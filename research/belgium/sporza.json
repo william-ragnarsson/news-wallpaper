@@ -1,0 +1,1697 @@
+[
+  {
+    "id": "sporza",
+    "name": "Sporza",
+    "owner": "VRT (Vlaamse Radio- en Televisieomroeporganisatie)",
+    "language": "nl",
+    "homepage": "https://sporza.be/nl/",
+    "discovery": "Not advertised: there are no feed <link> tags, no RSS page, and no 'rss' string in the sporza.be HTML or JS. The site is a React Router v7 SSR app. The feeds were found by applying VRT's AEM selector pattern. The homepage feed is https://sporza.be/nl.rss.xml (any selector after .rss gives the same result). Category feeds are https://sporza.be/nl/categorie/<path>.rss.xml for any category on the A-Z page https://sporza.be/nl/a-z/ (about 200 /nl/categorie/ paths). Every category path tested worked. Tag pages (/nl/tag/...) have no feed. Sitemaps were found via robots.txt. All streams are therefore official=false.",
+    "streams": [
+      {
+        "slug": "home",
+        "name": "Sporza",
+        "group": "Top stories",
+        "url": "https://sporza.be/nl.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "belgium",
+          "top-stories"
+        ],
+        "description": "Sporza homepage: the 20 stories currently on the front page across all sports, in editorial order.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:48:56.212Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href (images.vrt.be/width1280/YYYY/MM/DD/<uuid>.jpg)",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__home.xml",
+        "notes": "Editorial order, not chronological. It covered about 7.5 hours (oldest updated 07:17Z). 6 of the 20 are live or match-page items (title prefix 'LIVE' or a /nl/matches/ link) whose title and summary update in place. nl.rss.articles.xml, nl.rss.headlines.xml and nl/.rss.xml are identical."
+      },
+      {
+        "slug": "voetbal",
+        "name": "Voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "soccer"
+        ],
+        "description": "All football news on Sporza (Belgian and international).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:48:34.099Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal.xml",
+        "notes": "9 hero articles, then 11 video items (nstag contains 'video', most with an empty summary). 5 live or match items."
+      },
+      {
+        "slug": "jupiler-pro-league",
+        "name": "Jupiler Pro League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/jupiler-pro-league.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "belgium",
+          "jupiler-pro-league"
+        ],
+        "description": "Belgian top-flight football (Jupiler Pro League): match reports, transfers, news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:48:34.099Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__jupiler-pro-league.xml",
+        "notes": "11 of 20 are video items with mostly empty summaries. 3 live match pages."
+      },
+      {
+        "slug": "eerste-klasse-b",
+        "name": "Challenger Pro League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/eerste-klasse-b-proximus-league.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "belgium",
+          "challenger-pro-league"
+        ],
+        "description": "Belgian second division (Challenger Pro League) football news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-23T16:00:52.662Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__eerste-klasse-b.xml",
+        "notes": "Low volume. The URL path still uses the old 'eerste-klasse-b-proximus-league' slug."
+      },
+      {
+        "slug": "croky-cup",
+        "name": "Croky Cup",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/croky-cup-beker-van-belgie.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "belgium",
+          "cup"
+        ],
+        "description": "Belgian Cup (Croky Cup) football news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-21T11:00:18.634Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__croky-cup.xml",
+        "notes": "Busy only around cup rounds. 11 of 20 are video items."
+      },
+      {
+        "slug": "champions-league",
+        "name": "Champions League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/champions-league.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "champions-league",
+          "europe"
+        ],
+        "description": "UEFA Champions League news and match reports.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T13:45:22.331Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__champions-league.xml",
+        "notes": "One fetch timed out at 20 s; the retry took 5.8 s (slow origin on a CloudFront miss)."
+      },
+      {
+        "slug": "europa-league",
+        "name": "Europa League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/europa-league.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "europa-league",
+          "europe"
+        ],
+        "description": "UEFA Europa League news and match reports.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-23T09:41:57.947Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__europa-league.xml"
+      },
+      {
+        "slug": "conference-league",
+        "name": "Conference League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/conference-league-nieuws-uitslagen-en-standen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "conference-league",
+          "europe"
+        ],
+        "description": "UEFA Conference League news and match reports.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-23T13:56:29.618Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__conference-league.xml"
+      },
+      {
+        "slug": "voetbal-buitenland",
+        "name": "Buitenlands voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "international-football"
+        ],
+        "description": "Foreign football leagues (England, Spain, Italy, Germany, France, Netherlands and others).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:47:15.380Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-buitenland.xml"
+      },
+      {
+        "slug": "voetbal-engeland",
+        "name": "Engels voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland/engeland.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "england",
+          "premier-league"
+        ],
+        "description": "English football (Premier League and cups).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:47:15.380Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-engeland.xml",
+        "notes": "11 of 20 are video items with mostly empty summaries."
+      },
+      {
+        "slug": "voetbal-spanje",
+        "name": "Spaans voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland/spanje.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "spain",
+          "la-liga"
+        ],
+        "description": "Spanish football (La Liga).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T12:03:01.420Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-spanje.xml"
+      },
+      {
+        "slug": "voetbal-italie",
+        "name": "Italiaans voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland/italie.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "italy",
+          "serie-a"
+        ],
+        "description": "Italian football (Serie A).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T20:21:23.442Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-italie.xml"
+      },
+      {
+        "slug": "voetbal-duitsland",
+        "name": "Duits voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland/duitsland.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "germany",
+          "bundesliga"
+        ],
+        "description": "German football (Bundesliga).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T13:45:22.331Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-duitsland.xml"
+      },
+      {
+        "slug": "voetbal-frankrijk",
+        "name": "Frans voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland/frankrijk.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "france",
+          "ligue-1"
+        ],
+        "description": "French football (Ligue 1).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-12T14:32:45.155Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-frankrijk.xml",
+        "notes": "Low volume: the newest item was 13 days old. Consider merging it into voetbal-buitenland."
+      },
+      {
+        "slug": "voetbal-nederland",
+        "name": "Nederlands voetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/buitenland/nederland.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "netherlands",
+          "eredivisie"
+        ],
+        "description": "Dutch football (Eredivisie).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:43:29.122Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__voetbal-nederland.xml"
+      },
+      {
+        "slug": "vrouwenvoetbal",
+        "name": "Vrouwenvoetbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/vrouwen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "women"
+        ],
+        "description": "Women's football (Belgian league, Red Flames, international).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T19:54:52.559Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__vrouwenvoetbal.xml",
+        "notes": "9 of 20 are video items."
+      },
+      {
+        "slug": "red-flames",
+        "name": "Red Flames",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/vrouwen/red-flames.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "women",
+          "belgium",
+          "national-team"
+        ],
+        "description": "Belgian women's national football team (Red Flames).",
+        "itemCount": 13,
+        "newestItemAt": "2026-10-22T15:44:22.238Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__red-flames.xml",
+        "notes": "Only 13 entries. The men's team (Rode Duivels) is a tag page with no feed."
+      },
+      {
+        "slug": "wielrennen",
+        "name": "Wielrennen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling"
+        ],
+        "description": "All cycling news (road, cyclocross, track, MTB, women's cycling).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:03:35.912Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__wielrennen.xml",
+        "notes": "11 of 20 are video items."
+      },
+      {
+        "slug": "wegwielrennen",
+        "name": "Wegwielrennen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/wegwielrennen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "road-cycling"
+        ],
+        "description": "Road cycling news (classics, grand tours, transfers).",
+        "itemCount": 15,
+        "newestItemAt": "2026-10-24T08:43:08.382Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__wegwielrennen.xml",
+        "notes": "Off-season the first 5 entries are identical to the tour feed (60% overlap overall). They are not full duplicates; dedupe by id."
+      },
+      {
+        "slug": "vrouwenwielrennen",
+        "name": "Vrouwenwielrennen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/wegwielrennen/vrouwenwielrennen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "women"
+        ],
+        "description": "Women's cycling news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:03:35.912Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__vrouwenwielrennen.xml"
+      },
+      {
+        "slug": "veldrijden",
+        "name": "Veldrijden",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/veldrijden.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "cyclocross"
+        ],
+        "description": "Cyclocross news and race reports (in season October to February).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:48:56.212Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__veldrijden.xml",
+        "notes": "11 of 20 are video items. 1 live item."
+      },
+      {
+        "slug": "baanwielrennen",
+        "name": "Baanwielrennen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/baanwielrennen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "track-cycling"
+        ],
+        "description": "Track cycling news (six days, world cups, championships).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-23T14:14:06.318Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__baanwielrennen.xml"
+      },
+      {
+        "slug": "mountainbike",
+        "name": "Mountainbike",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/mountainbike.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "mountain-bike"
+        ],
+        "description": "Mountain bike racing news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-22T14:18:35.538Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__mountainbike.xml",
+        "notes": "4 of its first 5 entries are shared with onverhard (30% overlap overall)."
+      },
+      {
+        "slug": "onverhard",
+        "name": "Sporza Onverhard",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/onverhard.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "gravel",
+          "off-road"
+        ],
+        "description": "Off-road cycling (gravel, MTB and related) under the Sporza Onverhard label.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-22T14:18:35.538Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__onverhard.xml"
+      },
+      {
+        "slug": "tennis",
+        "name": "Tennis",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/tennis.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "tennis"
+        ],
+        "description": "Tennis news (ATP, WTA, Grand Slams, Belgian players).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T12:06:40.553Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__tennis.xml"
+      },
+      {
+        "slug": "auto-motor",
+        "name": "Autosport",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/auto-motor.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "motorsport"
+        ],
+        "description": "Motorsport news (Formula 1, rally, endurance and more).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:46:56.704Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__auto-motor.xml",
+        "notes": "60% overlap with formule-1 (4 of the first 5 shared)."
+      },
+      {
+        "slug": "formule-1",
+        "name": "Formule 1",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/auto-motor/formule-1.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "motorsport",
+          "formula-1"
+        ],
+        "description": "Formula 1 news and race reports.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T10:12:42.249Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__formule-1.xml",
+        "notes": "11 of 20 are video items. nstag duplicates values (e.g. 'Formule 1|autosport|Formule 1|autosport')."
+      },
+      {
+        "slug": "rally",
+        "name": "Rally",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/auto-motor/rally.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "motorsport",
+          "rally"
+        ],
+        "description": "Rally news (WRC, Dakar, Belgian rallies).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:46:56.704Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__rally.xml",
+        "notes": "11 of 20 are video items."
+      },
+      {
+        "slug": "motorsport",
+        "name": "Motorsport",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/motorsport.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "motorsport",
+          "motorcycling"
+        ],
+        "description": "Motorcycle sport (MotoGP, motocross).",
+        "itemCount": 11,
+        "newestItemAt": "2026-10-25T07:45:08.005Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__motorsport.xml",
+        "notes": "Only 11 entries. It lives under andere-sporten, not auto-motor."
+      },
+      {
+        "slug": "motogp",
+        "name": "Moto GP",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/motorsport/motogp.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "motorsport",
+          "motogp",
+          "motorcycling"
+        ],
+        "description": "MotoGP news and race reports.",
+        "itemCount": 10,
+        "newestItemAt": "2026-10-25T07:45:08.005Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__motogp.xml",
+        "notes": "Only 10 entries, mostly a subset of motorsport."
+      },
+      {
+        "slug": "atletiek",
+        "name": "Atletiek",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/atletiek.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "athletics"
+        ],
+        "description": "Athletics news (track and field, road running, cross country).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:25:16.589Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__atletiek.xml"
+      },
+      {
+        "slug": "veldlopen",
+        "name": "Veldlopen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/atletiek/veldlopen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "athletics",
+          "cross-country"
+        ],
+        "description": "Cross-country running news (CrossCup, European championships).",
+        "itemCount": 13,
+        "newestItemAt": "2026-10-25T14:25:16.589Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__veldlopen.xml",
+        "notes": "Seasonal (October to March). 13 entries."
+      },
+      {
+        "slug": "zaalsport",
+        "name": "Zaalsport",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/zaalsport.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "indoor-sports",
+          "basketball",
+          "volleyball",
+          "handball"
+        ],
+        "description": "Indoor sports (basketball, volleyball, handball, futsal).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T11:13:12.081Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__zaalsport.xml",
+        "notes": "60% overlap with basketbal."
+      },
+      {
+        "slug": "basketbal",
+        "name": "Basketbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/zaalsport/basketbal.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "basketball"
+        ],
+        "description": "Basketball news (Belgian league, Belgian Lions and Cats, NBA).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T10:44:42.422Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__basketbal.xml",
+        "notes": "11 of 20 are video items."
+      },
+      {
+        "slug": "nba",
+        "name": "NBA",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/zaalsport/basketbal/nba.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "basketball",
+          "nba",
+          "usa"
+        ],
+        "description": "NBA basketball news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T10:44:42.422Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__nba.xml",
+        "notes": "One fetch timed out at 20 s; the retry succeeded."
+      },
+      {
+        "slug": "volleybal",
+        "name": "Volleybal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/zaalsport/volleybal.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "volleyball"
+        ],
+        "description": "Volleyball news (Belgian league, Red Dragons, Yellow Tigers).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T20:30:42.026Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__volleybal.xml"
+      },
+      {
+        "slug": "handbal",
+        "name": "Handbal",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/zaalsport/handbal.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "handball"
+        ],
+        "description": "Handball news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T11:13:12.081Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__handbal.xml"
+      },
+      {
+        "slug": "andere-sporten",
+        "name": "Andere sporten",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "other-sports"
+        ],
+        "description": "All other sports (hockey, darts, snooker, swimming, winter sports, golf, motorsport and more).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:06:41.181Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__andere-sporten.xml",
+        "notes": "3 entries are evergreen category landing pages (links to /nl/categorie/..., e.g. Beijing 2022, Tokyo 2020, Paralympische Spelen, dated 2021-2023). Filter them out by link pattern. 8 video items."
+      },
+      {
+        "slug": "hockey",
+        "name": "Hockey",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/hockey.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "hockey"
+        ],
+        "description": "Field hockey news (Red Lions, Red Panthers, Belgian league).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-23T18:32:37.318Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__hockey.xml",
+        "notes": "11 of 20 are video items."
+      },
+      {
+        "slug": "darts",
+        "name": "Darts",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/darts.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "darts"
+        ],
+        "description": "Darts news.",
+        "itemCount": 13,
+        "newestItemAt": "2026-10-24T13:05:22.716Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__darts.xml",
+        "notes": "13 entries. Peaks around the World Championship (December and January)."
+      },
+      {
+        "slug": "snooker",
+        "name": "Snooker",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/snooker.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "snooker"
+        ],
+        "description": "Snooker news.",
+        "itemCount": 13,
+        "newestItemAt": "2026-10-23T17:13:38.998Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__snooker.xml",
+        "notes": "13 entries."
+      },
+      {
+        "slug": "wintersport",
+        "name": "Wintersport",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/wintersport.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "winter-sports",
+          "skating",
+          "skiing"
+        ],
+        "description": "Winter sports (speed skating, short track, skiing, figure skating).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T14:06:41.181Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__wintersport.xml"
+      },
+      {
+        "slug": "zwemmen",
+        "name": "Zwemmen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/zwemmen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "swimming"
+        ],
+        "description": "Swimming news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-17T15:41:47.868Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__zwemmen.xml",
+        "notes": "Low volume: the newest item was 8 days old."
+      },
+      {
+        "slug": "golf",
+        "name": "Golf",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/golf.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "golf"
+        ],
+        "description": "Golf news.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-19T09:07:47.732Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__golf.xml",
+        "notes": "Low volume: the newest item was 6 days old. 11 of 20 are video items."
+      },
+      {
+        "slug": "quiz",
+        "name": "Sporza quiz",
+        "group": "Other",
+        "url": "https://sporza.be/nl/categorie/quiz.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "quiz",
+          "interactive"
+        ],
+        "description": "Sporza sports quizzes (interactive, not news).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-22T15:30:10.014Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__quiz.xml",
+        "notes": "Quizzes, not news. Probably leave this off a news wallpaper by default."
+      },
+      {
+        "slug": "bnxt-league",
+        "name": "BNXT League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/zaalsport/basketbal/bnxt-league.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "basketball",
+          "bnxt-league",
+          "belgium",
+          "netherlands"
+        ],
+        "description": "BNXT League basketball (the Belgian-Dutch league): match reports and club news. The season runs September to May.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T20:18:12.436Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__bnxt-league.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. 5 items in the last 14 days and 13 in the last 30. No video items, and every item has a summary. Shares only 3 of 20 ids with basketbal and zaalsport, so it adds content those feeds miss. Several links are /nl/matches/basketbal/... match pages, which are updated in place.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "vechtsport",
+        "name": "Vechtsport",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/vechtsport.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "combat-sports",
+          "boxing",
+          "mma",
+          "judo"
+        ],
+        "description": "Combat sports: boxing, MMA, judo and kickboxing.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T18:47:26.219Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__vechtsport.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. 3 items in the last 14 days, 9 in the last 30 and 12 in the last 60, at a steady year-round pace. It shares no ids with any reported stream, so this content is reachable nowhere else, not even through andere-sporten. No video items, and every item has a summary.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "nations-league",
+        "name": "Nations League",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/voetbal/nations-league.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "football",
+          "nations-league",
+          "belgium",
+          "national-team",
+          "rode-duivels"
+        ],
+        "description": "UEFA Nations League, including Belgium's Rode Duivels (Red Devils) and their opponents. Bursty around international windows.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-20T14:32:44.822Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__nations-league.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. Activity is concentrated in international windows: all 20 items fall in the last 30 days, but only 1 in the last 14. Expect gaps of several weeks between windows (naturally slow). It is the best feed proxy for the Rode Duivels, which only have a tag page and no feed. It shares no ids with any reported stream.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "turnen",
+        "name": "Turnen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/turnen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "gymnastics"
+        ],
+        "description": "Gymnastics news, with heavy coverage during the World and European championships.",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T13:00:00.000Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__turnen.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. 19 items in the last 14 days because the gymnastics World Championships end today. Outside championships it is slow (event-driven), so expect it to go quiet for weeks. 4 video items. Shares 6 of 20 ids with andere-sporten. The wk-turnen sub-category is a subset, so do not add it.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "superprestige",
+        "name": "Superprestige",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/veldrijden/superprestige-veldrijden.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "cyclocross",
+          "superprestige"
+        ],
+        "description": "Superprestige cyclocross series: race reports and news (in season October to February).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-25T15:13:50.877Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__superprestige.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. Seasonal: today is the season opener in Overijse. 4 items in the last 7 days. Older entries are from last season, so expect it to be stale March to September. Shares 4 of 20 ids with veldrijden, so dedupe by id. 4 video items.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "exact-cross",
+        "name": "HG Cross",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/wielrennen/veldrijden/exact-cross-veldrijden.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "cycling",
+          "cyclocross",
+          "hg-cross"
+        ],
+        "description": "HG Cross cyclocross series (URL slug exact-cross): race reports and news (in season October to February).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T14:03:29.648Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__exact-cross.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. The A-Z page and nstag both label this series 'HG Cross', while the path still says exact-cross. 8 items in the last 14 days. Seasonal, so expect it to be stale March to September. Shares 5 of 20 ids with veldrijden, so dedupe by id. 4 video items.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "paardensport",
+        "name": "Paardensport",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/paardensport.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "equestrian",
+          "show-jumping"
+        ],
+        "description": "Equestrian sport, mainly show jumping (Belgian riders, Nations Cup, Grand Prix events).",
+        "itemCount": 20,
+        "newestItemAt": "2026-10-24T17:50:26.269Z",
+        "coverage": {
+          "image": "all",
+          "summary": "some",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__paardensport.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. Low cadence: 2 items in the last 14 days, 4 in the last 30 and 10 in the last 60, but it is year-round. 11 of 20 are video items with empty summaries, so summary coverage is only 'some'. Shares 2 ids with andere-sporten. Optional, low priority.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "kunstschaatsen",
+        "name": "Kunstschaatsen",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/kunstschaatsen.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "figure-skating",
+          "winter-sports"
+        ],
+        "description": "Figure skating: Belgian skaters, the Grand Prix series and championships (in season October to March).",
+        "itemCount": 13,
+        "newestItemAt": "2026-10-24T19:34:07.730Z",
+        "coverage": {
+          "image": "all",
+          "summary": "most",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__kunstschaatsen.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. Only 13 entries. 4 items in the last 7 days (Grand Prix season). Seasonal, so expect it to be quiet April to September. Shares 4 of 13 ids with wintersport. 4 video items. Its ek- and wk- sub-categories are event subsets, so do not add them.",
+        "addedByGapCheck": true
+      },
+      {
+        "slug": "alpineskien",
+        "name": "Alpineskiën",
+        "group": "Sport",
+        "url": "https://sporza.be/nl/categorie/andere-sporten/alpineskien.rss.xml",
+        "format": "atom",
+        "language": "nl",
+        "official": false,
+        "topics": [
+          "sport",
+          "alpine-skiing",
+          "winter-sports"
+        ],
+        "description": "Alpine skiing World Cup, including Belgian skiers (in season late October to March).",
+        "itemCount": 11,
+        "newestItemAt": "2026-10-25T13:31:07.223Z",
+        "coverage": {
+          "image": "all",
+          "summary": "all",
+          "author": "none",
+          "categories": "all",
+          "fullContent": "none"
+        },
+        "imageSource": "link[rel=enclosure]@href",
+        "sampleFile": "/private/tmp/claude-501/-Users-williamragnarsson-Documents-Programming-news-wallpaper/0caac9a3-ce23-49a0-8649-ba7ffd1030f7/scratchpad/research/feeds/sporza__alpineskien.xml",
+        "notes": "Fetched 2026-10-25: 200, valid Atom. Only 11 entries. The season opened this weekend in Sölden (3 items in the last 7 days); the other 8 entries are more than 60 days old. Seasonal, so expect it to be stale April to mid-October. Shares 4 of 11 ids with wintersport. No video items, and every item has a summary. Optional.",
+        "addedByGapCheck": true
+      }
+    ],
+    "rejected": [
+      {
+        "url": "https://sporza.be/nl/categorie/voetbal/lagere-klasse.rss.xml",
+        "reason": "Works (200, valid Atom, 9 entries) but stale: the newest item is 2026-08-14 (over 2 months old). Fixture kept at feeds/sporza__lagere-klasse.xml."
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/wielrennen/giro.rss.xml",
+        "reason": "Works (200, valid Atom, 20 entries) but seasonal and stale: the newest item is 2026-06-07. Re-enable in May. Fixture kept at feeds/sporza__giro.xml."
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/wielrennen/vuelta.rss.xml",
+        "reason": "Works (200, valid Atom, 20 entries) but seasonal and stale: the newest item is 2026-09-15. Re-enable in August. Fixture kept at feeds/sporza__vuelta.xml."
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/olympische-spelen.rss.xml",
+        "reason": "Works (200, valid Atom, 20 entries) but stale: the newest item is 2026-10-06 (19 days), low volume between Games. Re-enable around Olympic Games. Fixture kept at feeds/sporza__olympische-spelen.xml."
+      },
+      {
+        "url": "https://sporza.be/nl.rss.articles.xml",
+        "reason": "Duplicate of https://sporza.be/nl.rss.xml (the selector after .rss is ignored)"
+      },
+      {
+        "url": "https://sporza.be/nl.rss.headlines.xml",
+        "reason": "Duplicate of https://sporza.be/nl.rss.xml"
+      },
+      {
+        "url": "https://sporza.be/nl/.rss.xml",
+        "reason": "Duplicate of https://sporza.be/nl.rss.xml"
+      },
+      {
+        "url": "https://sporza.be/nl.rss.xml?x=1",
+        "reason": "Duplicate of https://sporza.be/nl.rss.xml (query ignored)"
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/voetbal/.rss.xml",
+        "reason": "Duplicate of https://sporza.be/nl/categorie/voetbal.rss.xml (the trailing-slash form is identical for every category)"
+      },
+      {
+        "url": "https://www.sporza.be/nl.rss.articles.xml",
+        "reason": "200 but returns the HTML homepage: the www host does not serve feeds"
+      },
+      {
+        "url": "https://sporza.be/rss",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/rss.xml",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/feed",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/feed",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/feed.xml",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/rss",
+        "reason": "200 HTML page, not a feed"
+      },
+      {
+        "url": "https://sporza.be/nl/rss/",
+        "reason": "200 HTML page, not a feed"
+      },
+      {
+        "url": "https://sporza.be/nl/rss.xml",
+        "reason": "200 HTML page, not a feed"
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/voetbal/rss.xml",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/voetbal/rss",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/pas-verschenen/rss",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/pas-verschenen.rss.xml",
+        "reason": "200 but 0-byte text/html: the 'meest recent' page has no feed"
+      },
+      {
+        "url": "https://sporza.be/nl/pas-verschenen.rss.articles.xml",
+        "reason": "200 but 0-byte text/html"
+      },
+      {
+        "url": "https://sporza.be/nl/pas-verschenen/.rss.xml",
+        "reason": "200 but 0-byte text/html"
+      },
+      {
+        "url": "https://sporza.be/nl/podcasts.rss.xml",
+        "reason": "200 but 0-byte text/html"
+      },
+      {
+        "url": "https://sporza.be/nl/livestream.rss.xml",
+        "reason": "200 but 0-byte text/html"
+      },
+      {
+        "url": "https://sporza.be/nl/kalender.rss.xml",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/fr.rss.xml",
+        "reason": "404 (no French edition)"
+      },
+      {
+        "url": "https://sporza.be/en.rss.xml",
+        "reason": "404 (no English edition)"
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/voetbal/rode-duivels.rss.xml",
+        "reason": "200 HTML with 0 entries: Rode Duivels is a tag page, not a category"
+      },
+      {
+        "url": "https://sporza.be/nl/tag/voetbal/ploegen/rode-duivels~3004.rss.xml",
+        "reason": "404: tag pages have no feed"
+      },
+      {
+        "url": "https://sporza.be/nl/tag/voetbal/ploegen/rode-duivels~3004/.rss.xml",
+        "reason": "404: tag pages have no feed"
+      },
+      {
+        "url": "https://sporza.be/nl/tag/in-form.rss.xml",
+        "reason": "404: tag pages have no feed"
+      },
+      {
+        "url": "https://sporza.be/nl/tag/andere-sporten/zwemmen/ek-zwemmen.rss.xml",
+        "reason": "404: tag pages have no feed"
+      },
+      {
+        "url": "https://sporza.be/sitemap.xml",
+        "reason": "404 (the real sitemaps are nl.sitemap-index.xml and nl.news-sitemap.xml)"
+      },
+      {
+        "url": "https://sporza.be/sitemap-news.xml",
+        "reason": "404"
+      },
+      {
+        "url": "https://sporza.be/nl/news-sitemap.xml",
+        "reason": "404 (the correct URL is https://sporza.be/nl.news-sitemap.xml)"
+      },
+      {
+        "url": "https://sporza.be/nl/pas-verschenen.data",
+        "reason": "202 text/x-script React Router turbo-stream (redirect payload), not JSON"
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/voetbal.data",
+        "reason": "202 text/x-script React Router turbo-stream, not JSON"
+      },
+      {
+        "url": "https://api.sporza.be/",
+        "reason": "403"
+      },
+      {
+        "url": "https://api.sporza.be/web",
+        "reason": "403"
+      },
+      {
+        "url": "https://api.sporza.be/web/",
+        "reason": "404 JSON"
+      },
+      {
+        "url": "https://api.sporza.be/web/nl/pas-verschenen/",
+        "reason": "404 JSON"
+      },
+      {
+        "url": "https://api.sporza.be/web/page?path=...",
+        "reason": "404 JSON for the page paths tried: no public page JSON found on the BFF"
+      },
+      {
+        "url": "https://sporza.be/nl/categorie/wielrennen/tour.rss.xml",
+        "reason": "gap check: Duplicate. The re-fetch on 2026-10-25 shows its first 5 entry ids are identical, in the same order, to wegwielrennen's (https://sporza.be/nl/categorie/wielrennen/wegwielrennen.rss.xml), and 9 of wegwielrennen's 15 ids also appear in tour. tour is the weaker, seasonal stream: off-season it only mirrors road-cycling news. Keep wegwielrennen as the general road-cycling stream, and re-enable tour (or ship it default-off) for June and July."
+      }
+    ],
+    "apis": [
+      {
+        "name": "Google News sitemap (nl)",
+        "purpose": "The only CHRONOLOGICAL 'latest' list for Sporza (all RSS feeds are in editorial order). Use it to fill a 'meest recent' stream or to backfill timestamps; titles only.",
+        "urlTemplate": "https://sporza.be/nl.news-sitemap.xml",
+        "exampleUrl": "https://sporza.be/nl.news-sitemap.xml",
+        "method": "GET",
+        "requiredHeaders": "none",
+        "verified": true,
+        "responseNotes": "<urlset> with 85 <url> elements covering about 2 days. Each has loc (canonical article URL /nl/YYYY/MM/DD/<slug>~<id>/), news:publication_date with a local Belgian offset (range 2026-10-23T17:02:16+02:00 to 2026-10-25T15:48:56+01:00) and news:title. No images, no summaries, no sport label (derive it from the slug or by joining with feed ids).",
+        "pagination": "None",
+        "freshness": "Live (the newest entry matched the newest RSS entry)."
+      },
+      {
+        "name": "Sitemap index (nl)",
+        "purpose": "Discovery of article sitemaps per sport and per week, for backfill or category discovery.",
+        "urlTemplate": "https://sporza.be/nl.sitemap-index.xml",
+        "exampleUrl": "https://sporza.be/nl.sitemap-index.xml",
+        "method": "GET",
+        "requiredHeaders": "none",
+        "verified": true,
+        "responseNotes": "<sitemapindex> listing nl.sitemap.article.recent.xml, .homepage.xml, .category.xml, .lastweek.xml, .cycling.xml, .soccer.xml, .tennis.xml and weekly nl.sitemap.article.YYYY.WW.xml.",
+        "pagination": "Weekly child sitemaps",
+        "freshness": "Updated as content publishes",
+        "notes": "No clean JSON API exists. api.sporza.be (the BFF in window.ENV) returns 403 or 404 for every guessed route. The page data is embedded only as a React Router turbo-stream in the SSR HTML, which is not reported (that would be HTML scraping)."
+      }
+    ],
+    "quirks": "Feeds are Atom (application/feed+xml, xml:lang nl) behind CloudFront with cache-control max-age=60. Some origin responses on a cache miss are slow (two fetches timed out at 20 s and succeeded on retry), so use a 30 s timeout plus one retry. The feed <title> is always 'sporza' and the feed <author> is 'sporza - Vrt', even for category feeds. The feed self link is WRONG on every feed (always https://sporza.be/nl/.rss.xml), so key streams by the requested URL, not the self link.\nMax 20 entries per feed (some have 9-15). Order is EDITORIAL (the page layout), NOT chronological: hero articles come first, then a block of video items. Sort by <updated> yourself. The homepage feed covers only about 7.5 hours.\nEntry fields: title (type=text), id (= canonical URL, not a short link), published, updated, summary type=text, vrtns:nstag, link rel=alternate, link rel=enclosure (image). No <author>, <category> or <content>. The content namespace is declared but never used.\nVideo items: in many category feeds 4-11 of 20 entries have 'video' (and often 'Sporzatips') in nstag. Their summary is usually EMPTY, which is why summary coverage drops to 'some'. Decide whether to show them (they link to the video article page).\nnstag is a PIPE-SEPARATED list: sport|competition|teams|people|editor names|'video'. Example: 'voetbal|Jupiler Pro League|KRC Genk|Standard|voetbal|Joël Heymbeeck'. It contains duplicates and inconsistent case and accents (e.g. 'Formule 1|autosport|Formule 1|autosport'). Split it, dedupe case-insensitively, take the first token as the sport, and drop editor names (they are not distinguishable from player names, so do not use it as author).\nLink patterns:\n- articles: /nl/YYYY/MM/DD/<slug>~<numeric id>/\n- match pages: /nl/matches/<sport>/<competition>/<season>/.../<slug>~<id>/ (these update in place: title, summary and updated change during and after the match)\n- evergreen category landing pages: /nl/categorie/... (e.g. Olympics hubs dated 2021-2023 in andere-sporten). Filter these out.\nTitles prefixed 'LIVE' or 'LIVESTREAM' are live items. The date in the URL is the original creation date and can differ from <published> (e.g. /2026/10/12/ for an item published 2026-10-25), so do not parse dates from URLs. Dates are UTC with milliseconds ('2026-10-25T14:32:45.741Z').\nDedupe across streams by <id> (= URL): parent and child categories overlap heavily (auto-motor/formule-1 60%, zaalsport/basketbal 60%, tour/wegwielrennen 60% with identical first 5 off-season).\nImages: every entry has an enclosure https://images.vrt.be/width1280/YYYY/MM/DD/<uuid>.jpg (image/jpeg). The preset segment can be swapped (orig, width640, width320, w960hx, w640hx, w480hx, w1280hx, vrtnws_share).\nNo premium or paywall: Sporza is free (VRT public broadcaster), so premium=false always. No tracking params.\nCategory URL rule: any /nl/categorie/<path>/ page from https://sporza.be/nl/a-z/ (about 200 paths, including per-competition ones like voetbal/buitenland/dfb-pokal, zaalsport/basketbal/wnba, wielrennen/wegwielrennen/wk-wielrennen) has a feed at https://sporza.be/nl/categorie/<path>.rss.xml. Validate a non-empty atom body because non-categories return HTML with 200.\nrobots.txt disallows / for named AI crawlers (ClaudeBot, GPTBot, etc.) while allowing User-agent *. Fetch politely with a normal UA, at most once a minute (matches max-age=60).",
+    "sampleItem": "<entry><title type=\"text\">Racing Genk straft defensief gestuntel bij tienkoppig Standard genadeloos af en boekt deugddoende zege</title><id>https://sporza.be/nl/matches/voetbal/jupiler-pro-league/2026-2027/regulier/09/krc-genk-standard-racing-genk-straft-defensief-gestuntel-bij-tienkoppig-standard-genadeloos-af-en-boekt-deugddoende-zege~1781787794216/</id><published>2026-10-25T14:32:45.741Z</published><updated>2026-10-25T14:48:34.099Z</updated><summary type=\"text\">Is Racing Genk eindelijk vertrokken? Tegen Standard boekten de Limburgers voor het eerst dit seizoen twee opeenvolgende zeges in de competitie. De bezoekers schoten zichzelf in de voet: na de openingsgoal van Ito pakte Epolo pijnlijk rood. Ondanks het ondertal vonden de Rouches toch een gelijkmaker. Maar in het slotkwartier strafte Bibout gestuntel achterin genadeloos af.</summary><vrtns:nstag xmlns=\"\">voetbal|Jupiler Pro League|KRC Genk|Standard|voetbal|Joël Heymbeeck</vrtns:nstag><link href=\"https://sporza.be/nl/matches/voetbal/jupiler-pro-league/2026-2027/regulier/09/krc-genk-standard-racing-genk-straft-defensief-gestuntel-bij-tienkoppig-standard-genadeloos-af-en-boekt-deugddoende-zege~1781787794216/\" rel=\"alternate\" type=\"text/html\"></link><link href=\"https://images.vrt.be/width1280/2026/10/25/52a1efe3-6317-4ed5-8ed9-2f6c25a6d214.jpg\" rel=\"enclosure\" type=\"image/jpeg\"></link></entry>",
+    "gapNotes": [
+      "I re-fetched all 46 reported Sporza URLs on 2026-10-25: every one returned 200 with valid Atom (application/feed+xml). Only one exact duplicate exists, tour/wegwielrennen (see remove). Other pairs overlap partly but are distinct streams: auto-motor/formule-1 (12/20), basketbal/zaalsport (12/20), mountainbike/onverhard (6/20, 4 of the first 5 shared). Fresh counts that differ from the report: home, voetbal, jupiler-pro-league, veldrijden, voetbal-buitenland, voetbal-nederland, voetbal-engeland and tennis each have 20 entries, with the newest at about 15:10 to 15:24Z.",
+      "Borderline freshness among the reported streams. voetbal-frankrijk: newest item 2026-10-12, 13 days old even in mid-season. I kept it because it is just under the 14-day threshold, but make it default-off or fold it into voetbal-buitenland. Also slow: zwemmen (newest 10-17, 8 days), golf (10-18), croky-cup (10-21). Some feeds carry old evergreen entries: andere-sporten has a 2021 entry, motogp a 2020 one, and wegwielrennen's oldest is from 2022. Sort by <updated> and cap item age in the client.",
+      "Completeness: I fetched every category on the A-Z page (163 paths, including X2o-trofee-veldrijden, whose path has an uppercase X) and kept only the 9 additions. Rejected:\n- Empty landing pages with 0 entries: formule-1-grand-prix-kalender, formule-1-stand-wk-2026, the tennis ATP/WTA kalender and ranglijst pages, veldrijden-kalender, wegwielrennen/kalender, worldtourranking.\n- Duplicate: andere-sporten/watersport has the same first 5 entries as zwemmen.\n- Event subsets: wk-turnen, ek/wk-kunstschaatsen, tennis/european-open (20 fresh items, but the tournament ends today; seasonal for October).\n- Too thin (1 item in 14 days): gewichtheffen, korfbal, triatlon, zaalvoetbal, black-arrows, ek-atletiek, champions-league-volleybal, uefa-youth-league, yellow-tigers, belgian-cats, boksen (vechtsport covers it), skeeleren, motorcross, skateboard, taekwondo, wk-voetbal-2026, diamond-league, 3x3-basketbal.\n- Shorttrack: only 2 items in 60 days; wintersport covers it.\n- voetbal/vrouwen/women-super-league: the site labels it 'Lotto Women's Pro League' (Belgian league, not the English WSL). Not added: only 2 items in 14 days and 6 of 20 ids shared with vrouwenvoetbal.",
+      "Seasonal categories that are stale today (newest more than 14 days old) but worth re-checking when their season starts:\n- wereldbeker-veldrijden (newest about 20 days old; World Cup from late November)\n- X2o-trofee-veldrijden (from November)\n- wk-darts (December to January)\n- schaatsen (31 days) and biatlon (winter)\n- Spring classics, giro, vuelta and the Grand Slam tennis categories\n- Red Lions and Red Panthers (about 55 days), Belgian Lions (34 days), Red Dragons (16 days), Red Wolves (19 days), wnba (15 days)\n- zesdaagse-van-gent (November) and wk-baanwielrennen (newest 10-19)\nDead categories: formule-e (368 days), esports (835 days), cricket (1070 days), copa-america-2019. The Rode Duivels still have no category feed (tag page only), so use nations-league as the proxy.",
+      "Fetch reliability: 5 of 163 category fetches timed out at 25 s on a cache miss (kunstschaatsen/ek-kunstschaatsen, tennis/australian-open-1, tennis/davis-cup, tennis/european-open, olympische-spelen voetbal) and all succeeded on immediate retry. This confirms the existing quirk: use a 30 s timeout plus one retry. All 9 additions come from the same /nl/categorie/<path>.rss.xml pattern. They share the existing quirks: editorial order, max 20 entries, feed <title> always 'sporza', wrong self link, image in link[rel=enclosure], and nstag as a pipe-separated category list."
+    ]
+  }
+]

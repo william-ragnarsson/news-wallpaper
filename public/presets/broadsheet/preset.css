@@ -1,0 +1,820 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Playfair+Display:wght@700;800;900&display=block');
+
+/* Broadsheet: the followed liveblog as a classic newspaper front page.
+   Warm newsprint, near-black ink, one oxblood accent for what is live.
+   Type scales with the short side of the screen (cqmin); the number of
+   columns comes from the width (see geometry() in preset.js), so every
+   column is the same measure, about 33 characters, on every screen.
+
+   Faces: Playfair Display for the flag, Newsreader for headlines and text
+   (its optical sizes run from 6 to 72), Libre Franklin for labels. */
+
+.preset-broadsheet {
+  --paper: #f1ebdd;
+  --paper-deep: #e6dcc6;
+  --ink: #1c1915;
+  --ink-2: #3f3a33;
+  --ink-3: #6e665a;
+  --hair: rgb(28 25 21 / 0.26);
+  --rule: rgb(28 25 21 / 0.9);
+  --tint: rgb(120 96 60 / 0.085);
+  --accent: #9d2219;
+
+  --flag: 'Playfair Display', 'Bodoni 72', Didot, 'Times New Roman', serif;
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
+
+  --u: 1cqmin;
+  --mx: max(28px, calc(2.4cqmin + 1.1cqw));
+  --gap: calc(2.2 * var(--u));
+  --body: clamp(12.5px, calc(1.45 * var(--u)), 24px);
+  --lh: 1.37;
+  --label: clamp(9.5px, calc(1.04 * var(--u)), 16px);
+  --small: clamp(10.5px, calc(1.2 * var(--u)), 18px);
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: var(--body);
+  line-height: var(--lh);
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+.preset-broadsheet [hidden] {
+  display: none !important;
+}
+
+.preset-broadsheet :where(h1, h2, h3, h4, h5, p, ul, figure, figcaption) {
+  margin: 0;
+  padding: 0;
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+/* --- newsprint ------------------------------------------------------------ */
+
+.preset-broadsheet .bs-paper {
+  position: absolute;
+  inset: 0;
+  background:
+    /* fine grain */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .25 0 0 0 0 .2 0 0 0 0 .13 0 0 0 .5 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    /* fibre clouds */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .009' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .22 0 0 0 .6 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E"),
+    /* the fold */
+    linear-gradient(180deg, transparent calc(50% - 4cqh), rgb(90 70 40 / 0.045) calc(50% - 1px), rgb(255 255 255 / 0.28) calc(50% + 1px), transparent calc(50% + 3cqh)),
+    /* warm edges, as if the sheet catches light in the middle */
+    radial-gradient(130% 115% at 50% 42%, transparent 58%, rgb(120 90 50 / 0.13) 100%),
+    var(--paper);
+}
+
+.preset-broadsheet .bs-page {
+  --col: calc((100cqw - 2 * var(--mx) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) calc(var(--safe-bottom) + 1.1 * var(--u));
+  row-gap: calc(1.2 * var(--u));
+  padding: calc(var(--safe-top) + 1.1 * var(--u)) var(--mx) 0;
+}
+
+/* --- masthead ------------------------------------------------------------- */
+
+.preset-broadsheet .bs-mast {
+  display: grid;
+}
+
+.preset-broadsheet .bs-flagrow {
+  display: grid;
+  grid-template-columns: var(--col) minmax(0, 1fr) var(--col);
+  column-gap: var(--gap);
+  align-items: center;
+  padding: calc(0.5 * var(--u)) 0 calc(1 * var(--u));
+}
+
+.preset-broadsheet .bs-nameplate {
+  font-family: var(--flag);
+  font-weight: 900;
+  font-size: calc(7.4 * var(--u));
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  text-align: center;
+  white-space: nowrap;
+  /* layout() makes the flag fit; clip sideways only, so no descender is cut. */
+  overflow-x: clip;
+  overflow-y: visible;
+  font-feature-settings: 'lnum' 1, 'liga' 1;
+}
+
+.preset-broadsheet .bs-nameplate > span {
+  display: inline-block;
+  padding: 0 0.04em;
+}
+
+.preset-broadsheet .bs-ear {
+  display: grid;
+  align-content: center;
+  gap: calc(0.25 * var(--u));
+  padding: calc(0.7 * var(--u)) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.preset-broadsheet .bs-ear-right {
+  text-align: right;
+}
+
+.preset-broadsheet .bs-ear-label {
+  font: 700 var(--label) / 1.1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.preset-broadsheet .bs-ear-label.is-live {
+  color: var(--accent);
+}
+
+.preset-broadsheet .bs-ear-main {
+  font: 600 calc(2.5 * var(--u)) / 1 var(--serif);
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums;
+}
+
+.preset-broadsheet .bs-ear-sub {
+  font: italic 400 var(--small) / 1.25 var(--serif);
+  color: var(--ink-2);
+}
+
+.preset-broadsheet .bs-livedot {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.5em;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.02em;
+  animation: bs-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes bs-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* Dateline: a heavy rule over a hairline, then the folio line, then a rule. */
+.preset-broadsheet .bs-dateline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  column-gap: var(--gap);
+  padding: calc(0.55 * var(--u)) 0 calc(0.5 * var(--u));
+  border-top: calc(0.32 * var(--u)) solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  box-shadow: 0 calc(-0.32 * var(--u) - 3px) 0 -2px var(--paper), 0 calc(-0.32 * var(--u) - 3px) 0 -1px var(--ink);
+  font: 500 var(--small) / 1.2 var(--sans);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.preset-broadsheet .bs-dateline-date {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-size: calc(var(--small) * 1.1);
+}
+
+.preset-broadsheet .bs-dateline-mid {
+  font-weight: 700;
+  text-align: center;
+}
+
+.preset-broadsheet .bs-source {
+  justify-self: end;
+  color: var(--ink-3);
+}
+
+/* --- body grid ------------------------------------------------------------ */
+
+.preset-broadsheet .bs-body {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  min-height: 0;
+  padding-top: calc(0.4 * var(--u));
+}
+
+.preset-broadsheet .bs-lead {
+  grid-column: 1 / span var(--lead-cols);
+  display: grid;
+  grid-template-columns: repeat(var(--lead-cols), minmax(0, 1fr));
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  column-gap: var(--gap);
+  min-height: 0;
+}
+
+/* --- lead: kicker, headline, standfirst ----------------------------------- */
+
+.preset-broadsheet .bs-kicker {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.9em;
+  font: 500 var(--small) / 1.2 var(--sans);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.preset-broadsheet .bs-kicker > span + span::before {
+  content: '';
+  display: inline-block;
+  width: 0.3em;
+  height: 0.3em;
+  margin-right: 0.9em;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 0.22em;
+  opacity: 0.55;
+}
+
+.preset-broadsheet .bs-kicker-tag {
+  font-weight: 800;
+  font-size: var(--label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.preset-broadsheet .is-ended .bs-kicker-tag {
+  color: var(--ink);
+}
+
+.preset-broadsheet .bs-kicker-time {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.preset-broadsheet .bs-headline {
+  grid-column: 1 / -1;
+  margin: calc(0.5 * var(--u)) 0 calc(1.3 * var(--u));
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(6 * var(--u));
+  line-height: 1.02;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+  font-variant-numeric: lining-nums;
+}
+
+.preset-broadsheet .bs-deck {
+  grid-column: 1 / span var(--flow-cols);
+  max-width: calc(var(--col) * 3 + var(--gap) * 2);
+  margin-bottom: calc(1.3 * var(--u));
+  padding-bottom: calc(1.2 * var(--u));
+  border-bottom: 1px solid var(--hair);
+  font: 400 calc(2.05 * var(--u)) / 1.28 var(--serif);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* --- flowing columns ------------------------------------------------------- */
+
+.preset-broadsheet .bs-flow {
+  grid-column: 1 / span var(--flow-cols);
+  grid-row: 4;
+  min-height: 0;
+  overflow: hidden;
+  column-count: var(--flow-cols);
+  column-gap: var(--gap);
+  column-fill: auto;
+  column-rule: 1px solid var(--hair);
+}
+
+.preset-broadsheet .no-photo .bs-flow,
+.preset-broadsheet .no-photo .bs-deck {
+  grid-column: 1 / -1;
+}
+
+.preset-broadsheet .no-photo .bs-deck {
+  max-width: calc(var(--col) * 3 + var(--gap) * 2);
+}
+
+.preset-broadsheet .bs-flow p {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 6 3 2;
+  text-indent: 1.1em;
+  orphans: 2;
+  widows: 2;
+}
+
+.preset-broadsheet .bs-flow p.bs-li {
+  text-indent: 0;
+  padding-left: 0.95em;
+  position: relative;
+}
+
+.preset-broadsheet .bs-flow p.bs-li::before {
+  content: '';
+  position: absolute;
+  left: 0.05em;
+  top: 0.62em;
+  width: 0.36em;
+  height: 0.36em;
+  background: var(--ink);
+}
+
+.preset-broadsheet .bs-flow p.bs-opener,
+.preset-broadsheet .bs-flow p.bs-first,
+.preset-broadsheet .bs-flow .bs-li + p {
+  text-indent: 0;
+}
+
+/* Lead text: the opening paragraph carries a three-line drop cap. */
+.preset-broadsheet .bs-leadtext p.bs-opener::first-letter {
+  float: left;
+  margin: 0.06em 0.08em 0 -0.02em;
+  font-family: var(--flag);
+  font-weight: 800;
+  font-size: calc(var(--lh) * 3em + 0.1em);
+  line-height: 0.8;
+  color: var(--ink);
+}
+
+@supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+  .preset-broadsheet .bs-leadtext p.bs-opener::first-letter {
+    float: none;
+    margin: 0 0.1em 0 0;
+    font-size: inherit;
+    line-height: inherit;
+    -webkit-initial-letter: 3;
+    initial-letter: 3;
+  }
+}
+
+.preset-broadsheet .bs-leadtext:not(.has-deck) p.bs-opener {
+  font-size: 1.12em;
+  line-height: 1.32;
+}
+
+.preset-broadsheet .bs-videonote {
+  margin-top: 0.4em;
+  font: italic 500 var(--label) / 1.3 var(--sans);
+  color: var(--ink-3);
+  text-indent: 0 !important;
+}
+
+.preset-broadsheet [data-trimmed] .bs-t::after {
+  content: '';
+}
+
+/* Pull quote at the end of the lead story, only where a column has room. */
+.preset-broadsheet .bs-pull {
+  margin: calc(1.3 * var(--u)) 0 0;
+  padding: calc(0.9 * var(--u)) 0 calc(1 * var(--u));
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  break-inside: avoid;
+}
+
+.preset-broadsheet .bs-flow .bs-pull p {
+  font: italic 500 calc(var(--body) * 1.42) / 1.14 var(--serif);
+  letter-spacing: -0.006em;
+  text-align: left;
+  text-indent: -0.4em;
+  padding-left: 0.4em;
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  text-wrap: balance;
+  color: var(--ink);
+}
+
+.preset-broadsheet .bs-flow .bs-pull.is-plain p {
+  text-indent: 0;
+  padding-left: 0;
+}
+
+/* Set inside the story, the quote breaks the text like a picture would. */
+.preset-broadsheet .bs-leadtext .bs-pull {
+  margin-bottom: calc(1.1 * var(--u));
+}
+
+.preset-broadsheet .bs-flow .bs-pull + p {
+  text-indent: 0;
+}
+
+/* Section head inside the columns */
+.preset-broadsheet .bs-flow-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin: calc(1.5 * var(--u)) 0 calc(1 * var(--u));
+  font: 800 var(--label) / 1.2 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  break-after: avoid;
+  break-inside: avoid;
+}
+
+.preset-broadsheet .bs-flow-head::before,
+.preset-broadsheet .bs-flow-head::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--rule);
+}
+
+.preset-broadsheet .bs-flow-head::before {
+  flex: 0 0 1.2em;
+  border-top-width: 3px;
+}
+
+/* Earlier posts */
+.preset-broadsheet .bs-brief + .bs-brief {
+  margin-top: calc(1.05 * var(--u));
+  padding-top: calc(1.05 * var(--u));
+  border-top: 1px solid var(--hair);
+}
+
+.preset-broadsheet .bs-brief-title {
+  margin-bottom: 0.3em;
+  font: 650 calc(1.82 * var(--u)) / 1.1 var(--serif);
+  letter-spacing: -0.006em;
+  text-wrap: balance;
+  hyphens: manual;
+  break-after: avoid;
+  break-inside: avoid;
+}
+
+.preset-broadsheet .bs-brief.is-highlight:not(.is-long) .bs-brief-title {
+  font-size: calc(2.15 * var(--u));
+  font-weight: 700;
+  line-height: 1.06;
+}
+
+.preset-broadsheet .bs-brief.is-highlight .bs-brief-title::before {
+  content: '';
+  display: inline-block;
+  width: 0.42em;
+  height: 0.42em;
+  margin-right: 0.35em;
+  background: var(--accent);
+  vertical-align: 0.1em;
+}
+
+.preset-broadsheet .bs-dl {
+  font: 700 0.8em / 1 var(--sans);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.preset-broadsheet .bs-brief-fig {
+  margin-bottom: calc(0.8 * var(--u));
+  break-inside: avoid;
+}
+
+.preset-broadsheet .bs-brief-fig .bs-imgwrap {
+  aspect-ratio: var(--ar);
+}
+
+.preset-broadsheet .bs-brief-fig figcaption {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35em;
+}
+
+/* --- photographs ---------------------------------------------------------- */
+
+.preset-broadsheet .bs-photocol {
+  grid-column: span var(--photo-cols) / -1;
+  grid-row: 3 / 5;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(1.6 * var(--u));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.preset-broadsheet .bs-imgwrap {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper-deep);
+}
+
+.preset-broadsheet .bs-figure .bs-imgwrap {
+  width: 100%;
+  aspect-ratio: var(--ar);
+}
+
+.preset-broadsheet .bs-imgwrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.04) sepia(0.06);
+  mix-blend-mode: multiply;
+}
+
+.preset-broadsheet .bs-play {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.5em 0.8em 0.5em 0.7em;
+  background: var(--ink);
+  color: var(--paper);
+  font: 700 var(--label) / 1 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.preset-broadsheet .bs-play i {
+  width: 0;
+  height: 0;
+  border-left: 0.75em solid currentColor;
+  border-top: 0.45em solid transparent;
+  border-bottom: 0.45em solid transparent;
+}
+
+.preset-broadsheet .bs-figure figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  column-gap: 1em;
+  row-gap: 0.15em;
+  margin-top: calc(0.6 * var(--u));
+  padding-bottom: calc(0.6 * var(--u));
+  border-bottom: 1px solid var(--hair);
+}
+
+.preset-broadsheet .bs-cap {
+  flex: 1 1 60%;
+  font: italic 400 var(--small) / 1.3 var(--serif);
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.preset-broadsheet .bs-credit {
+  font: 600 calc(var(--label) * 0.92) / 1.3 var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* Rules between the photo column and the text, and before the rail. */
+.preset-broadsheet .bs-photocol::before,
+.preset-broadsheet .bs-rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gap) / -2);
+  border-left: 1px solid var(--hair);
+}
+
+.preset-broadsheet .bs-photocol {
+  overflow: visible;
+  clip-path: inset(0 0 0 calc(var(--gap) / -2 - 1px));
+}
+
+/* --- fact box ------------------------------------------------------------- */
+
+.preset-broadsheet .bs-box {
+  flex: none;
+  padding: calc(1.15 * var(--u)) calc(1.3 * var(--u)) calc(1.3 * var(--u));
+  background: var(--tint);
+  border-top: calc(0.32 * var(--u)) solid var(--ink);
+}
+
+.preset-broadsheet .bs-box-head {
+  margin-bottom: calc(0.8 * var(--u));
+  font: 800 var(--label) / 1 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.preset-broadsheet .bs-box ul {
+  list-style: none;
+  display: grid;
+  gap: calc(0.55 * var(--u));
+}
+
+.preset-broadsheet .bs-box li {
+  position: relative;
+  padding-left: 1.05em;
+  font-size: var(--body);
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+
+.preset-broadsheet .bs-box li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.4em;
+  height: 0.4em;
+  background: var(--accent);
+}
+
+.preset-broadsheet .bs-box.is-intro p {
+  font: italic 400 calc(var(--body) * 1.08) / 1.35 var(--serif);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* --- rail ----------------------------------------------------------------- */
+
+.preset-broadsheet .bs-rail {
+  grid-column: span var(--rail-cols) / -1;
+  position: relative;
+  min-height: 0;
+}
+
+.preset-broadsheet .bs-rail::before {
+  border-left-color: var(--rule);
+}
+
+/* The rail is one stream of sections set in the rail's own columns. */
+.preset-broadsheet .bs-rail-flow {
+  height: 100%;
+  overflow: hidden;
+  column-count: var(--rail-cols);
+  column-gap: var(--gap);
+  column-fill: auto;
+  column-rule: 1px solid var(--hair);
+}
+
+.preset-broadsheet .bs-rail-sec + .bs-rail-sec,
+.preset-broadsheet .bs-rail-flow > .bs-box + .bs-rail-sec {
+  margin-top: calc(1.8 * var(--u));
+}
+
+.preset-broadsheet .bs-rail-flow > .bs-box {
+  break-inside: avoid;
+}
+
+.preset-broadsheet .bs-other,
+.preset-broadsheet .bs-headitem {
+  break-inside: avoid;
+}
+
+.preset-broadsheet .bs-rail-head {
+  padding-top: calc(0.55 * var(--u));
+  margin-bottom: calc(0.3 * var(--u));
+  break-after: avoid;
+  border-top: calc(0.32 * var(--u)) solid var(--ink);
+  font: 800 var(--label) / 1 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.preset-broadsheet .bs-ooklive .bs-rail-head {
+  color: var(--accent);
+  border-top-color: var(--accent);
+}
+
+.preset-broadsheet .bs-other,
+.preset-broadsheet .bs-headitem {
+  padding: calc(0.85 * var(--u)) 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.preset-broadsheet .bs-other:last-child,
+.preset-broadsheet .bs-headitem:last-child {
+  border-bottom: 0;
+}
+
+.preset-broadsheet .bs-other-topic,
+.preset-broadsheet .bs-headitem-sec {
+  margin-bottom: 0.35em;
+  font: 700 var(--label) / 1.15 var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.preset-broadsheet .bs-other-topic .bs-livedot {
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.45em;
+}
+
+.preset-broadsheet .bs-other.is-ended .bs-other-topic {
+  color: var(--ink-3);
+}
+
+.preset-broadsheet .bs-other-title {
+  font: 600 calc(1.6 * var(--u)) / 1.16 var(--serif);
+  letter-spacing: -0.004em;
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.preset-broadsheet .bs-other-meta {
+  margin-top: 0.4em;
+  font: 500 var(--label) / 1.2 var(--sans);
+  color: var(--ink-3);
+}
+
+.preset-broadsheet .bs-headitem-sec {
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.preset-broadsheet .bs-headitem h5 {
+  font: 500 calc(1.48 * var(--u)) / 1.2 var(--serif);
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+/* --- folio ---------------------------------------------------------------- */
+
+.preset-broadsheet .bs-folio {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: calc(1.1 * var(--u));
+  font: 500 var(--label) / 1 var(--sans);
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  border-top: 1px solid var(--rule);
+  margin-bottom: 0;
+}
+
+.preset-broadsheet .bs-folio > span {
+  display: flex;
+  align-items: baseline;
+  gap: 1.1em;
+  max-width: calc(50% - var(--dock-width) / 2 - var(--gap));
+  white-space: nowrap;
+  line-height: 1.3;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.preset-broadsheet .bs-folio-no {
+  font: 700 calc(var(--label) * 1.25) / 1 var(--serif);
+  color: var(--ink);
+}
+
+.preset-broadsheet .bs-folio-topic {
+  font-style: italic;
+  font-family: var(--serif);
+  font-size: calc(var(--label) * 1.15);
+  letter-spacing: 0;
+}
+
+.preset-broadsheet .bs-folio-right > span:last-child {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* --- fresh posts ---------------------------------------------------------- */
+
+.preset-broadsheet .bs-new {
+  display: inline-block;
+  margin-right: 0.5em;
+  padding: 0.2em 0.45em 0.15em;
+  background: var(--accent);
+  color: var(--paper);
+  font: 800 var(--label) / 1 var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  vertical-align: 0.2em;
+}
+
+.preset-broadsheet .bs-kicker .bs-new {
+  vertical-align: baseline;
+}
+
+.preset-broadsheet .is-fresh {
+  animation: bs-ink-in 2.4s ease-out both;
+}
+
+@keyframes bs-ink-in {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: none; }
+}

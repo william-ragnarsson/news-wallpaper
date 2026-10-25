@@ -1,0 +1,460 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* Cover — photo-led magazine cover.
+   One unit, --u, drives every size: 1% of the screen width, capped by height
+   so a 3440×1440 ultrawide sets type like a 2560×1440 screen and spends the
+   extra width on photograph. */
+
+.preset-cover {
+  --u: min(1cqw, 1.6cqh);
+  --pad-x: max(36px, calc(4.4 * var(--u)));
+  --pad-top: calc(var(--safe-top) + max(44px, calc(5.4 * var(--u))));
+  --pad-bottom: calc(var(--safe-bottom) + max(18px, calc(2.2 * var(--u))));
+  --gutter: calc(5 * var(--u));
+  --rail-w: clamp(330px, calc(28 * var(--u)), 700px);
+  --label-lh: max(14.4px, calc(1.224 * var(--u))); /* the kicker's line box */
+
+  --ink: #fbf8f2;
+  --ink-2: rgb(251 248 242 / 0.84);
+  --ink-3: rgb(251 248 242 / 0.66);
+  --ink-4: rgb(251 248 242 / 0.4);
+  --rule: rgb(251 248 242 / 0.3);
+  --live: #ff4a36;
+  --shade: 8 8 11;
+
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Instrument Sans', -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+
+  background: var(--tone-a, #101216);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  font-kerning: normal;
+}
+
+/* layout() drops items with the hidden attribute; keep that stronger than
+   the display values below. */
+.preset-cover [hidden] {
+  display: none !important;
+}
+
+/* --- background ------------------------------------------------------------ */
+
+.preset-cover .cv-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.preset-cover .cv-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--pos, 50% 40%);
+  filter: saturate(0.9) contrast(1.04);
+}
+
+/* No usable photo: a deep tonal ground with the topic set huge above the
+   cover line, like a masthead. layout() fits it into the space it has. */
+.preset-cover .cv-tonal {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(110% 85% at 82% 8%, color-mix(in srgb, var(--tone-b) 92%, white 8%) 0%, transparent 62%),
+    radial-gradient(90% 70% at 0% 100%, color-mix(in srgb, var(--tone-a) 70%, black 30%) 0%, transparent 70%),
+    linear-gradient(160deg, var(--tone-b), var(--tone-a) 70%);
+}
+
+.preset-cover .cv-ghost {
+  --ghost-k: 1;
+  position: absolute;
+  left: calc(var(--pad-x) - 0.05em);
+  right: var(--pad-x);
+  top: calc(var(--pad-top) - 0.1em);
+  margin: 0;
+  font: italic 400 calc(var(--ghost-k) * 17 * var(--u)) / 0.86 var(--serif);
+  letter-spacing: -0.02em;
+  color: rgb(255 255 255 / 0.09);
+  text-wrap: balance;
+  overflow-wrap: normal;
+}
+
+/* Scrims: a veil under the menu bar, a deep eased gradient that rises to
+   just above the text (layout() sets --text-top), and extra weight in the
+   bottom corners where the type sits. The upper frame stays photograph. */
+.preset-cover .cv-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg,
+      rgb(var(--shade) / 0.62) 0,
+      rgb(var(--shade) / 0.44) var(--safe-top),
+      rgb(var(--shade) / 0.24) calc(var(--safe-top) + 4.4 * var(--u)),
+      rgb(var(--shade) / 0.08) calc(var(--safe-top) + 8 * var(--u)),
+      rgb(var(--shade) / 0) calc(var(--safe-top) + 12 * var(--u))),
+    radial-gradient(70% 75% at 0% 100%, rgb(var(--shade) / 0.5), rgb(var(--shade) / 0) 70%),
+    radial-gradient(48% 80% at 100% 100%, rgb(var(--shade) / 0.58), rgb(var(--shade) / 0) 72%);
+}
+
+.preset-cover .cv-scrim::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: max(0px, calc(var(--text-top, 45cqh) - 16 * var(--u)));
+  background: linear-gradient(0deg,
+    rgb(var(--shade) / 0.9) 0%,
+    rgb(var(--shade) / 0.85) 18%,
+    rgb(var(--shade) / 0.74) 34%,
+    rgb(var(--shade) / 0.6) 48%,
+    rgb(var(--shade) / 0.44) 61%,
+    rgb(var(--shade) / 0.27) 73%,
+    rgb(var(--shade) / 0.12) 85%,
+    rgb(var(--shade) / 0.03) 94%,
+    rgb(var(--shade) / 0) 100%);
+}
+
+.preset-cover:not(.is-photo) .cv-scrim {
+  opacity: 0.55;
+}
+
+/* Fine print grain: hides upscaling softness and gives the photo some paper. */
+.preset-cover .cv-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* --- folio: the cover's top line ------------------------------------------- */
+
+.preset-cover .cv-folio {
+  position: absolute;
+  left: var(--pad-x);
+  right: var(--pad-x);
+  top: calc(var(--safe-top) + max(12px, calc(1.5 * var(--u))));
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2em;
+  padding-bottom: calc(0.7 * var(--u));
+  border-bottom: 1px solid var(--rule);
+  font: 600 max(11px, calc(0.78 * var(--u))) / 1 var(--sans);
+  font-stretch: 85%;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-2);
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.5);
+}
+
+.preset-cover .cv-source {
+  font-weight: 500;
+}
+
+/* --- stage: cover line + sell-lines ----------------------------------------- */
+
+.preset-cover .cv-stage {
+  position: absolute;
+  left: var(--pad-x);
+  right: var(--pad-x);
+  top: var(--pad-top);
+  bottom: var(--pad-bottom);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  column-gap: var(--gutter);
+}
+
+/* Nothing earlier to sell: the cover line gets the full width. */
+.preset-cover .cv-stage:not(:has(> .cv-rail:not([hidden]))) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.preset-cover .cv-main,
+.preset-cover .cv-rail {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.preset-cover .cv-main-inner {
+  max-width: calc(66 * var(--u));
+}
+
+.preset-cover .cv-kicker {
+  display: flex;
+  align-items: center;
+  gap: calc(0.9 * var(--u));
+  margin: 0 0 calc(1.5 * var(--u));
+  font: 650 max(12px, calc(1.02 * var(--u))) / var(--label-lh) var(--sans);
+  font-stretch: 80%;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.45);
+}
+
+.preset-cover .cv-kicker-rule {
+  flex: none;
+  width: calc(2.6 * var(--u));
+  height: max(2px, calc(0.16 * var(--u)));
+  background: var(--live);
+}
+
+.preset-cover.is-ended .cv-kicker-rule {
+  background: var(--ink-3);
+}
+
+.preset-cover .cv-headline {
+  --hl-k: 1;
+  margin: 0;
+  max-width: 13.4em;
+  font: 400 calc(var(--hl-k) * 6.4 * var(--u)) / 0.95 var(--serif);
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  text-wrap: balance;
+  overflow-wrap: normal;
+  hyphens: manual;
+  text-shadow: 0 0.02em 0.35em rgb(0 0 0 / 0.32);
+}
+
+.preset-cover .cv-headline.is-hung {
+  text-indent: -0.36em;
+}
+
+.preset-cover .cv-headline em {
+  font-style: italic;
+}
+
+.preset-cover .cv-dek {
+  margin: calc(1.6 * var(--u)) 0 0;
+  max-width: 44em;
+  font: 400 max(14px, calc(1.18 * var(--u))) / 1.42 var(--sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.5);
+}
+
+.preset-cover .cv-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: calc(1.2 * var(--u));
+  row-gap: 0.4em;
+  margin: calc(1.7 * var(--u)) 0 0;
+  font: 500 max(12px, calc(0.95 * var(--u))) / 1.2 var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.45);
+}
+
+.preset-cover .cv-meta > span + span::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin-right: calc(1.2 * var(--u));
+  border-radius: 50%;
+  background: var(--ink-3);
+  vertical-align: 0.24em;
+}
+
+.preset-cover .cv-meta .cv-live::before,
+.preset-cover .cv-meta .cv-live + span::before {
+  display: none;
+}
+
+.preset-cover .cv-meta-time {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.preset-cover .cv-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.42em 0.8em 0.4em 0.7em;
+  border-radius: 999px;
+  background: var(--live);
+  font-weight: 700;
+  font-stretch: 85%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: none;
+}
+
+.preset-cover .cv-live.is-off {
+  background: rgb(20 20 24 / 0.5);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.preset-cover .cv-live-dot {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: #fff;
+  animation: cv-pulse 3.2s ease-in-out infinite;
+}
+
+.preset-cover .cv-live.is-off .cv-live-dot {
+  background: var(--ink-3);
+  animation: none;
+}
+
+/* --- sell-lines --------------------------------------------------------------
+   Like the lines down the side of a cover: a small heading on the kicker's
+   line, then short serif lines with their time hung in a narrow column. */
+
+.preset-cover .cv-rail {
+  align-self: end;
+  max-height: 100%;
+}
+
+.preset-cover .cv-rail-inner {
+  flex: none;
+}
+
+.preset-cover .cv-rail-label {
+  margin: 0;
+  padding-bottom: calc(0.7 * var(--u));
+  border-bottom: 1px solid var(--rule);
+  font: 650 max(11px, calc(0.8 * var(--u))) / var(--label-lh) var(--sans);
+  font-stretch: 85%;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.55);
+}
+
+.preset-cover .cv-sells {
+  --sell-gap: calc(1.15 * var(--u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: calc(1.1 * var(--u));
+}
+
+.preset-cover .cv-sell {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+  padding-top: calc(var(--sell-gap) + var(--sell-extra, 0px));
+}
+
+.preset-cover .cv-sell-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font: 650 max(11px, calc(0.82 * var(--u))) / 1.25 var(--sans);
+  font-stretch: 85%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.55);
+}
+
+.preset-cover .cv-sell-time {
+  position: relative;
+}
+
+.preset-cover .cv-sell-day {
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+/* VRT marked it as important: a red dot hung in front of the time. */
+.preset-cover .cv-sell.is-highlight .cv-sell-time {
+  color: var(--ink);
+}
+
+.preset-cover .cv-sell.is-highlight .cv-sell-time::before {
+  content: '';
+  position: absolute;
+  right: calc(100% + 0.55em);
+  top: 50%;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 0 1.5px rgb(var(--shade) / 0.35);
+  transform: translateY(-55%);
+}
+
+.preset-cover .cv-sell-title {
+  font: 400 max(17px, calc(1.5 * var(--u))) / 1.13 var(--serif);
+  color: var(--ink);
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  /* room for the serif's descenders inside the clip; layout() already cut
+     the text to whole lines, so no fourth line can show here */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.5);
+}
+
+.preset-cover .cv-sell-title.is-untitled {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+/* --- photo credit along the right edge -------------------------------------- */
+
+.preset-cover .cv-credit {
+  position: absolute;
+  right: calc(var(--pad-x) * 0.5 - 0.6em);
+  bottom: var(--pad-bottom);
+  max-height: 46cqh;
+  margin: 0;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  overflow: hidden;
+  font: 500 max(10px, calc(0.68 * var(--u))) / 1.2 var(--sans);
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
+}
+
+/* --- motion: only new posts arrive, and the live dot breathes ---------------- */
+
+.preset-cover .is-fresh {
+  animation: cv-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes cv-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+}
+
+@keyframes cv-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preset-cover .is-fresh,
+  .preset-cover .cv-live-dot {
+    animation: none;
+  }
+}

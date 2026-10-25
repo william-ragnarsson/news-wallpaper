@@ -1,0 +1,307 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Instrument+Sans:wght@400..600&display=swap');
+
+/* Ambient: dark colour field from the lead photo, one quiet block bottom-left. */
+
+.preset-ambient .aw {
+  --ink: #f3efe8;
+  --ink-2: rgb(243 239 232 / 0.64);
+  --ink-3: rgb(243 239 232 / 0.5);
+  --hair: rgb(243 239 232 / 0.2);
+  --live: #ff6a55;
+
+  /* Type scale follows the short side so 2560 and 3440 ultrawide match. */
+  --hl: clamp(34px, 4.4cqmin, 68px);
+  --dek: clamp(15px, 1.7cqmin, 25px);
+  --small: clamp(12px, 1.2cqmin, 17px);
+  --pad-x: calc(var(--hl) * 1.6);
+  --gap-top: calc(var(--hl) * 1.2);
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #0b0c0f;
+  color: var(--ink);
+  font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- field ---------------------------------------------------------------- */
+
+.preset-ambient .aw-field {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(70% 90% at 82% 18%, hsl(var(--hue) 38% 20%) 0%, transparent 70%),
+    radial-gradient(80% 80% at 12% 95%, hsl(calc(var(--hue) + 50) 30% 12%) 0%, transparent 70%),
+    linear-gradient(160deg, hsl(var(--hue) 22% 11%), #08090b 70%);
+}
+
+.preset-ambient .aw-photo {
+  position: absolute;
+  inset: calc(var(--blur) * -3);
+  width: calc(100% + var(--blur) * 6);
+  height: calc(100% + var(--blur) * 6);
+  object-fit: cover;
+  filter: blur(var(--blur)) saturate(1.9) brightness(0.4) contrast(1.06);
+}
+
+.preset-ambient .aw-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    /* settle the lower-left corner where the type sits */
+    radial-gradient(120% 90% at 0% 100%, rgb(6 7 9 / 0.78) 0%, rgb(6 7 9 / 0.35) 45%, transparent 75%),
+    /* menu bar band */
+    linear-gradient(to bottom, rgb(6 7 9 / 0.55), rgb(6 7 9 / 0.15) 18%, transparent 34%),
+    /* overall vignette */
+    radial-gradient(140% 120% at 60% 40%, transparent 40%, rgb(4 5 7 / 0.55) 100%);
+}
+
+.preset-ambient .aw-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- block ---------------------------------------------------------------- */
+
+.preset-ambient .aw-block {
+  position: absolute;
+  left: var(--pad-x);
+  bottom: calc(var(--safe-bottom) + var(--hl) * 1.25);
+  width: min(calc(var(--hl) * 14.5), 100cqw - var(--pad-x) * 2);
+}
+
+.preset-ambient .aw-kicker {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  margin: 0 0 calc(var(--small) * 1.7);
+  font-size: var(--small);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.preset-ambient .aw-topic,
+.preset-ambient .aw-when {
+  display: inline-flex;
+  align-items: center;
+}
+
+.preset-ambient .aw-topic {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-ambient .aw-topic::before,
+.preset-ambient .aw-when::before {
+  content: '';
+  flex: none;
+  width: 1px;
+  height: 1em;
+  margin: 0 1.1em;
+  background: currentColor;
+  opacity: 0.4;
+}
+
+.preset-ambient .aw-when {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.preset-ambient .aw-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+  color: var(--ink);
+}
+
+.preset-ambient .aw-dot {
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 0 0.28em rgb(255 106 85 / 0.16), 0 0 1.2em rgb(255 106 85 / 0.6);
+  animation: aw-pulse 4s ease-in-out infinite;
+  animation-delay: var(--pulse-delay);
+}
+
+.preset-ambient .is-ended .aw-state {
+  color: var(--ink-2);
+}
+
+.preset-ambient .is-ended .aw-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+  animation: none;
+}
+
+.preset-ambient .aw-headline {
+  margin: 0 0 0 -0.5em;
+  padding-left: 0.5em;
+  font-family: 'Newsreader', Georgia, serif;
+  font-optical-sizing: auto;
+  font-size: var(--hl);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.preset-ambient .aw-headline.is-measuring {
+  display: block;
+  -webkit-line-clamp: none;
+}
+
+.preset-ambient .aw-hang {
+  margin-left: -0.42em;
+}
+
+.preset-ambient .aw-dek {
+  margin: calc(var(--dek) * 0.9) 0 0;
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: var(--dek);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- footer: activity trace, caption, credit ------------------------------ */
+
+.preset-ambient [hidden] {
+  display: none !important;
+}
+
+.preset-ambient .aw-foot {
+  margin-top: calc(var(--hl) * 0.9);
+  font-size: var(--small);
+}
+
+.preset-ambient .aw-axis {
+  position: relative;
+  height: 2em;
+  margin-bottom: 1.5em;
+}
+
+/* the baseline fades in from the left: time runs on before the span */
+.preset-ambient .aw-axis::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--hair) 18%);
+}
+
+/* "now" sits at the right end of a live trace */
+.preset-ambient .is-live .aw-axis::after {
+  content: '';
+  position: absolute;
+  right: -1.5px;
+  bottom: -1.5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
+.preset-ambient .aw-tick {
+  position: absolute;
+  bottom: 1px;
+  width: 1px;
+  height: 0.9em;
+  background: var(--ink-2);
+}
+
+.preset-ambient .aw-tick.is-hl {
+  height: 1.3em;
+  background: rgb(243 239 232 / 0.8);
+}
+
+.preset-ambient .aw-tick.is-latest {
+  height: 1.7em;
+  background: var(--ink);
+}
+
+.preset-ambient .is-live .aw-tick.is-latest::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -0.25em;
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--live);
+  box-shadow: 0 0 0.8em rgb(255 106 85 / 0.7);
+}
+
+.preset-ambient .aw-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 2em;
+  margin: 0;
+  line-height: 1.2;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.preset-ambient .aw-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-ambient .aw-credit {
+  flex: none;
+  margin-left: auto;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+/* --- motion --------------------------------------------------------------- */
+
+@keyframes aw-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes aw-arrive {
+  from { opacity: 0; transform: translateY(0.4em); }
+  to { opacity: 1; transform: none; }
+}
+
+.preset-ambient .aw-block.is-fresh .aw-headline,
+.preset-ambient .aw-block.is-fresh .aw-dek {
+  animation: aw-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.preset-ambient .aw-block.is-fresh .aw-dek {
+  animation-delay: 0.25s;
+}
+
+.preset-ambient .aw-tick.is-fresh {
+  animation: aw-arrive 1.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preset-ambient * {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "news-wallpaper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live news as a desktop wallpaper. Browser prototype of the macOS app.",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "snap": "sh tools/snap.sh",
+    "check": "node tools/check-feeds.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
