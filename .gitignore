@@ -1,1 +1,5 @@
 snapshots/
+settings.json
+settings.json.tmp
+app/.build/
+app/build/

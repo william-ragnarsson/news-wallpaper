@@ -49,6 +49,8 @@ export default {
     const today = dayKey(ctx.now);
     const nowMs = ctx.now.getTime();
     const blogTime = focus.updatedAt ?? lead?.timestamp ?? focus.startedAt ?? nowMs;
+    // When the news was fetched, as opposed to when the liveblog last posted.
+    const refreshed = Date.parse(data.generatedAt);
 
     const stamp = ts => {
       if (!Number.isFinite(ts)) return '';
@@ -76,9 +78,9 @@ export default {
       h('div', { class: cls('w-status', live ? 'is-live' : 'is-ended') }, h('i', { class: 'w-dot' }), h('span', null, live ? 'live' : 'afgelopen')),
       h('div', { class: 'w-topic' }, focus.topic || focus.title),
       h('div', { class: 'w-meta' }, h('b', null, String(count)), h('span', null, count === 1 ? 'bericht' : 'berichten')),
-      h('div', { class: 'w-meta' },
-        h('span', null, live ? 'bijgewerkt' : 'laatste update'),
-        timeEl(h, stamp(blogTime), 'w-meta-time'),
+      Number.isNaN(refreshed) ? null : h('div', { class: 'w-meta' },
+        h('span', null, 'bijgewerkt'),
+        timeEl(h, ctx.time(refreshed), 'w-meta-time'),
       ),
       h('div', { class: 'w-fill' }),
       focus.startedAt ? h('div', { class: 'w-meta w-since' }, h('span', null, 'liveblog sinds'), h('b', null, ctx.date(focus.startedAt, 'short'))) : null,
@@ -111,7 +113,7 @@ export default {
       h('div', { class: 'w-lead-stamp' },
         timeEl(h, ctx.time(lead ? lead.timestamp : blogTime), 'w-lead-time'),
         h('div', { class: 'w-lead-kick' },
-          h('span', { class: 'w-kick-label' }, lead ? (live ? 'laatste update' : 'laatste bericht') : 'bijgewerkt'),
+          h('span', { class: 'w-kick-label' }, lead ? (live ? 'laatste update' : 'laatste bericht') : 'laatste update'),
           h('span', null, ctx.ago(lead ? lead.timestamp : blogTime, nowMs)),
           lead?.author ? h('span', { class: 'w-kick-by' }, `door ${lead.author}`) : null,
         ),

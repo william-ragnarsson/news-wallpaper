@@ -10,8 +10,9 @@
 //   ──────────────────────────────────────────────────────────────────
 //   LIVE  running liveblogs, one line
 //
-// Stories keep VRT's order: top[0] is the lead, then the side column, then
-// the briefs. Column counts come from the screen (see columns()); type scales
+// Stories keep the front page's order: top[0] is the lead (the first liveblog
+// picked on Customize, else VRT's own lead), then the side column, then the
+// briefs. Column counts come from the screen (see columns()); type scales
 // with cqmin in preset.css. layout() only drops what does not fit.
 
 const NAMEPLATE = 'Het Nieuws';
@@ -29,9 +30,10 @@ export default {
     const [lead, ...rest] = top;
     const side = rest.slice(0, cols.side * SIDE_ROWS);
     const briefs = rest.slice(side.length, side.length + cols.briefs);
-    // A liveblog can reach us under two URLs (VRT renames the slug), so match titles too.
-    const shown = new Set([lead, ...side, ...briefs].filter(Boolean).flatMap(s => [s.id, s.title]));
-    const live = (data.live ?? []).filter(s => s?.title && !shown.has(s.id) && !shown.has(s.title)).slice(0, cols.live);
+    // A liveblog can reach us under two URLs (VRT renames the slug), so match
+    // its number (storyKey) and the title too.
+    const shown = new Set([lead, ...side, ...briefs].filter(Boolean).flatMap(s => [storyKey(s), s.title]));
+    const live = (data.live ?? []).filter(s => s?.title && !shown.has(storyKey(s)) && !shown.has(s.title)).slice(0, cols.live);
 
     root.append(h('div', { class: `ev-page${cols.side > 1 ? ' is-wide' : ''}`, '--brief-cols': cols.briefs },
       masthead(data, ctx),
@@ -164,6 +166,11 @@ function kicker(story, ctx, { time = true } = {}) {
     story.section ? h('span', { class: 'ev-section' }, story.section) : null,
     time && story.time && !isLive ? h('span', { class: 'ev-time' }, stamp(story.time, ctx)) : null,
   );
+}
+
+// The ~number at the end of a story's URL, which stays when the slug changes.
+function storyKey(s) {
+  return s.id?.match(/~(\d+)\/?$/)?.[1] ?? s.id;
 }
 
 // Today: newsroom time (21u12). Older: VRT-style relative date.

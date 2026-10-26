@@ -2,7 +2,12 @@
 
 A preset turns the normalized news data into a full-screen desktop wallpaper.
 The host (`public/app.js`) fetches data, loads the preset, and calls it again
-whenever data changes, the minute ticks over, or the screen size changes.
+whenever data changes, the minute ticks over, or the screen size changes. It
+also follows the settings picked on the Customize page (`/customize/`): when
+they change it switches to the picked preset unless the URL pins one
+(`?preset=`), follows the first picked liveblog unless the URL pins one
+(`?follow=`), and fetches again and re-renders at once. A URL that pins both
+(tools/snap.sh) does not listen for changes.
 
 Each preset lives in its own folder and is registered in `index.js`, where
 `data` says which payload it gets: `'front'` (the front page, below) or
@@ -60,16 +65,31 @@ with the newest stories per section and the running liveblogs. A story is in
 `top` or in one section, never both; `live` and `latest` may repeat them.
 Titles and summaries are trimmed plain text.
 
+The settings picked on Customize shape it, and a preset keeps their order:
+
+- `top` starts with the liveblogs picked there (`featured: true`, the first
+  one is the lead), then VRT's front page follows. Without picks, `top[0]` is
+  VRT's own lead. A picked liveblog that is live shows its Live mark like any
+  other.
+- `sections` are the ones picked there, in the order picked: any of the
+  section streams, possibly none. Show them in that order; do not sort them or
+  assume a fixed set. Leave out a section with no stories.
+- `live` is empty when "other liveblogs" is off there (the picked ones already lead `top`).
+- A liveblog in `top` can also be in `live` and `latest`. Its URL slug follows
+  its headline, so the same blog can come with two ids: match it by the number
+  at the end of its URL (`…~1792507723130`), not only by `id`.
+
 ```js
 {
   source: { id: 'vrt-nws', name: 'VRT NWS', language: 'nl', homepage },
   generatedAt: '2026-10-25T21:44:05.451Z',
-  top: Story[],             // the front page in VRT's order: top[0] is the lead (about 40)
-  sections: [{              // Binnenland, Buitenland, Politiek, Economie, Sport, Cultuur, Wetenschap
+  top: Story[],             // the picked liveblogs, then the front page in VRT's order: top[0] is the lead (about 40)
+  sections: [{              // in the order picked on Customize (default: Binnenland, Buitenland, Politiek,
+                            // Economie, Sport, Cultuur, Wetenschap); can be empty
     id: 'binnenland', name: 'Binnenland',
     stories: Story[],       // newest first, up to 6; most have no summary
   }],
-  live: Story[],            // running liveblogs, latest activity first
+  live: Story[],            // running liveblogs, latest activity first; empty when "other liveblogs" is off
   latest: Story[],          // the whole site, newest first (20)
 }
 
@@ -83,6 +103,8 @@ Story = {
   time,                     // publishedAt; for a liveblog its latest post
   // kind 'liveblog' only:
   live: true, postCount: 339, startedAt,
+  featured: true,           // only on liveblogs picked on Customize, at the start of `top`;
+                            // their summary is the latest post ("post title: first paragraph")
   // kind 'video' only:
   durationSec: 34,
 }
@@ -155,7 +177,8 @@ Block =
 ```
 
 Live data: `curl localhost:4174/api/vrt-nws/wallpaper` (add `?follow=<id>` to
-pick a liveblog; ids are in `liveblogs[].id`).
+pick a liveblog; ids are in `liveblogs[].id`). The host follows the liveblog in
+the page's `?follow=`, else the first one picked on Customize, else `auto`.
 
 ## Designing for a wallpaper
 

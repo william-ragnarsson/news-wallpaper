@@ -113,9 +113,13 @@ export default {
       : null;
 
     // --- frame --------------------------------------------------------------
+    // When the news was fetched; the meta line gives the update's own time.
+    const refreshed = Date.parse(data.generatedAt);
     const folio = h('header', { class: 'cv-folio' },
       h('span', { class: 'cv-folio-date' }, ctx.date(ctx.now, 'long')),
-      h('span', { class: 'cv-source' }, 'VRT NWS'),
+      h('span', { class: 'cv-source' },
+        Number.isNaN(refreshed) ? null : h('span', { class: 'cv-updated' }, 'Bijgewerkt ', h('span', { class: 'cv-time' }, ctx.time(refreshed))),
+        'VRT NWS'),
     );
 
     const credit = photo ? photoCredit(photo.image) : null;

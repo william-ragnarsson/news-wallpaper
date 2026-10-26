@@ -158,6 +158,15 @@
   font-weight: 500;
 }
 
+.preset-cover .cv-updated {
+  margin-right: 2em;
+}
+
+/* "14u16", not "14U16". */
+.preset-cover .cv-time {
+  text-transform: none;
+}
+
 /* --- stage: cover line + sell-lines ----------------------------------------- */
 
 .preset-cover .cv-stage {

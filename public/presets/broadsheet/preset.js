@@ -39,7 +39,7 @@ export default {
       '--photo-cols': geo.photo,
       '--flow-cols': geo.lead - geo.photo,
     },
-      masthead(focus, posts, ctx),
+      masthead(focus, posts, Date.parse(data.generatedAt), ctx),
       h('main', { class: 'bs-body' },
         leadPackage(focus, posts, photo, geo, ctx),
         rail(data, focus, photo, geo, ctx),
@@ -105,14 +105,14 @@ function geometry(screen, photo) {
 // ---------------------------------------------------------------------------
 // Masthead
 
-function masthead(focus, posts, ctx) {
+// `refreshed` is when the news was fetched; the ears give the liveblog's own times.
+function masthead(focus, posts, refreshed, ctx) {
   const { h } = ctx;
   const live = focus.status === 'live';
   const now = ctx.now.getTime();
   const started = focus.startedAt || null;
   const last = focus.updatedAt || posts[0]?.timestamp || now;
   const day = started ? Math.max(1, Math.floor((startOfDay(now) - startOfDay(started)) / DAY) + 1) : null;
-  const updated = stamp(last, ctx);
   const newest = posts[0]?.timestamp ?? last;
   const count = focus.postCount ?? posts.length;
   const since = started ? ctx.date(started, 'daymonth') : null;
@@ -142,7 +142,8 @@ function masthead(focus, posts, ctx) {
     h('div', { class: 'bs-dateline' },
       h('span', { class: 'bs-dateline-date' }, cap(ctx.date(ctx.now, 'long'))),
       h('span', { class: 'bs-dateline-mid' },
-        live ? `Liveblog · bijgewerkt ${updated}` : `Einde liveblog · laatste update ${updated}`),
+        [live ? 'Liveblog' : 'Einde liveblog', Number.isNaN(refreshed) ? null : `bijgewerkt ${ctx.time(refreshed)}`]
+          .filter(Boolean).join(' · ')),
       h('span', { class: 'bs-source' }, 'Bron: VRT NWS'),
     ),
   );
@@ -1016,13 +1017,6 @@ function stripFollow(text) {
   return String(text || '')
     .replace(/\s*(Volg|Lees)[^.]*?(liveblog|hier)[^.]*\.?\s*$/i, '')
     .trim();
-}
-
-function stamp(ts, ctx) {
-  const now = ctx.now.getTime();
-  if (sameDay(ts, now)) return ctx.time(ts);
-  if (sameDay(ts, now - DAY)) return `gisteren ${ctx.time(ts)}`;
-  return `${ctx.date(ts, 'short')} ${ctx.time(ts)}`;
 }
 
 function sameDay(a, b) {

@@ -11,6 +11,7 @@ integrations/
   outlets/index.mjs    the registry: one import per outlet
   outlets/<id>.mjs     one outlet: its streams and quirk fixes
   vrt-nws.mjs          VRT's web backend: front page, liveblogs, wallpaper payload
+  frontpage.mjs        the front-page payload with the settings applied; the options to pick from
   lib/feed.mjs         RSS 2.0 / RDF / Atom reader and normalizeEntry()
   lib/http.mjs         fetch with charset handling, user agents, in-memory cache
   lib/xml.mjs          small XML parser and query helpers
@@ -28,13 +29,106 @@ Served by `server.mjs` (`npm run dev`, port 4174).
 | `GET /api/outlets/:outlet/streams/:stream` | a `StreamPayload`; add `?raw=1` for each item's source |
 | `GET /api/outlets/:outlet/health` | a `HealthReport` for that outlet's listed streams |
 | `GET /api/health` | a `HealthReport` for every outlet |
+| `GET /api/vrt-nws/frontpage` | the front page for the `'front'` designs, with the `Settings` applied (see below; shape in `public/presets/README.md`) |
+| `GET /api/settings` | the `Settings` |
+| `PATCH /api/settings` | the new `Settings`; the body is a JSON object with any of `preset`, `liveblogs`, `otherLiveblogs`, `sections`; only from this Mac (`localhost`), 403 otherwise |
+| `GET /api/settings/options` | `SettingsOptions`: what the Customize page picks from |
+| `GET /api/settings/events` | server-sent events: `settings` with the `Settings` on connect and after every change |
 
 Errors come back as `{ error }` with the upstream's status where it makes sense:
 404 for an unknown outlet or stream, 502 when the upstream answered with
-something that is not a feed, 504 when it did not answer.
+something that is not a feed, 504 when it did not answer. A known route asked
+with another method gets 405.
+
+`PATCH /api/settings` saves all or nothing: 400 for invalid JSON, an unknown
+key or an invalid value, 415 when the body is not `application/json`, 413 for a
+body over 10 kB.
 
 `npm run check` runs the health report from the command line and exits non-zero
 when a stream fails (see `tools/check-feeds.mjs`).
+
+## Wallpaper settings
+
+What the wallpaper shows, picked on the Customize page (`/customize/`).
+`settings.mjs` (repo root) keeps them in `settings.json` next to it, which is
+gitignored. A missing file means the defaults; a field that is no longer valid
+(a preset or section that was removed) falls back to its default. Saves run one
+at a time and replace the file in one step (`settings.json.tmp`, then a rename).
+
+### Settings
+
+```js
+{
+  preset: 'newsprint',           // a preset id from public/presets/index.js
+  liveblogs: ['1792507723130'],  // VRT liveblog ids (strings of digits) that lead the front page,
+                                 // in order: the first is the lead story; at most 3, no repeats
+  otherLiveblogs: true,          // false: the front page's `live` is empty
+  sections: ['binnenland', …],   // section stream ids below the front page, in order; none to all
+  updatedAt: '2026-10-26T16:29:29.263Z' | null,  // ISO time of the last save; null for the defaults
+}
+```
+
+Defaults: `preset: 'newsprint'`, `liveblogs: []`, `otherLiveblogs: true`,
+`sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`.
+
+`PATCH /api/settings` takes any of the first four fields; each one sent
+replaces the saved value (arrays whole), and the server sets `updatedAt`. A
+liveblog id matches the stream `liveblog-<id>` of outlet `vrt-nws`; a section id
+is that outlet's stream of the same id.
+
+### SettingsOptions
+
+```js
+{
+  presets: [{                    // public/presets/index.js, in order
+    id: 'newsprint', name: 'Newsprint', description: '…',
+    data: 'front',               // a front-page design (/api/vrt-nws/frontpage); absent for
+                                 // the liveblog designs (/api/vrt-nws/wallpaper)
+    sections: true,              // front-page designs that show `sections`; absent otherwise
+    live: true,                  // front-page designs that list the running liveblogs (`live`)
+  }],
+  sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // every section stream, catalog order
+  liveblogs: [{                  // every liveblog in VRT's feed, live first, then picked ones that left it
+    id: '1792507723130',
+    title: '…',
+    section: 'Binnenland' | null,
+    live: true | false | null,   // null when the liveblog's own data could not be loaded
+    updatedAt: 1793029328467 | null,  // epoch ms of the latest post
+    postCount: 82 | null,
+    url: 'https://…' | null,
+    error: '…',                  // only when a picked liveblog could not be loaded
+  }],
+  maxLiveblogs: 3,
+}
+```
+
+### Events
+
+`GET /api/settings/events` is a `text/event-stream`: `retry: 2000`, then an
+event `settings` with the `Settings` as JSON right after connecting and again
+after every change. A `: ping` comment every 30 s keeps the connection open.
+`EventSource` reconnects by itself after a server restart and gets the current
+settings again on connect.
+
+```js
+new EventSource('/api/settings/events').addEventListener('settings', e => apply(JSON.parse(e.data)));
+```
+
+### The front page with the settings applied
+
+`GET /api/vrt-nws/frontpage` reads the settings on every request:
+
+- `top` starts with the picked liveblogs, in order, as stories with
+  `featured: true` (kind `liveblog` with `live`, `postCount`, `startedAt`; the
+  `summary` is the latest post as "title: first paragraph"), then VRT's own
+  front-page order, without the picked ones (matched by liveblog id, since a
+  liveblog's URL follows its headline). A picked liveblog that fails to load
+  is left out.
+- `sections` come in the settings order, each with up to 6 stories not already
+  in `top` or an earlier section. A section that fails to load is left out.
+- `live` is empty when `otherLiveblogs` is false. The designs leave liveblogs
+  already on the page out of it, so the picked ones never show there anyway.
+- `preset` does not change the payload: the wallpaper page reads it.
 
 ## Shapes
 

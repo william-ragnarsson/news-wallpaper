@@ -10,7 +10,8 @@
 //   ─────────────────────────────────────────────────────────────────
 //   ● LIVE  the other running liveblogs, on one line
 //
-// VRT's order is kept: top[0] is the lead, then the tiers read left to right.
+// The front page's order is kept: top[0] is the lead (the first liveblog picked
+// on Customize, else VRT's own lead), then the tiers read left to right.
 // Type scales with the screen's short side, so a wider screen simply holds
 // more columns. layout() hides whole stories that do not fit, never half a line.
 

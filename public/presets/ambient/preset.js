@@ -52,7 +52,7 @@ export default {
         ),
         h('h1', { class: 'aw-headline' }, hang(smarten(title), h)),
         deks.length ? h('p', { class: 'aw-dek', dataset: { options: JSON.stringify(deks) } }, deks[0]) : null,
-        footer(blog, posts, live, now, ctx),
+        footer(blog, posts, live, now, Date.parse(data?.generatedAt), ctx),
       ),
     ));
   },
@@ -230,9 +230,9 @@ function hueOf(str) {
 
 // ---------------------------------------------------------------------------
 // Footer: a hairline tick per update over a recent span, one quiet caption,
-// and the source credit (always present).
+// when the news was fetched, and the source credit (always present).
 
-function footer(blog, posts, live, now, ctx) {
+function footer(blog, posts, live, now, refreshed, ctx) {
   const { h } = ctx;
   let axis = null;
   let note = null;
@@ -284,6 +284,7 @@ function footer(blog, posts, live, now, ctx) {
     axis,
     h('p', { class: 'aw-caption' },
       note ? h('span', { class: 'aw-note' }, note) : null,
+      Number.isNaN(refreshed) ? null : h('span', { class: 'aw-updated' }, `bijgewerkt ${ctx.time(refreshed)}`),
       h('span', { class: 'aw-credit' }, 'VRT NWS'),
     ),
   );
