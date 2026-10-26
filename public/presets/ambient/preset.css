@@ -275,6 +275,15 @@
   letter-spacing: 0.16em;
 }
 
+.preset-ambient .aw-updated {
+  flex: none;
+  margin-left: auto;
+}
+
+.preset-ambient .aw-updated + .aw-credit {
+  margin-left: 0;
+}
+
 /* --- motion --------------------------------------------------------------- */
 
 @keyframes aw-pulse {
