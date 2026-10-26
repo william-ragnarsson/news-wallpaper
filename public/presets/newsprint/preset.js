@@ -7,8 +7,8 @@
 //             with a boxed "Nu live" panel beside a big photo; one secondary
 //             story per remaining column (photo, headline, summary)
 //   index     one row: each section with its newest headline
-//   (blank)   bare paper at the bottom for the Dock, and down the right edge
-//             for the files on the desktop
+//   (blank)   bare paper at the bottom for the Dock, down the right edge for
+//             the files on the desktop, and as much down the left to center it
 //
 // The number of columns comes from the screen (geometry()); type scales with
 // cqmin. layout() shrinks the lead headline to three lines and gives each
@@ -75,7 +75,8 @@ export default {
 // --- geometry ---------------------------------------------------------------
 
 // Columns of about 19 ems of body text: 5 on a MacBook, 6 at 2560, 8 on an
-// ultrawide. They share the width left of the desktop files (safe.right).
+// ultrawide, counted on the width left of the desktop files (safe.right). The
+// page is centered, with as much paper on the left, which only narrows them.
 function geometry({ width, height }, safe) {
   const unit = Math.min(width, height) / 100;
   const text = Math.min(22, Math.max(12.5, 1.45 * unit));
@@ -85,7 +86,7 @@ function geometry({ width, height }, safe) {
   const photo = Math.min(lead - 1, 3);
   const mx = Math.round(Math.max(24, width * 0.022));
   const gap = Math.round(Math.max(16, 1.9 * unit));
-  const colW = (width - safe.right - 2 * mx - (cols - 1) * gap) / cols;
+  const colW = (width - 2 * (safe.right + mx) - (cols - 1) * gap) / cols;
   const photoH = Math.round(Math.min((photo * (colW + gap) - gap) * 9 / 16, height * 0.4));
   return { cols, seconds, lead, photo, photoH, side: lead - photo, mx, gap, colW };
 }

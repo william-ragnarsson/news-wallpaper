@@ -49,8 +49,9 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   row-gap: calc(1.5 * var(--u));
-  /* The right margin also clears the desktop's files and folders. */
-  padding: calc(var(--safe-top) + 1.3 * var(--u)) calc(var(--mx) + var(--safe-right)) var(--blank) var(--mx);
+  /* The right margin clears the desktop's files and folders; the left one
+     matches it, so the page sits centered under the Dock. */
+  padding: calc(var(--safe-top) + 1.3 * var(--u)) calc(var(--mx) + var(--safe-right)) var(--blank);
 }
 
 /* --- masthead ---------------------------------------------------------------- */
