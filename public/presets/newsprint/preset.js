@@ -25,14 +25,12 @@ export default {
   render(root, data, ctx) {
     const { h } = ctx;
     const geo = geometry(ctx.screen, ctx.safe);
-    // TEMP: the riots in Europe lead the page until this is taken out. Matched by
-    // the liveblog's id, so the text is VRT's own.
-    const riots = (data.live ?? []).find(s => s.id.includes('1792507723130'));
-    const top = (data.top ?? []).filter(s => s.id !== riots?.id);
-    const [lead, ...rest] = riots ? [riots, ...top] : top;
+    // top[] starts with the liveblogs picked on Customize, then VRT's own order.
+    const [lead, ...rest] = data.top ?? [];
     const seconds = rest.slice(0, geo.seconds);
-    const onFront = new Set([lead, ...seconds].filter(Boolean).map(s => s.id));
-    const live = (data.live ?? []).filter(s => !onFront.has(s.id));
+    // "Nu live" lists the running liveblogs that are not on the page already.
+    const onFront = new Set([lead, ...seconds].filter(Boolean).map(storyKey));
+    const live = (data.live ?? []).filter(s => !onFront.has(storyKey(s)));
 
     root.setAttribute('lang', 'nl');
     root.append(h('div', {
@@ -162,23 +160,24 @@ function livePanel(live, ctx) {
 
 // --- section index ----------------------------------------------------------
 
-// One row, a section per column, in VRT's section order. When sections are
-// missing (an upstream failed) the latest news fills the row; a leftover
-// column gets the colophon, so the row never ends in a hole.
+// One row, a section per column, in the order picked on Customize. When there
+// are fewer sections than columns (fewer picked, or an upstream failed) the
+// latest news fills the row; a leftover column gets the colophon, so the row
+// never ends in a hole.
 function sectionIndex(data, geo, ctx) {
   const { h } = ctx;
-  const used = new Set([...(data.live ?? []), ...(data.top ?? [])].map(s => s.id));
+  const used = new Set([...(data.live ?? []), ...(data.top ?? [])].map(storyKey));
   const entry = (s, label) => {
-    used.add(s.id);
+    used.add(storyKey(s));
     return h('div', { class: 'np-entry' }, kicker(s, ctx, label), h('p', { class: 'np-entry-hed' }, s.title));
   };
   const entries = (data.sections ?? []).map(sec => {
-    const s = sec.stories?.find(st => !used.has(st.id)) ?? sec.stories?.[0];
+    const s = sec.stories?.find(st => !used.has(storyKey(st))) ?? sec.stories?.[0];
     return s && entry(s, sec.name);
   }).filter(Boolean).slice(0, geo.cols);
   for (const s of data.latest ?? []) {
     if (entries.length >= geo.cols - 1) break;
-    if (!used.has(s.id)) entries.push(entry(s));
+    if (!used.has(storyKey(s))) entries.push(entry(s));
   }
   if (entries.length < geo.cols) {
     entries.push(h('div', { class: 'np-entry np-colophon' },
@@ -186,6 +185,12 @@ function sectionIndex(data, geo, ctx) {
       h('p', null, 'Een bureaubladkrant met het nieuws van VRT NWS')));
   }
   return h('footer', { class: 'np-index' }, entries);
+}
+
+// A liveblog's URL slug follows its headline, so the same blog can come in
+// under two ids; the ~number at the end stays.
+function storyKey(s) {
+  return s.id?.match(/~(\d+)\/?$/)?.[1] ?? s.id;
 }
 
 // --- fitting ----------------------------------------------------------------

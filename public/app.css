@@ -198,6 +198,19 @@ html, body {
   white-space: nowrap;
 }
 
+/* The value, then where it comes from (Customize or the URL). */
+#hud dd > span,
+#hud dd > small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#hud dd > small {
+  color: #8a8a92;
+  font-size: 12px;
+}
+
 #hud kbd {
   display: inline-block;
   min-width: 22px;
@@ -229,6 +242,21 @@ html, body {
 
 .hud-presets li.is-active {
   background: #ffffff12;
+}
+
+.hud-links {
+  display: flex;
+  gap: 14px;
+  margin: 12px 0 0;
+}
+
+.hud-links a {
+  color: #8ab4ff;
+  text-decoration: none;
+}
+
+.hud-links a:hover {
+  text-decoration: underline;
 }
 
 #toast {

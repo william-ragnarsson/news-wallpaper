@@ -1,5 +1,7 @@
 // Wallpaper host. Plays the role the macOS app will play later: it fetches the
 // normalized news data, picks a preset, renders it full-screen and keeps it fresh.
+// The preset and the followed liveblog come from the settings picked on
+// /customize/ and change live with them, unless the URL pins them.
 // Dev controls live in a HUD (press ?) and never become part of the wallpaper.
 
 import { PRESETS } from './presets/index.js';
@@ -22,9 +24,13 @@ const DOCK_DEFAULT = { width: 12 * (52 + 6) + 28, height: 52 + 26 };
 const DESKTOP_ICONS = 104;
 
 const params = new URLSearchParams(location.search);
+const urlPreset = PRESETS.find(p => p.id === params.get('preset'))?.id;
 const state = {
-  preset: PRESETS.some(p => p.id === params.get('preset')) ? params.get('preset') : PRESETS[0].id,
+  preset: urlPreset ?? PRESETS[0].id,
   follow: params.get('follow') || 'auto',
+  // Pinned in the URL (or by a key, which writes it there): the settings leave it alone.
+  pinned: { preset: Boolean(urlPreset), follow: Boolean(params.get('follow')) },
+  settings: null,
   chrome: params.get('chrome') !== '0',
   screen: SCREENS.some(s => s.id === params.get('screen')) ? params.get('screen') : 'fill',
   dock: parseDock(params.get('dock')),
@@ -50,6 +56,7 @@ const els = {
 };
 
 let preset = null;
+let presetId = null; // which preset `preset` is; state.preset runs ahead during a switch
 const imageFallbacks = new Map();
 
 // ---------------------------------------------------------------------------
@@ -80,21 +87,35 @@ function frontStories(d) {
   return [...d.top, ...d.sections.flatMap(s => s.stories), ...d.live];
 }
 
-async function fetchData() {
+let fetchSeq = 0;
+let lastFetch = null;
+
+// Calls can overlap (the timer, a key, a settings change). Only the newest
+// response is kept and the older calls wait for it, so stale data never lands
+// last. `markFresh: false` takes in what a settings change brought into view
+// without marking it Nieuw: it is not news.
+function fetchData(options) {
+  lastFetch = loadData(++fetchSeq, options);
+  return lastFetch;
+}
+
+async function loadData(seq, { markFresh = true } = {}) {
   const source = dataSource();
   try {
     const res = await fetch(source.url());
     const body = await res.json();
+    if (seq !== fetchSeq) return lastFetch;
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     const changed = !state.data || source.signature(body) !== source.signature(state.data);
     const ids = source.ids(body);
-    state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
+    if (markFresh) state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
     ids.forEach(id => state.seenPostIds.add(id));
     state.data = body;
     state.error = null;
     state.fetchedAt = new Date();
     return changed;
   } catch (err) {
+    if (seq !== fetchSeq) return lastFetch;
     state.error = err.message;
     console.warn('Wallpaper refresh failed:', err);
     return !state.data;
@@ -102,21 +123,99 @@ async function fetchData() {
 }
 
 // ---------------------------------------------------------------------------
+// Settings (picked on /customize/, kept by the server)
+
+async function fetchSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Settings unavailable, using the defaults:', err);
+    return null;
+  }
+}
+
+// What the settings ask for, or the defaults while they are unknown.
+function settingsPreset() {
+  const id = state.settings?.preset;
+  return PRESETS.some(p => p.id === id) ? id : PRESETS[0].id;
+}
+
+function settingsFollow() {
+  return state.settings?.liveblogs?.[0] ?? 'auto';
+}
+
+// Hears every change made on Customize, without a reload; EventSource
+// reconnects by itself after a server restart. A page with both the preset and
+// the liveblog pinned (tools/snap.sh renders those) does without: headless
+// Chrome can hold virtual time while a request stays open, so a snapshot might
+// never be taken. Its front page still follows the settings on each refresh.
+function listen() {
+  if (listen.events) return;
+  listen.events = new EventSource('/api/settings/events');
+  listen.events.addEventListener('settings', e => onSettings(JSON.parse(e.data)));
+}
+
+// The stream sends the settings on connecting and again on every change. The
+// same updatedAt as the settings in use means there is nothing new.
+function onSettings(settings) {
+  const changed = settings.updatedAt !== state.settings?.updatedAt;
+  state.settings = settings;
+  if (changed) followSettings();
+  else renderHud();
+}
+
+// Takes what is not pinned from the settings, then fetches and renders at
+// once: the front page changes with the settings even when the preset stays.
+async function followSettings() {
+  if (!state.pinned.follow) state.follow = settingsFollow();
+  const id = state.pinned.preset ? state.preset : settingsPreset();
+  if (id !== state.preset) return setPreset(id, { pin: false });
+  await fetchData({ markFresh: false });
+  render();
+  renderHud();
+}
+
+// Drops both pins (key C): back to what Customize says.
+async function followCustomize() {
+  state.pinned = { preset: false, follow: false };
+  syncUrl();
+  toast('Volgt Customize');
+  listen();
+  await followSettings();
+}
+
+// ---------------------------------------------------------------------------
 // Presets
 
-async function loadPreset(id) {
+// Loads a preset's module, and its stylesheet once `ready` (its data) is in
+// too, so the page on screen keeps its styles until the new one can render.
+// False when another switch started meanwhile.
+async function loadPreset(id, ready) {
+  const [mod] = await Promise.all([import(`./presets/${id}/preset.js`), ready]);
+  if (id !== state.preset) return false;
   const href = `./presets/${id}/preset.css`;
-  const cssLoaded = new Promise(resolve => {
-    els.presetCss.onload = els.presetCss.onerror = resolve;
-  });
-  els.presetCss.href = href;
-  const [mod] = await Promise.all([import(`./presets/${id}/preset.js`), cssLoaded]);
-  preset = mod.default;
-  els.desktop.dataset.tone = preset.tone ?? 'dark';
+  if (els.presetCss.getAttribute('href') !== href) {
+    await new Promise(resolve => {
+      els.presetCss.onload = els.presetCss.onerror = resolve;
+      els.presetCss.href = href;
+    });
+  }
+  if (id !== state.preset) return false;
+  // Set last: a module without a default export throws here, and presetId must
+  // still name the preset on screen for the fallback.
+  const next = mod.default;
+  els.desktop.dataset.tone = next.tone ?? 'dark';
+  preset = next;
+  presetId = id;
+  return true;
 }
 
 function render() {
   const root = els.wallpaper;
+  // Mid-switch the new preset is still loading: leave the last page up.
+  if (state.data && presetId !== state.preset) return;
   root.replaceChildren();
   root.className = `preset-${state.preset}`;
   if (!state.data) {
@@ -297,15 +396,20 @@ function tickClock() {
 // ---------------------------------------------------------------------------
 // Dev HUD
 
+// Only pinned choices go in the URL: a plain one (Plash's /?chrome=0&hud=0)
+// keeps following Customize.
 function syncUrl() {
   const p = new URLSearchParams();
-  p.set('preset', state.preset);
-  if (state.follow !== 'auto') p.set('follow', state.follow);
+  if (state.pinned.preset) p.set('preset', state.preset);
+  if (state.pinned.follow) p.set('follow', state.follow);
   if (state.screen !== 'fill') p.set('screen', state.screen);
   if (state.dockHidden) p.set('dock', '0');
   else if (state.dock !== DOCK_DEFAULT) p.set('dock', `${state.dock.width}x${state.dock.height}`);
   if (!state.chrome) p.set('chrome', '0');
-  history.replaceState(null, '', `?${p}`);
+  if (params.has('refresh')) p.set('refresh', params.get('refresh'));
+  if (!state.showHint) p.set('hud', '0');
+  const query = String(p);
+  history.replaceState(null, '', query ? `?${query}` : location.pathname);
 }
 
 function toast(text, ms = 1600) {
@@ -316,16 +420,17 @@ function toast(text, ms = 1600) {
 }
 
 function renderHud() {
-  const d = state.data;
-  const blogs = d?.liveblogs ?? [];
-  const followLabel = state.follow === 'auto'
-    ? `auto → ${d?.focus?.topic ?? '…'}`
-    : blogs.find(b => b.id === state.follow)?.topic ?? state.follow;
+  // A front design takes its liveblogs and sections from Customize even when
+  // pinned in the URL; the liveblog pin does nothing there.
+  const front = dataSource() === SOURCES.front;
+  const pinned = ['preset', 'follow'].filter(k => state.pinned[k] && !(k === 'follow' && front));
   els.hud.replaceChildren(
     h('h2', null, 'Wallpaper controls'),
     h('dl', null,
-      row('← →', 'Preset', PRESETS.find(p => p.id === state.preset)?.name),
-      row('L', 'Liveblog', followLabel),
+      row('← →', 'Preset', PRESETS.find(p => p.id === state.preset)?.name, origin('preset')),
+      front ? leadRow() : row('L', 'Liveblog', followLabel(), origin('follow')),
+      row('C', 'Follow Customize', pinned.length === 2 ? 'off: pinned in URL'
+        : pinned.length ? `partly: ${pinned[0] === 'preset' ? 'preset' : 'liveblog'} pinned in URL` : 'on'),
       row('S', 'Screen', SCREENS.find(s => s.id === state.screen)?.label),
       row('M', 'macOS overlay', state.chrome ? 'on' : 'off'),
       row('D', 'Dock', state.dockHidden ? 'hides itself (dock=0)' : `${state.dock.width}×${state.dock.height} kept clear`),
@@ -335,23 +440,73 @@ function renderHud() {
     h('ul', { class: 'hud-presets' }, PRESETS.map(p =>
       h('li', { class: p.id === state.preset ? 'is-active' : null, 'data-preset': p.id }, h('b', null, p.name), ' ', p.description),
     )),
+    h('p', { class: 'hud-links' },
+      h('a', { href: '/customize/', target: '_blank' }, 'Customize'),
+      h('a', { href: '/explorer/', target: '_blank' }, 'Explorer')),
   );
-  function row(key, label, value) {
-    return [h('dt', null, h('kbd', null, key), ' ', label), h('dd', null, value ?? '')];
+
+  function row(key, label, value, from) {
+    return [
+      h('dt', null, key && h('kbd', null, key), ' ', label),
+      h('dd', null, h('span', null, value ?? ''), from && h('small', null, from)),
+    ];
+  }
+
+  // Where the preset or the liveblog comes from.
+  function origin(key) {
+    if (state.pinned[key]) return 'pinned in URL';
+    return state.settings ? 'from Customize' : 'default: settings not loaded';
+  }
+
+  function followLabel() {
+    const d = state.data;
+    if (state.follow === 'auto') return `auto → ${d?.focus?.topic ?? '…'}`;
+    const topic = d?.liveblogs?.find(b => b.id === state.follow)?.topic;
+    if (topic) return topic;
+    // The server fell back to the most active blog: the pick did not load.
+    return d?.follow === state.follow && d.focus ? `${state.follow} not loaded → ${d.focus.topic}` : state.follow;
+  }
+
+  // Front-page designs: the server puts the liveblogs picked on Customize
+  // first (L does not apply to them).
+  function leadRow() {
+    const picked = (state.data?.top ?? []).filter(s => s.featured);
+    return row(null, 'Lead liveblog', picked[0]?.title ?? "none: VRT's own lead",
+      state.settings ? `${picked.length} picked on Customize` : 'settings not loaded');
   }
 }
 
-async function setPreset(id) {
+// From a key or the HUD this pins the preset in the URL. From the settings it
+// does not, and it always fetches: the settings change the data too.
+async function setPreset(id, { pin = true } = {}) {
   const sourceChanged = dataSource(id) !== dataSource();
+  const wasPinned = state.pinned.preset;
   state.preset = id;
+  if (pin) state.pinned.preset = true;
   if (sourceChanged) {
     state.data = null;
     state.seenPostIds.clear();
+    state.fresh = new Set();
   }
-  await Promise.all([loadPreset(id), sourceChanged && fetchData()]);
-  syncUrl();
+  // A key press within one source waits for a fetch an earlier switch started.
+  const fetched = sourceChanged || !pin ? fetchData({ markFresh: pin }) : !state.data && lastFetch;
+  try {
+    if (!await loadPreset(id, fetched)) return; // another switch overtook this one
+  } catch (err) {
+    // A preset that does not load (a syntax error while editing it): back to
+    // the one still on screen, so the page keeps refreshing.
+    console.error(`Preset "${id}" failed to load:`, err);
+    toast(`Preset ${id} laadt niet`);
+    if (id === state.preset && presetId && presetId !== id) {
+      state.pinned.preset = wasPinned; // a failed key press pins nothing
+      await setPreset(presetId, { pin: false });
+    }
+    return;
+  }
   render();
   renderHud();
+  if (!pin) return;
+  syncUrl();
   toast(PRESETS.find(p => p.id === id)?.name ?? id);
 }
 
@@ -359,11 +514,13 @@ async function cycleFollow() {
   if (dataSource() !== SOURCES.wallpaper) return;
   const ids = ['auto', ...(state.data?.liveblogs ?? []).map(b => b.id)];
   state.follow = ids[(ids.indexOf(state.follow) + 1) % ids.length];
+  state.pinned.follow = true;
   syncUrl();
-  await fetchData();
+  await fetchData({ markFresh: false });
   render();
   renderHud();
-  toast(state.follow === 'auto' ? `Liveblog: automatisch (${state.data?.focus.topic})` : `Liveblog: ${state.data?.focus.topic}`);
+  const topic = state.data?.focus?.topic;
+  toast(state.follow === 'auto' ? `Liveblog: automatisch (${topic})` : `Liveblog: ${topic}`);
 }
 
 function onKey(e) {
@@ -373,6 +530,7 @@ function onKey(e) {
     case 'ArrowRight': setPreset(PRESETS[(i + 1) % PRESETS.length].id); break;
     case 'ArrowLeft': setPreset(PRESETS[(i - 1 + PRESETS.length) % PRESETS.length].id); break;
     case 'l': case 'L': cycleFollow(); break;
+    case 'c': case 'C': followCustomize(); break;
     case 'm': case 'M':
       state.chrome = !state.chrome;
       applyScreen(); syncUrl(); render(); renderHud(); // the menu bar inset may change
@@ -411,9 +569,28 @@ async function refresh(announce = false) {
 async function start() {
   applyScreen();
   tickClock();
-  await Promise.all([loadPreset(state.preset), fetchData()]);
+  // What the URL does not pin comes from the settings (the defaults without them).
+  state.settings = await fetchSettings();
+  if (!state.pinned.preset) state.preset = settingsPreset();
+  if (!state.pinned.follow) state.follow = settingsFollow();
+  try {
+    await loadPreset(state.preset, fetchData());
+  } catch (err) {
+    // As in setPreset: a preset that does not load must not stop the page.
+    console.error(`Preset "${state.preset}" failed to load:`, err);
+    toast(`Preset ${state.preset} laadt niet`);
+    await setPreset(PRESETS.find(p => p.id !== state.preset).id, { pin: false });
+  }
   render();
   renderHud();
+  if (!(state.pinned.preset && state.pinned.follow)) listen();
+  // The Customize preview lets go of its stream while that tab is hidden: a
+  // browser keeps six connections to this server at most. The server sends
+  // the settings again on reconnect, and onSettings catches up from those.
+  if (window.self !== window.top) document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { listen.events?.close(); listen.events = null; }
+    else if (!(state.pinned.preset && state.pinned.follow)) listen();
+  });
   // Web fonts only start loading once text uses them; lay out again when they land.
   document.fonts.ready.then(layout);
   document.fonts.addEventListener?.('loadingdone', layout);
@@ -443,7 +620,7 @@ async function start() {
   }, true);
 
   if (state.showHint) toast('Druk op ? voor de bediening', 3500);
-  window.wallpaper = { state, setPreset, refresh, render };
+  window.wallpaper = { state, setPreset, followCustomize, refresh, render };
 }
 
 start();

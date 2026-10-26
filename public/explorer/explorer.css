@@ -88,6 +88,16 @@ nav {
 #outlets { background: var(--side); }
 #streams { background: var(--pane); }
 
+/* The other pages: the wallpaper and the Customize page. */
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
 .pane-head {
   display: flex;
   align-items: baseline;
@@ -186,6 +196,10 @@ nav {
 
 .dot.live { background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 20%, transparent); }
 
+/* Picked on the Customize page; the lead liveblog gets a ring. */
+.dot.pick { background: var(--accent); }
+.dot.pick.lead { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+
 .link { color: var(--accent); }
 .link:hover { text-decoration: underline; }
 .link[aria-current], .link[aria-pressed] { font-weight: 600; }
@@ -221,6 +235,9 @@ nav {
 
 .stream-title h1 { font-size: 19px; }
 .stream-desc { margin-top: 2px; color: var(--muted); max-width: 80ch; }
+
+.on-wallpaper { margin-top: 6px; font-size: 13px; }
+.on-wallpaper .dot { display: inline-block; margin-right: 8px; vertical-align: 1px; }
 
 .facts {
   display: flex;
@@ -439,4 +456,14 @@ table.health {
   .thumb { width: 80px; }
   .item-detail { margin-left: 0; }
   .liveblog-head { grid-template-columns: 1fr; }
+}
+
+/* Phones: the panes stack and the page scrolls as a whole. */
+@media (max-width: 640px) {
+  #explorer { display: block; height: auto; }
+  nav { border-right: 0; border-bottom: 1px solid var(--line); }
+  nav .pane-body { max-height: 40vh; }
+  .stream-head { padding: 12px 16px; }
+  .facts { overflow-wrap: anywhere; }
+  .items { padding: 8px 16px 32px; overflow-x: auto; }
 }

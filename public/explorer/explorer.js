@@ -1,11 +1,16 @@
 // Stream explorer: browse every integrated outlet and stream, and inspect the
 // normalized items exactly as the wallpaper will receive them. A data tool,
 // not a design: each item shows what the integration extracted, with the
-// normalized JSON and the raw upstream entry one click away.
+// normalized JSON and the raw upstream entry one click away. Streams picked
+// on /customize/ carry a quiet mark.
 
 const REFRESH_MS = 60_000;
 
 const LANGUAGES = { nl: 'Nederlands', fr: 'Français', de: 'Deutsch', en: 'English' };
+
+// The outlet the wallpaper shows. The Customize page picks which of its
+// liveblogs lead the front page and which sections follow.
+const WALLPAPER_OUTLET = 'vrt-nws';
 
 const params = new URLSearchParams(location.search);
 const state = {
@@ -24,6 +29,7 @@ const state = {
   openData: new Map(),   // item id → 'json' | 'raw'
   seen: new Map(),       // "outlet/stream" → Set of item ids already shown
   fresh: new Set(),
+  picks: null,           // picked on Customize, from /api/settings/events: { liveblogs, sections }
 };
 
 const els = {
@@ -121,6 +127,30 @@ async function loadHealthAll() {
   renderStream();
 }
 
+// What the owner picked on the Customize page. The server sends the settings
+// on connect and after every change; without them, no marks. Open only while
+// the tab is in view: a browser keeps six connections to this server at most.
+let settingsEvents = null;
+function watchSettings() {
+  if (document.hidden) {
+    settingsEvents?.close();
+    settingsEvents = null;
+  } else if (!settingsEvents) {
+    settingsEvents = new EventSource('/api/settings/events');
+    settingsEvents.addEventListener('settings', e => applySettings(JSON.parse(e.data)));
+  }
+}
+
+// Redraws the marks only: the streams pane keeps its scroll, the stream pane
+// its items, and the selected stream and view stay as they are.
+function applySettings(settings) {
+  const list = v => Array.isArray(v) ? v : [];
+  state.picks = { liveblogs: list(settings?.liveblogs), sections: list(settings?.sections) };
+  renderStreams();
+  const head = els.stream.querySelector('.stream-head');
+  if (state.view === 'stream' && state.payload && head) head.replaceWith(streamHeader(state.payload));
+}
+
 // ---------------------------------------------------------------------------
 // Navigation
 
@@ -170,6 +200,7 @@ function syncUrl() {
 function renderOutlets() {
   const byLanguage = groupBy(state.outlets, o => o.language);
   els.outlets.replaceChildren(
+    h('p', { class: 'pages' }, h('a', { href: '/' }, 'Wallpaper'), h('a', { href: '/customize/' }, 'Customize')),
     h('header', { class: 'pane-head' }, h('h1', null, 'Outlets'), h('span', { class: 'muted' }, `${state.outlets.length}`)),
     h('div', { class: 'pane-body' },
       Object.keys(LANGUAGES).filter(l => byLanguage.has(l)).concat([...byLanguage.keys()].filter(l => !LANGUAGES[l]))
@@ -199,6 +230,9 @@ function renderStreams() {
   if (!outlet) return els.streams.replaceChildren();
   const health = state.health.get(outlet.id);
   const groups = groupBy(state.streams, s => s.group);
+  // Keep the list where it was on a refresh, not when the outlet changes.
+  const scroll = els.streams.dataset.outlet === outlet.id ? els.streams.querySelector('.pane-body')?.scrollTop ?? 0 : 0;
+  els.streams.dataset.outlet = outlet.id;
 
   els.streams.replaceChildren(
     h('header', { class: 'pane-head' },
@@ -217,6 +251,7 @@ function renderStreams() {
       health ? h('button', { class: 'link', onclick: () => checkOutlet(outlet.id) }, 'Recheck') : null,
     ),
   );
+  els.streams.querySelector('.pane-body').scrollTop = scroll;
 }
 
 function streamRow(s, check) {
@@ -224,10 +259,12 @@ function streamRow(s, check) {
   const count = check?.ok ? check.stats.count : null;
   const newest = check?.ok ? check.stats.newestAt : s.updatedAt;
   const warn = check?.warnings?.length ? check.warnings.join('\n') : null;
+  const role = wallpaperRole(state.outletId, s.id);
   return h('button', {
     class: 'row stream',
     'aria-current': s.id === state.streamId && state.view === 'stream' ? 'true' : null,
-    title: [s.description, s.url, failed ? `Error: ${check.error}` : null, warn].filter(Boolean).join('\n'),
+    title: [s.description, s.url, failed ? `Error: ${check.error}` : null, warn, role ? `Picked on Customize (${role})` : null]
+      .filter(Boolean).join('\n'),
     onclick: () => selectStream(s.id),
   },
     s.kind === 'liveblog' ? h('i', { class: `dot ${s.live ? 'live' : 'ended'}`, title: s.live ? 'Live' : 'Ended' }) : null,
@@ -242,8 +279,29 @@ function streamRow(s, check) {
     h('span', { class: 'row-meta' },
       failed ? h('span', { class: 'bad' }, check.status) : count ?? '',
       warn ? h('span', { class: 'warn', title: warn }, '!') : null,
+      role ? pickMark(role) : null,
     ),
   );
+}
+
+// Where a stream was picked on Customize, or null. The picked liveblogs open
+// the front page (the first leads it); the picked sections show in order on the
+// designs that have sections.
+function wallpaperRole(outletId, streamId) {
+  const picks = state.picks;
+  if (!picks || outletId !== WALLPAPER_OUTLET) return null;
+  const liveblog = picks.liveblogs.indexOf(/^liveblog-(\d+)$/.exec(streamId ?? '')?.[1]);
+  if (liveblog === 0) return 'lead liveblog';
+  if (liveblog > 0) return `liveblog ${liveblog + 1} of ${picks.liveblogs.length}`;
+  const section = picks.sections.indexOf(streamId);
+  return section >= 0 ? `section ${section + 1} of ${picks.sections.length}` : null;
+}
+
+function pickMark(role) {
+  return h('i', {
+    class: `dot pick${role === 'lead liveblog' ? ' lead' : ''}`,
+    title: `Picked on Customize (${role})`,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +331,7 @@ function renderStream() {
 
 function streamHeader(p) {
   const { stats, upstream } = p;
+  const role = wallpaperRole(p.outlet.id, p.stream.id);
   return h('header', { class: 'stream-head' },
     h('div', { class: 'stream-title' },
       h('h1', null, p.stream.name),
@@ -280,6 +339,8 @@ function streamHeader(p) {
       p.stream.derived ? h('span', { class: 'badge' }, 'filtered from feed') : null,
     ),
     p.stream.description ? h('p', { class: 'stream-desc' }, p.stream.description) : null,
+    role ? h('p', { class: 'on-wallpaper' }, pickMark(role), `Picked on Customize · ${role} · `,
+      h('a', { href: '/customize/' }, 'Change')) : null,
     h('dl', { class: 'facts' },
       fact('Items', stats.count),
       fact('Newest', stats.newestAt ? `${stamp(stats.newestAt)} (${ago(stats.newestAt)})` : '—'),
@@ -565,6 +626,7 @@ async function refresh() {
   await loadStream({ quiet: true });
 }
 
+watchSettings();
 try {
   await loadOutlets();
   await loadStreams();
@@ -575,4 +637,7 @@ try {
   els.stream.replaceChildren(h('div', { class: 'stream-empty' }, h('p', { class: 'bad' }, `Could not reach the API: ${err.message}`)));
 }
 setInterval(refresh, REFRESH_MS);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+document.addEventListener('visibilitychange', () => {
+  watchSettings();
+  refresh();
+});

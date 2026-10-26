@@ -8,7 +8,9 @@
 //              stories as related headlines under it, the lead photo beside it;
 //              an ultrawide adds a column with more top stories
 //   rail       "Net binnen": the newest stories with their time, full height
-//   sections   one block per section: label, a story with thumbnail, headlines
+//   sections   one block per section, in the order picked on Customize: label,
+//              a story with thumbnail, headlines; the screen shows as many as
+//              it has columns for
 //   footer     a quiet band that the Dock sits on
 //
 // Type scales with the short side of the screen (cqmin). layout() hides whole
@@ -17,8 +19,6 @@
 
 const NAMEPLATE = 'Het Nieuws';
 
-// Section blocks in this order; the screen shows as many as it has columns for.
-const SECTION_ORDER = ['binnenland', 'buitenland', 'sport', 'economie', 'politiek', 'cultuur', 'wetenschap'];
 const RELATED = 4; // top stories listed under the lead, as many as fit
 const MORE = 6; // top stories in the ultrawide column
 const LATEST = 12; // most items in "Net binnen"
@@ -32,7 +32,8 @@ export default {
   render(root, data, ctx) {
     const { h } = ctx;
     const top = data.top ?? [];
-    const sections = orderSections(data.sections ?? []);
+    // The sections come in the order picked on Customize; empty ones are left out.
+    const sections = (data.sections ?? []).filter(s => s.stories?.length);
     const rest = top.slice(1 + RELATED + MORE);
     // The lead already fills the page; do not repeat it in "Net binnen".
     const latest = (data.latest ?? []).filter(s => s.id !== top[0]?.id);
@@ -180,11 +181,6 @@ function marks(story, ctx, play = true) {
 }
 
 // --- data helpers -------------------------------------------------------------
-
-function orderSections(sections) {
-  const rank = s => (SECTION_ORDER.indexOf(s.id) + 1 || 99);
-  return sections.filter(s => s.stories?.length).sort((a, b) => rank(a) - rank(b));
-}
 
 // Stand-ins when sections are missing: later top stories grouped by VRT's tag.
 function topicGroups(stories) {
