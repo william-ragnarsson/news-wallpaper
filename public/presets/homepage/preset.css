@@ -1,0 +1,313 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..800;1,8..60,400..800&display=swap');
+
+/* Homepage: a quality news site's front page as a wallpaper.
+   White page, black serif headlines (Source Serif 4), sans labels and times
+   (Inter), thin grey rules, one brick-red accent for LIVE and Nieuw.
+   A 12-column grid (15 on an ultrawide) that the lead row and the section row
+   share through subgrid; the "Net binnen" rail takes the last three columns.
+   Type scales with the short side of the screen (1u = 1cqmin). */
+
+.preset-homepage {
+  --bg: #fff;
+  --ink: #111;
+  --ink-2: #3b3b3b;
+  --ink-3: #6f6f6f;
+  --rule: #dedede;
+  --tint: #f4f4f2;
+  --accent: #b8241b;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --u: 1cqmin;
+  --cols: 12;
+  --mx: calc(2 * var(--u) + 1.2cqw);
+  --gap: calc(2.4 * var(--u));
+  --gap-y: calc(2 * var(--u));
+  --photo: 3 / 2;
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+.preset-homepage [hidden] { display: none !important; }
+
+.preset-homepage :where(h1, h2, h3, h4, p, ul, ol, li, figure) {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  list-style: none;
+}
+
+/* Every headline and summary is clamped to whole lines (--lines). */
+.preset-homepage :is(.hp-lead-title, .hp-lead-summary, .hp-related-title, .hp-card-title, .hp-headline) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lines);
+  overflow: hidden;
+}
+
+/* --- top bar ------------------------------------------------------------- */
+
+.preset-homepage .hp-top { padding: var(--safe-top) var(--mx) 0; }
+
+.preset-homepage .hp-mast {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  padding: calc(1.5 * var(--u)) 0 calc(1.2 * var(--u));
+}
+
+.preset-homepage .hp-wordmark { font: 800 calc(3.3 * var(--u)) / 1 var(--serif); letter-spacing: -0.015em; }
+
+.preset-homepage :is(.hp-date, .hp-meta) {
+  font: 500 max(11px, calc(1.28 * var(--u))) / 1.2 var(--sans);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.preset-homepage .hp-meta { justify-self: end; color: var(--ink-3); }
+
+/* Section labels: one row, extra labels wrap out of sight. */
+.preset-homepage .hp-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 calc(2.6 * var(--u));
+  height: calc(3.6 * var(--u));
+  overflow: hidden;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--ink);
+  font: 500 max(11.5px, calc(1.38 * var(--u))) / calc(3.6 * var(--u)) var(--sans);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.preset-homepage .hp-nav .is-current { font-weight: 700; color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+
+/* --- main grid ------------------------------------------------------------- */
+
+.preset-homepage .hp-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--gap-y) var(--gap);
+  padding: calc(2.2 * var(--u)) var(--mx) var(--gap-y);
+}
+
+/* Container labels: section blocks, the rail, the ultrawide column. */
+.preset-homepage .hp-label {
+  padding-top: calc(0.9 * var(--u));
+  margin-bottom: calc(1.2 * var(--u));
+  border-top: 2px solid var(--ink);
+  font: 700 max(11px, calc(1.18 * var(--u))) / 1.2 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preset-homepage .hp-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin-bottom: calc(0.6 * var(--u));
+  font: 600 max(11px, calc(1.15 * var(--u))) / 1.2 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* --- lead row -------------------------------------------------------------- */
+
+.preset-homepage .hp-lead {
+  grid-column: 1 / span 9;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+/* The photo sets the row height (contain: size); the text fits itself into it. */
+.preset-homepage .hp-lead-text {
+  grid-column: 1 / span 4;
+  contain: size;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preset-homepage .hp-lead-photo {
+  grid-column: 5 / span 5;
+  aspect-ratio: var(--photo);
+  overflow: hidden;
+  background: var(--tint);
+}
+
+.preset-homepage :is(.hp-lead-photo, .hp-thumb) img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.preset-homepage .hp-lead-title {
+  --lines: 5;
+  font: 700 calc(var(--k, 1) * var(--lead-size, 3.4) * var(--u)) / 1.1 var(--serif);
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+
+.preset-homepage .hp-lead-summary {
+  --lines: 3;
+  margin-top: calc(1.2 * var(--u));
+  font: 400 max(13px, calc(1.68 * var(--u))) / 1.45 var(--serif);
+  color: var(--ink-2);
+}
+
+/* Related headlines stand on the foot of the photo; spare room opens above. */
+.preset-homepage .hp-related { margin-top: auto; padding-top: calc(1.8 * var(--u)); }
+.preset-homepage .hp-related li { padding-top: calc(1.3 * var(--u)); border-top: 1px solid var(--rule); }
+.preset-homepage .hp-related li + li { margin-top: calc(1.3 * var(--u)); }
+.preset-homepage .hp-related-title { --lines: 3; font: 600 max(14px, calc(1.8 * var(--u))) / 1.2 var(--serif); }
+
+/* No lead photo: the story takes the whole lead width. */
+.preset-homepage .hp-lead.no-photo .hp-lead-text { grid-column: 1 / span 9; contain: none; }
+
+/* Ultrawide only: more top stories between the photo and the rail. */
+.preset-homepage .hp-more { display: none; grid-column: 10 / span 3; contain: size; overflow: hidden; }
+
+/* --- rail: Net binnen -------------------------------------------------------- */
+
+.preset-homepage .hp-rail {
+  grid-column: -4 / -1;
+  grid-row: 1 / span 2;
+  contain: size;
+  display: flex;
+  flex-direction: column;
+}
+
+.preset-homepage .hp-latest { flex: 1; min-height: 0; overflow: hidden; }
+
+.preset-homepage .hp-latest li {
+  display: grid;
+  grid-template-columns: calc(5.6 * var(--u)) 1fr;
+  align-items: baseline;
+  padding: var(--u) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.preset-homepage .hp-latest li:first-child { padding-top: 0; }
+
+.preset-homepage .hp-latest time {
+  font: 600 max(11px, calc(1.22 * var(--u))) / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.preset-homepage .hp-headline { --lines: 3; font: 500 max(13px, calc(1.6 * var(--u))) / 1.25 var(--serif); }
+
+/* --- section row ------------------------------------------------------------- */
+
+.preset-homepage .hp-sections {
+  grid-column: 1 / span 9;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: subgrid;
+  min-height: 0;
+}
+
+.preset-homepage .hp-section { grid-column: span 3; min-height: 0; overflow: hidden; }
+.preset-homepage .hp-section:nth-child(n + 4) { display: none; }
+
+.preset-homepage .hp-card {
+  display: grid;
+  grid-template-columns: 38% 1fr;
+  gap: calc(1.3 * var(--u));
+  align-items: start;
+  padding-bottom: calc(1.2 * var(--u));
+}
+
+.preset-homepage .hp-card.no-photo { grid-template-columns: 1fr; }
+
+.preset-homepage .hp-thumb {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: var(--tint);
+}
+
+.preset-homepage .hp-card-title { --lines: 4; font: 600 max(14px, calc(1.75 * var(--u))) / 1.2 var(--serif); }
+.preset-homepage .hp-list li { padding: var(--u) 0; border-top: 1px solid var(--rule); }
+.preset-homepage .hp-list .hp-headline { --lines: 2; }
+
+/* --- marks: Nieuw, LIVE, video --------------------------------------------- */
+
+.preset-homepage .hp-mark {
+  display: inline-block;
+  margin-right: 0.5em;
+  font: 700 max(10px, calc(1.05 * var(--u))) / 1 var(--sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  vertical-align: 0.12em;
+}
+
+/* In a kicker the Nieuw chip must not make the line taller than plain text. */
+.preset-homepage .hp-kicker .hp-mark { margin-right: 0; vertical-align: baseline; padding-block: 0.1em; }
+.preset-homepage .hp-live { color: var(--accent); }
+
+.preset-homepage .hp-live::before {
+  content: '';
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.preset-homepage .hp-new { padding: 0.25em 0.45em; border-radius: 2px; background: #fbe8e5; color: var(--accent); }
+
+/* Inline play mark: a small grey triangle drawn with borders. */
+.preset-homepage .hp-play { border: solid transparent; border-width: 0.36em 0 0.36em 0.6em; border-left-color: var(--ink-3); }
+
+.preset-homepage .hp-thumb.is-video::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  bottom: 10%;
+  width: calc(2.6 * var(--u));
+  height: calc(2.6 * var(--u));
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M3.6 2.6v4.8L7.4 5z' fill='white'/%3E%3C/svg%3E") center / 70% no-repeat;
+}
+
+/* --- footer: a quiet band the Dock sits on ---------------------------------- */
+
+.preset-homepage .hp-foot {
+  flex: none;
+  height: var(--safe-bottom);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--mx);
+  border-top: 1px solid var(--rule);
+  background: var(--tint);
+  font: 500 max(11px, calc(1.15 * var(--u))) / 1 var(--sans);
+  color: var(--ink-3);
+}
+
+.preset-homepage .hp-foot-mark { font: 800 max(13px, calc(1.6 * var(--u))) / 1 var(--serif); color: var(--ink-2); }
+
+/* --- wider screens ----------------------------------------------------------- */
+
+/* 16:9 and up: a wider lead photo leaves the section blocks more room. */
+@container desktop (min-aspect-ratio: 16 / 9) {
+  .preset-homepage { --photo: 16 / 9; }
+}
+
+/* Ultrawide: 15 columns, a column of more top stories, a fourth section. */
+@container desktop (min-aspect-ratio: 2 / 1) {
+  .preset-homepage { --cols: 15; --lead-size: 3.9; }
+  .preset-homepage :is(.hp-lead, .hp-sections) { grid-column: 1 / span 12; }
+  .preset-homepage :is(.hp-more, .hp-section:nth-child(4)) { display: block; }
+}

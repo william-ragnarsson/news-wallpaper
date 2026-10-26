@@ -129,6 +129,8 @@ html, body {
   box-shadow: inset 0 0 0 1px #ffffff40, 0 8px 30px #0003;
 }
 
+.dock[hidden] { display: none; }
+
 .dock i {
   width: var(--dock-tile);
   height: var(--dock-tile);

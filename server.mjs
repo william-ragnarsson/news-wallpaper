@@ -8,6 +8,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as catalog from './integrations/catalog.mjs';
 import * as vrt from './integrations/vrt-nws.mjs';
+import { getFrontpage } from './integrations/frontpage.mjs';
 
 const PORT = Number(process.env.PORT) || 4174;
 const PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
@@ -32,6 +33,7 @@ const routes = [
     maxHeadlines: clampInt(q.get('headlines'), 0, 50, 16),
   })],
   [/^\/api\/vrt-nws\/front$/, () => vrt.getFront()],
+  [/^\/api\/vrt-nws\/frontpage$/, () => getFrontpage()],
   [/^\/api\/vrt-nws\/liveblog\/(\d+)$/, ([, id]) => vrt.getLiveblog(id)],
 
   // Outlet catalog, for the explorer and anything built on normalized streams.

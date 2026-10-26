@@ -1,0 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..800;1,8..60,300..800&display=block');
+
+/* Headlines: the front page as ranked headlines, type only.
+   Warm paper, near-black ink, one muted red for what is live. Every size is a
+   multiple of --u (1cqmin, the screen's short side), so the page keeps its
+   proportions on every screen; the column count comes from preset.js.
+
+   One family carries the page: Source Serif 4, optical sizes 8 (labels) to 60
+   (the lead). Labels are small tracked capitals set by hand, since the Google
+   Fonts build has no real small caps. */
+
+.preset-headlines {
+  --paper: #f3efe6;
+  --ink: #1c1a17;
+  --ink-2: #4a453d;
+  --ink-3: #8a8275;
+  --rule: rgb(28 26 23 / 0.62);
+  --hair: rgb(28 26 23 / 0.15);
+  --accent: #a33a2f;
+  --serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+
+  --u: 1cqmin;
+  --mx: calc(3 * var(--u) + 2.4cqw);
+  --gap: calc(3 * var(--u));
+  --label: max(11px, calc(1.16 * var(--u)));
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+.preset-headlines :where(h1, h2, h3, p) {
+  margin: 0;
+  font: inherit;
+}
+
+.preset-headlines [hidden] {
+  display: none !important;
+}
+
+/* Text stays between the menu bar and the Dock band. */
+.preset-headlines .hl-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--safe-top) + 1.8 * var(--u)) var(--mx) calc(var(--safe-bottom) + 1.4 * var(--u));
+}
+
+/* After layout() has trimmed the index, spare room spreads between the tiers. */
+.preset-headlines .hl-page.is-set {
+  justify-content: space-between;
+}
+
+/* --- nameplate line -------------------------------------------------------- */
+
+.preset-headlines .hl-masthead {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  column-gap: var(--gap);
+  padding-bottom: calc(1.1 * var(--u));
+  border-bottom: 1px solid var(--rule);
+}
+
+.preset-headlines .hl-nameplate {
+  font-size: calc(3.1 * var(--u));
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.012em;
+}
+
+/* Every label: small tracked capitals. */
+.preset-headlines :is(.hl-date, .hl-credit, .hl-kicker, .hl-live, .hl-foot-item b) {
+  font-size: var(--label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.preset-headlines :is(.hl-date, .hl-credit) {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.preset-headlines .hl-credit {
+  justify-self: end;
+}
+
+/* --- kickers ---------------------------------------------------------------- */
+
+.preset-headlines .hl-kicker {
+  line-height: 1.2;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A middle dot between the parts of a label and between foot items. */
+.preset-headlines :is(.hl-credit > span, .hl-kicker > *, .hl-foot-item) + *::before {
+  content: '·';
+  margin: 0 0.65em;
+  color: var(--ink-3);
+}
+
+/* 21u44 keeps its lowercase u. */
+.preset-headlines .hl-time {
+  text-transform: none;
+  letter-spacing: 0.03em;
+}
+
+.preset-headlines .hl-section {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.preset-headlines .hl-live {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.preset-headlines .hl-live::before {
+  content: '';
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.02em;
+}
+
+.preset-headlines .hl-new {
+  font-size: 1.15em;
+  color: var(--ink);
+  font-style: italic;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.preset-headlines .hl-play {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.7em;
+  margin-right: 0.4em;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* --- shared headline setting ---------------------------------------------- */
+
+.preset-headlines :is(.hl-lead-title, .hl-title, .hl-summary, .hl-lead-summary) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preset-headlines :is(.hl-lead-title, .hl-title) {
+  text-wrap: balance;
+}
+
+.preset-headlines :is(.hl-summary, .hl-lead-summary) {
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* An opening quote hangs in the margin; the padding keeps it inside the clip. */
+.preset-headlines .hangs {
+  margin-left: -0.42em;
+  padding-left: 0.42em;
+  text-indent: -0.42em;
+}
+
+/* --- the lead --------------------------------------------------------------- */
+
+/* The lead and tier two share the page's columns and a hairline below. */
+.preset-headlines :is(.hl-lead, .hl-second) {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  border-bottom: 1px solid var(--hair);
+}
+
+.preset-headlines .hl-lead {
+  align-items: last baseline;
+  padding: calc(2.9 * var(--u)) 0 calc(2.2 * var(--u));
+}
+
+.preset-headlines .hl-lead .hl-kicker {
+  grid-column: 1 / -1;
+  margin-bottom: calc(0.9 * var(--u));
+}
+
+.preset-headlines .hl-lead-title {
+  grid-column: 1 / span var(--lead-span);
+  font-size: calc(5.6 * var(--u));
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  -webkit-line-clamp: 4;
+  padding-bottom: 0.12em; /* room for the last line's descenders */
+}
+
+.preset-headlines .is-long .hl-lead-title {
+  font-size: calc(5 * var(--u));
+}
+
+.preset-headlines .is-short .hl-lead-title {
+  font-size: calc(6.6 * var(--u));
+}
+
+.preset-headlines .hl-lead-summary {
+  grid-column: var(--summary-col);
+  font-size: calc(1.75 * var(--u));
+  line-height: 1.42;
+  -webkit-line-clamp: 6;
+}
+
+/* --- second tier: one row with summaries ---------------------------------- */
+
+.preset-headlines .hl-second {
+  padding: calc(2.4 * var(--u)) 0 calc(2.6 * var(--u));
+}
+
+.preset-headlines .hl-second .hl-title {
+  margin-top: 0.42em;
+  font-size: calc(2.3 * var(--u));
+  font-weight: 560;
+  line-height: 1.14;
+  letter-spacing: -0.008em;
+  -webkit-line-clamp: 4;
+}
+
+.preset-headlines .hl-summary {
+  margin-top: 0.7em;
+  font-size: max(12.5px, calc(1.45 * var(--u)));
+  line-height: 1.42;
+  -webkit-line-clamp: 3;
+}
+
+/* --- third tier: the index -------------------------------------------------- */
+
+.preset-headlines .hl-index {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(var(--index-cols), minmax(0, 1fr));
+  align-content: start;
+  gap: calc(2.2 * var(--u)) var(--gap);
+  padding-top: calc(2.2 * var(--u));
+  margin-bottom: calc(1.8 * var(--u));
+}
+
+.preset-headlines .is-set .hl-index {
+  flex: none;
+}
+
+.preset-headlines .hl-index .hl-title {
+  margin-top: 0.4em;
+  font-size: calc(1.85 * var(--u));
+  font-weight: 500;
+  line-height: 1.2;
+  -webkit-line-clamp: 3;
+}
+
+.preset-headlines .hl-empty {
+  padding-top: calc(4 * var(--u));
+  font-size: calc(2.5 * var(--u));
+  color: var(--ink-3);
+}
+
+/* --- foot line: the other running liveblogs -------------------------------- */
+
+.preset-headlines .hl-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 1.1em;
+  padding-top: calc(1.2 * var(--u));
+  border-top: 1px solid var(--rule);
+  font-size: max(11.5px, calc(1.3 * var(--u)));
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.preset-headlines .hl-foot-items {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+}
+
+.preset-headlines .hl-foot-item:not(.is-squeezed) {
+  flex: none;
+}
+
+.preset-headlines .hl-foot .hl-foot-item + *::before {
+  margin: 0 0.9em;
+}
+
+/* A single liveblog too long for the line ends in an ellipsis. */
+.preset-headlines .hl-foot-item.is-squeezed {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-headlines .hl-foot-item b {
+  margin-right: 0.6em;
+  color: var(--ink);
+  font-weight: 600;
+}
