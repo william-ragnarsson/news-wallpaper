@@ -14,8 +14,12 @@ const SCREENS = [
 ];
 
 const IMAGE_WIDTHS = [320, 480, 640, 960, 1280, 1600, 1920];
-const DOCK_TILE = 52;
-const DOCK_TILES = 12;
+// The Dock area the wallpaper keeps clear, in points: `?dock=WxH` to match the
+// real one, `?dock=0` for a Dock that hides itself. Default: 12 icons of 52.
+const DOCK_DEFAULT = { width: 12 * (52 + 6) + 28, height: 52 + 26 };
+// The column at the right edge where Finder puts files and folders on the
+// desktop, in points: one icon with its label.
+const DESKTOP_ICONS = 104;
 
 const params = new URLSearchParams(location.search);
 const state = {
@@ -23,6 +27,8 @@ const state = {
   follow: params.get('follow') || 'auto',
   chrome: params.get('chrome') !== '0',
   screen: SCREENS.some(s => s.id === params.get('screen')) ? params.get('screen') : 'fill',
+  dock: parseDock(params.get('dock')),
+  dockHidden: params.get('dock') === '0',
   refreshMs: Math.max(15, Number(params.get('refresh')) || 60) * 1000,
   showHint: params.get('hud') !== '0',
   data: null,
@@ -49,14 +55,39 @@ const imageFallbacks = new Map();
 // ---------------------------------------------------------------------------
 // Data
 
+// Each preset reads one of these (its `data` in presets/index.js); both are
+// documented in presets/README.md.
+const SOURCES = {
+  // The followed liveblog with its posts, plus the other liveblogs and headlines.
+  wallpaper: {
+    url: () => `/api/vrt-nws/wallpaper?follow=${encodeURIComponent(state.follow)}&posts=40&headlines=16`,
+    ids: d => [d.focus, ...d.liveblogs].flatMap(b => (b.posts ?? b.recent).map(p => p.id)),
+    signature: d => [d.focus.id, d.focus.posts[0]?.id, ...d.liveblogs.map(b => b.updatedAt), d.headlines[0]?.id].join('|'),
+  },
+  // VRT NWS's front page in its own order, the sections and the running liveblogs.
+  front: {
+    url: () => '/api/vrt-nws/frontpage',
+    ids: d => frontStories(d).map(s => s.id),
+    signature: d => frontStories(d).map(s => `${s.id}@${s.time}`).join('|'),
+  },
+};
+
+function dataSource(presetId = state.preset) {
+  return SOURCES[PRESETS.find(p => p.id === presetId)?.data ?? 'wallpaper'];
+}
+
+function frontStories(d) {
+  return [...d.top, ...d.sections.flatMap(s => s.stories), ...d.live];
+}
+
 async function fetchData() {
-  const url = `/api/vrt-nws/wallpaper?follow=${encodeURIComponent(state.follow)}&posts=40&headlines=16`;
+  const source = dataSource();
   try {
-    const res = await fetch(url);
+    const res = await fetch(source.url());
     const body = await res.json();
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-    const changed = signature(body) !== signature(state.data);
-    const ids = [body.focus, ...body.liveblogs].flatMap(b => (b.posts ?? b.recent).map(p => p.id));
+    const changed = !state.data || source.signature(body) !== source.signature(state.data);
+    const ids = source.ids(body);
     state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
     ids.forEach(id => state.seenPostIds.add(id));
     state.data = body;
@@ -68,11 +99,6 @@ async function fetchData() {
     console.warn('Wallpaper refresh failed:', err);
     return !state.data;
   }
-}
-
-function signature(d) {
-  if (!d) return '';
-  return [d.focus.id, d.focus.posts[0]?.id, ...d.liveblogs.map(b => b.updatedAt), d.headlines[0]?.id].join('|');
 }
 
 // ---------------------------------------------------------------------------
@@ -115,11 +141,10 @@ function layout() {
 
 function makeContext() {
   const { width, height } = screenSize();
-  const menubar = menubarHeight(width);
   return {
     now: new Date(),
     screen: { width, height, id: state.screen },
-    safe: { top: menubar, bottom: DOCK_TILE + 26, dockWidth: dockWidth() },
+    safe: { top: menubarInset(width), right: DESKTOP_ICONS, bottom: dockArea().height, dockWidth: dockArea().width },
     fresh: state.fresh,
     follow: state.follow,
     image,
@@ -137,7 +162,7 @@ function image(img, cssWidth = 960) {
   if (!url) return '';
   const scale = screenScale() * (window.devicePixelRatio || 1);
   const want = IMAGE_WIDTHS.find(w => w >= cssWidth * scale) ?? IMAGE_WIDTHS.at(-1);
-  const resized = url.replace(/^(https:\/\/images\.vrt\.be\/)(orig|vrtnws_share|w\d+hx)\//, `$1w${want}hx/`);
+  const resized = url.replace(/^(https:\/\/images\.vrt\.be\/)(orig|vrtnws_share|width\d+|w\d+hx)\//, `$1w${want}hx/`);
   if (resized !== url) imageFallbacks.set(resized, url);
   return resized;
 }
@@ -213,8 +238,27 @@ function menubarHeight(width) {
   return width <= 1800 ? 37 : 25;
 }
 
-function dockWidth() {
-  return DOCK_TILES * (DOCK_TILE + 6) + 28;
+// How much of the menu bar lies over the page. A wallpaper app such as Plash
+// may already start its window below the menu bar: then the window is that
+// much shorter than the screen, and none of it does.
+function menubarInset(width) {
+  const height = menubarHeight(width);
+  if (state.chrome || state.screen !== 'fill') return height;
+  return Math.max(0, height - Math.max(0, screen.height - innerHeight));
+}
+
+function parseDock(value) {
+  const [width, height] = (value ?? '').split('x').map(Number);
+  return width > 0 && height > 0 ? { width, height } : DOCK_DEFAULT;
+}
+
+function dockArea() {
+  return state.dockHidden ? { width: 0, height: 0 } : state.dock;
+}
+
+// The fake Dock's icon size and count follow the area kept clear.
+function dockTile() {
+  return Math.max(16, state.dock.height - 26);
 }
 
 function applyScreen() {
@@ -224,17 +268,21 @@ function applyScreen() {
   d.style.setProperty('--screen-w', `${width}px`);
   d.style.setProperty('--screen-h', `${height}px`);
   d.style.setProperty('--screen-scale', screenScale());
-  d.style.setProperty('--safe-top', `${menubarHeight(width)}px`);
-  d.style.setProperty('--safe-bottom', `${DOCK_TILE + 26}px`);
-  d.style.setProperty('--dock-width', `${dockWidth()}px`);
-  d.style.setProperty('--dock-tile', `${DOCK_TILE}px`);
+  d.style.setProperty('--safe-top', `${menubarInset(width)}px`);
+  d.style.setProperty('--safe-right', `${DESKTOP_ICONS}px`);
+  d.style.setProperty('--safe-bottom', `${dockArea().height}px`);
+  d.style.setProperty('--dock-width', `${dockArea().width}px`);
+  d.style.setProperty('--dock-tile', `${dockTile()}px`);
   els.chrome.hidden = !state.chrome;
+  els.dock.hidden = state.dockHidden;
+  buildDock();
 }
 
 function buildDock() {
   const hues = [210, 0, 130, 28, 280, 190, 48, 340, 160, 230, 15, 260];
+  const tiles = Math.max(2, Math.round((state.dock.width - 28) / (dockTile() + 6)));
   els.dock.replaceChildren(
-    ...hues.slice(0, DOCK_TILES - 1).map(hue => h('i', { '--hue': hue })),
+    ...Array.from({ length: tiles - 1 }, (_, i) => h('i', { '--hue': hues[i % hues.length] })),
     h('b'),
     h('i', { class: 'trash' }),
   );
@@ -254,6 +302,8 @@ function syncUrl() {
   p.set('preset', state.preset);
   if (state.follow !== 'auto') p.set('follow', state.follow);
   if (state.screen !== 'fill') p.set('screen', state.screen);
+  if (state.dockHidden) p.set('dock', '0');
+  else if (state.dock !== DOCK_DEFAULT) p.set('dock', `${state.dock.width}x${state.dock.height}`);
   if (!state.chrome) p.set('chrome', '0');
   history.replaceState(null, '', `?${p}`);
 }
@@ -269,7 +319,7 @@ function renderHud() {
   const d = state.data;
   const blogs = d?.liveblogs ?? [];
   const followLabel = state.follow === 'auto'
-    ? `auto → ${d?.focus.topic ?? '…'}`
+    ? `auto → ${d?.focus?.topic ?? '…'}`
     : blogs.find(b => b.id === state.follow)?.topic ?? state.follow;
   els.hud.replaceChildren(
     h('h2', null, 'Wallpaper controls'),
@@ -278,6 +328,7 @@ function renderHud() {
       row('L', 'Liveblog', followLabel),
       row('S', 'Screen', SCREENS.find(s => s.id === state.screen)?.label),
       row('M', 'macOS overlay', state.chrome ? 'on' : 'off'),
+      row('D', 'Dock', state.dockHidden ? 'hides itself (dock=0)' : `${state.dock.width}×${state.dock.height} kept clear`),
       row('R', 'Refresh', state.fetchedAt ? `last ${clock(state.fetchedAt)}${state.error ? ' (error)' : ''}` : '…'),
       row('?', 'Hide this panel', ''),
     ),
@@ -291,8 +342,13 @@ function renderHud() {
 }
 
 async function setPreset(id) {
+  const sourceChanged = dataSource(id) !== dataSource();
   state.preset = id;
-  await loadPreset(id);
+  if (sourceChanged) {
+    state.data = null;
+    state.seenPostIds.clear();
+  }
+  await Promise.all([loadPreset(id), sourceChanged && fetchData()]);
   syncUrl();
   render();
   renderHud();
@@ -300,6 +356,7 @@ async function setPreset(id) {
 }
 
 async function cycleFollow() {
+  if (dataSource() !== SOURCES.wallpaper) return;
   const ids = ['auto', ...(state.data?.liveblogs ?? []).map(b => b.id)];
   state.follow = ids[(ids.indexOf(state.follow) + 1) % ids.length];
   syncUrl();
@@ -318,8 +375,13 @@ function onKey(e) {
     case 'l': case 'L': cycleFollow(); break;
     case 'm': case 'M':
       state.chrome = !state.chrome;
-      applyScreen(); syncUrl(); renderHud();
+      applyScreen(); syncUrl(); render(); renderHud(); // the menu bar inset may change
       toast(`macOS overlay ${state.chrome ? 'on' : 'off'}`);
+      break;
+    case 'd': case 'D':
+      state.dockHidden = !state.dockHidden;
+      applyScreen(); syncUrl(); render(); renderHud();
+      toast(state.dockHidden ? 'Dock hides itself' : 'Dock kept clear');
       break;
     case 's': case 'S': {
       const j = SCREENS.findIndex(s => s.id === state.screen);
@@ -348,7 +410,6 @@ async function refresh(announce = false) {
 
 async function start() {
   applyScreen();
-  buildDock();
   tickClock();
   await Promise.all([loadPreset(state.preset), fetchData()]);
   render();

@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700&family=Playfair+Display:wght@900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..500&display=block');
+
+/* Newsprint: VRT NWS's front page as a classic broadsheet.
+   Warm newsprint with a CSS-only paper grain, black ink, photos printed in
+   greyscale onto the paper, and one red accent for what is live.
+   Type scales with the short side of the screen (cqmin); the column count,
+   gutters and lead photo height come from preset.js (--cols, --gap, --photo-h).
+   Faces: Playfair Display Black (nameplate), Source Serif 4 (headlines and
+   text), Libre Franklin (kickers and labels). */
+
+.preset-newsprint {
+  --paper: #f1e9d8; --ink: #1a1713; --ink-2: #3b362f; --ink-3: #6a6155;
+  --hair: rgb(26 23 19 / 0.22); --red: #b0261c;
+
+  --nameplate: 'Playfair Display', 'Bodoni 72', 'Times New Roman', serif;
+  --serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
+
+  --u: 1cqmin;
+  --text: clamp(12.5px, calc(1.45 * var(--u)), 22px);
+  --small: clamp(9.5px, calc(1.02 * var(--u)), 15px);
+  /* Bare paper under the page, tall enough for a Dock that is shown. */
+  --blank: max(calc(var(--safe-bottom) + 3 * var(--u)), 16cqh);
+
+  position: absolute; inset: 0; overflow: hidden;
+  color: var(--ink);
+  font: 400 var(--text) / 1.38 var(--serif);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  /* Newsprint: a soft darker rim, a lighter mottle, fine laid lines. */
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(120 88 44 / 0.1)),
+    radial-gradient(ellipse 45% 35% at 22% 30%, rgb(255 251 240 / 0.5), transparent),
+    radial-gradient(ellipse 40% 40% at 76% 68%, rgb(160 120 60 / 0.07), transparent),
+    repeating-linear-gradient(0deg, rgb(90 66 30 / 0.03) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(90 66 30 / 0.025) 0 1px, transparent 1px 6px);
+}
+
+.preset-newsprint [hidden] { display: none !important; }
+
+.preset-newsprint :where(h1, h2, h3, h4, p, ul, figure) {
+  margin: 0; padding: 0; font-size: inherit; font-weight: inherit; list-style: none;
+}
+
+.preset-newsprint .np-page {
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: calc(1.5 * var(--u));
+  /* The right margin also clears the desktop's files and folders. */
+  padding: calc(var(--safe-top) + 1.3 * var(--u)) calc(var(--mx) + var(--safe-right)) var(--blank) var(--mx);
+}
+
+/* --- masthead ---------------------------------------------------------------- */
+
+.preset-newsprint .np-masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--gap);
+}
+
+.preset-newsprint .np-nameplate {
+  padding-bottom: calc(0.5 * var(--u));
+  font: 900 clamp(46px, calc(7.4 * var(--u)), 124px) / 1 var(--nameplate);
+  letter-spacing: -0.01em;
+}
+
+.preset-newsprint .np-ear {
+  justify-self: start;
+  display: grid; gap: 0.35em;
+  padding: 0.55em 0;
+  border-block: 1px solid var(--hair);
+  font: 500 var(--small) / 1.2 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.preset-newsprint .np-ear b { font-weight: 700; color: var(--ink); }
+.preset-newsprint .np-time { text-transform: none; } /* 21u23, not 21U23 */
+.preset-newsprint .np-ear-right { justify-self: end; text-align: right; }
+
+/* Thick-and-thin double rule under the masthead. */
+.preset-newsprint .np-rule {
+  grid-column: 1 / -1;
+  height: 2px;
+  margin-top: calc(0.5 * var(--u));
+  border-top: max(3px, calc(0.34 * var(--u))) solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+/* --- body grid: columns with hairline rules ---------------------------------- */
+
+.preset-newsprint .np-body {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: var(--gap);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.preset-newsprint :is(.np-body, .np-index) > * { position: relative; min-width: 0; }
+
+/* The rule sits in the gutter left of each block; the first column's falls
+   outside the grid and is clipped. */
+.preset-newsprint :is(.np-body, .np-index) > *::before {
+  content: ''; position: absolute; inset: 0 auto 0 calc(var(--gap) / -2);
+  border-left: 1px solid var(--hair);
+}
+
+/* Regions that layout() fits: their height comes from the lead, not from them. */
+.preset-newsprint :is(.np-second, .np-side) { contain: size; overflow: hidden; }
+
+.preset-newsprint :is(.np-lead, .np-side, .np-second > .np-story) {
+  display: flex; flex-direction: column;
+}
+
+/* Kept at their own height, so what does not fit shows up as overflow
+   (a clamped block would otherwise shrink and cut its last line in half). */
+.preset-newsprint :is(.np-lead, .np-side, .np-story) > * { flex-shrink: 0; }
+
+/* --- story parts --------------------------------------------------------------- */
+
+/* Headlines are never clamped: layout() sizes them, drops their summary or
+   leaves the whole story out. Only summaries end in an ellipsis. */
+
+.preset-newsprint .np-kicker {
+  display: flex; gap: 0.75em;
+  margin-bottom: 0.5em;
+  overflow: hidden; white-space: nowrap;
+  font: 600 var(--small) / 1.2 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.preset-newsprint .np-tag-live {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+.preset-newsprint .np-tag-live::before {
+  content: ''; display: inline-block; width: 0.55em; height: 0.55em; margin-right: 0.4em;
+  border-radius: 50%; background: currentColor; vertical-align: 0.06em;
+}
+
+/* A play mark, drawn with borders. */
+.preset-newsprint .np-tag-video {
+  align-self: center;
+  border-left: 0.62em solid var(--ink);
+  border-block: 0.37em solid transparent;
+}
+
+.preset-newsprint .np-tag-new { padding: 0 0.4em; border: 1px solid; color: var(--ink); }
+
+.preset-newsprint :is(.np-dek, .np-standfirst) {
+  display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.preset-newsprint .np-hed {
+  padding-bottom: 0.06em; /* room for the last line's descenders */
+  font-weight: 700;
+  font-variation-settings: 'opsz' 28; /* the sturdy text cut, not the thin display one */
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+.preset-newsprint .np-dek { margin-top: 0.45em; color: var(--ink-2); -webkit-line-clamp: 3; }
+
+.preset-newsprint .np-photo {
+  position: relative; aspect-ratio: 3 / 2; overflow: hidden;
+  margin-bottom: calc(0.9 * var(--u));
+  background: rgb(26 23 19 / 0.08);
+}
+
+/* Printed onto the paper: greyscale, multiplied with the paper tone. */
+.preset-newsprint .np-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.06);
+  mix-blend-mode: multiply;
+}
+
+/* --- lead ---------------------------------------------------------------------- */
+
+.preset-newsprint .np-lead { grid-column: span var(--lead); }
+
+.preset-newsprint .np-lead > .np-hed {
+  padding-bottom: 0.1em;
+  font-size: clamp(30px, calc(5 * var(--u)), 84px);
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+}
+
+.preset-newsprint .np-lead-body {
+  flex: 1 1 var(--photo-h); /* the photo takes the height the headline leaves */
+  display: grid;
+  grid-template-columns: repeat(var(--lead), minmax(0, 1fr));
+  column-gap: var(--gap);
+  min-height: 22cqh;
+  margin-top: calc(1.4 * var(--u));
+}
+
+.preset-newsprint .np-side {
+  grid-column: span var(--side);
+  justify-content: space-between;
+  gap: calc(1.2 * var(--u));
+}
+
+.preset-newsprint .np-lead .np-photo { grid-column: span var(--photo); aspect-ratio: auto; margin: 0; }
+
+.preset-newsprint .np-standfirst {
+  font-size: clamp(14px, calc(1.8 * var(--u)), 28px);
+  line-height: 1.3;
+  color: var(--ink-2);
+  -webkit-line-clamp: 3;
+}
+
+/* --- live panel ---------------------------------------------------------------- */
+
+/* As tall as its rows; the side's spare height stays bare paper above it. */
+.preset-newsprint .np-live {
+  display: flex; flex-direction: column;
+  padding: 0.7em 0.85em 0.2em;
+  border: 3px double var(--ink);
+}
+
+.preset-newsprint .np-live-head {
+  padding-bottom: 0.6em;
+  font: 700 var(--small) / 1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+.preset-newsprint .np-live ul {
+  display: grid;
+  grid-template-columns: repeat(var(--side), minmax(0, 1fr));
+  column-gap: 1.2em;
+}
+
+.preset-newsprint .np-live li { padding: 0.6em 0; border-top: 1px solid var(--hair); }
+
+.preset-newsprint .np-live-title { font-weight: 600; line-height: 1.2; }
+
+.preset-newsprint .np-live-meta {
+  margin-top: 0.35em;
+  font: 500 var(--small) / 1.2 var(--sans);
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+/* --- secondary stories --------------------------------------------------------- */
+
+.preset-newsprint .np-second > .np-story { height: 100%; }
+.preset-newsprint .np-second .np-photo { flex: 1 0 auto; } /* takes the height the text leaves */
+.preset-newsprint .np-second .np-hed { font-size: calc(2.5 * var(--u)); }
+
+/* --- section index --------------------------------------------------------------- */
+
+/* The page ends on a thin rule under the index, so the paper below reads as a
+   margin, not as a gap. */
+.preset-newsprint .np-index {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  padding-block: var(--u);
+  border-top: 3px double var(--ink);
+  border-bottom: 1px solid var(--ink);
+  overflow: hidden;
+}
+
+.preset-newsprint .np-entry .np-kicker { margin-bottom: 0.35em; color: var(--ink); }
+
+.preset-newsprint .np-entry-hed {
+  font-size: clamp(11.5px, calc(1.3 * var(--u)), 19px);
+  line-height: 1.25;
+  color: var(--ink-2);
+}
+
+.preset-newsprint .np-colophon { font: 500 var(--small) / 1.35 var(--sans); color: var(--ink-3); }
+
+.preset-newsprint .np-colophon-name {
+  margin-bottom: 0.2em;
+  font: 900 calc(1.6 * var(--u)) / 1.1 var(--nameplate);
+  color: var(--ink);
+}

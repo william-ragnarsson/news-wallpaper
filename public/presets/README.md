@@ -4,7 +4,9 @@ A preset turns the normalized news data into a full-screen desktop wallpaper.
 The host (`public/app.js`) fetches data, loads the preset, and calls it again
 whenever data changes, the minute ticks over, or the screen size changes.
 
-Each preset lives in its own folder and is registered in `index.js`:
+Each preset lives in its own folder and is registered in `index.js`, where
+`data` says which payload it gets: `'front'` (the front page, below) or
+`'wallpaper'` (one liveblog, the default):
 
 ```
 presets/<id>/preset.js    ES module, default-exports the preset object
@@ -41,8 +43,8 @@ simulated screen (not the browser window).
 |---|---|
 | `ctx.now` | `Date` of this render |
 | `ctx.screen` | `{ width, height }` logical px of the simulated Mac screen |
-| `ctx.safe` | `{ top, bottom, dockWidth }`: px covered by the menu bar (top) and the Dock (bottom-center). Also CSS vars `--safe-top`, `--safe-bottom`, `--dock-width` on the screen |
-| `ctx.fresh` | `Set` of post ids that arrived since the previous refresh (empty on first load) |
+| `ctx.safe` | `{ top, right, bottom, dockWidth }`: px covered by the menu bar (top), the desktop's files and folders (a column at the right edge) and the Dock (bottom-center). Also CSS vars `--safe-top`, `--safe-right`, `--safe-bottom`, `--dock-width` on the screen. `top` is 0 when the window already starts below the menu bar (Plash with `?chrome=0`). The Dock area comes from `?dock=WxH`; with `?dock=0` (a Dock that hides itself) `bottom` and `dockWidth` are 0 |
+| `ctx.fresh` | `Set` of post ids (story ids for `'front'`) that arrived since the previous refresh (empty on first load) |
 | `ctx.image(img, cssWidth)` | URL of a VRT image resized for `cssWidth` CSS px. Accepts an image object or a URL |
 | `ctx.time(ts)` | Flemish newsroom time: `20u38` |
 | `ctx.clock(ts)` | `20:38` |
@@ -51,7 +53,42 @@ simulated screen (not the browser window).
 | `ctx.h(tag, props, ...children)` | DOM builder. `props.class`, `props.style` (object), `'--var'` props, `dataset` |
 | `ctx.html(markup)` | `DocumentFragment` from a post's sanitized `html` |
 
-## `data`
+## Front-page data (`data: 'front'`)
+
+From `GET /api/vrt-nws/frontpage`. VRT NWS's own front page, in its order,
+with the newest stories per section and the running liveblogs. A story is in
+`top` or in one section, never both; `live` and `latest` may repeat them.
+Titles and summaries are trimmed plain text.
+
+```js
+{
+  source: { id: 'vrt-nws', name: 'VRT NWS', language: 'nl', homepage },
+  generatedAt: '2026-10-25T21:44:05.451Z',
+  top: Story[],             // the front page in VRT's order: top[0] is the lead (about 40)
+  sections: [{              // Binnenland, Buitenland, Politiek, Economie, Sport, Cultuur, Wetenschap
+    id: 'binnenland', name: 'Binnenland',
+    stories: Story[],       // newest first, up to 6; most have no summary
+  }],
+  live: Story[],            // running liveblogs, latest activity first
+  latest: Story[],          // the whole site, newest first (20)
+}
+
+Story = {
+  id, url,                  // id is the URL
+  kind: 'article' | 'liveblog' | 'video',
+  title: 'Storm Boelo trekt stilaan weg',
+  summary: '…' | null,      // 1-3 sentences; always set in `top`, `live` and `latest`
+  section: 'Binnenland' | null,   // VRT's tag: a section, country or topic ("Europa", "Weer")
+  image: { url, alt, credit } | null,   // pass to ctx.image(story.image, cssWidth)
+  time,                     // publishedAt; for a liveblog its latest post
+  // kind 'liveblog' only:
+  live: true, postCount: 339, startedAt,
+  // kind 'video' only:
+  durationSec: 34,
+}
+```
+
+## Liveblog data (`data: 'wallpaper'`)
 
 All timestamps are epoch milliseconds. Text is plain unless the field is
 named `html`.
@@ -124,9 +161,9 @@ pick a liveblog; ids are in `liveblogs[].id`).
 
 - It is read at a glance, from a distance, between windows. Hierarchy first:
   one thing should be readable in under a second.
-- Keep text out of the menu bar band (`--safe-top`) and the Dock area
-  (bottom-center, `--safe-bottom` by `--dock-width`). Images and texture may
-  run underneath both.
+- Keep text out of the menu bar band (`--safe-top`), the desktop files column
+  (`--safe-right`) and the Dock area (bottom-center, `--safe-bottom` by
+  `--dock-width`). Images and texture may run underneath them.
 - Nothing is clickable or scrollable. Content that does not fit must be cut
   cleanly (drop whole items, clamp lines), never overflow or scroll.
 - It must work from 1440×900 up to 2560×1440 and a 3440×1440 ultrawide.
