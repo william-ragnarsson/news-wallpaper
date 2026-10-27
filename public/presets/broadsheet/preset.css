@@ -449,7 +449,10 @@
   font: 650 calc(1.82 * var(--u)) / 1.1 var(--serif);
   letter-spacing: -0.006em;
   text-wrap: balance;
-  hyphens: manual;
+  /* Only long compound words break, so they fit a narrow column. */
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 14 6 6;
   break-after: avoid;
   break-inside: avoid;
 }
