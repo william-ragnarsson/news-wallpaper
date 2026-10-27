@@ -1,8 +1,8 @@
 // The outlet catalog: every news outlet we integrate, the streams it offers,
 // and one loader that turns any stream into the same normalized payload.
-// Shapes are documented in integrations/README.md.
+// Shapes are documented in sources/README.md.
 //
-// An outlet module (integrations/outlets/<id>.mjs) is mostly data: a list of
+// An outlet module (sources/outlets/<id>.mjs) is mostly data: a list of
 // hand-verified streams. Optional hooks cover what the generic feed reader
 // cannot know: normalize() fixes outlet quirks on every item, enrich() fills in
 // what a feed leaves out from another source, liveStreams() adds streams that

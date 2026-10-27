@@ -1,6 +1,6 @@
 // The front page: VRT NWS's own front-page order, its running liveblogs and the
 // newest stories per section, as one payload for the front-page wallpapers.
-// The settings (settings.mjs) pick the liveblogs that lead it and the sections.
+// The settings (settings.mjs, or the app's settings file) pick the liveblogs that lead it and the sections.
 // Every story appears once in `top` + `sections` (deduplicated by URL, a
 // liveblog by its stream id: its URL follows its headline); `live` and
 // `latest` are views across the whole site and may repeat them.

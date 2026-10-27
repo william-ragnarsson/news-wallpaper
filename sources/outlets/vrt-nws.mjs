@@ -8,10 +8,10 @@
 //     tag (section, town or programme) but no lead or author; leads come from
 //     the Atom feed when the article is still in it.
 // Liveblogs show up in all of them; their posts come from VRT's web backend
-// (integrations/vrt-nws.mjs), and each live one becomes its own stream.
+// (sources/liveblog.mjs), and each live one becomes its own stream.
 // VRT has no paywall, so nothing is premium.
 
-import { getFront, getLiveblog } from '../vrt-nws.mjs';
+import { getFront, getLiveblog } from '../liveblog.mjs';
 import { normalizeEntry, parseFeed } from '../lib/feed.mjs';
 import { cached, fetchResource, HttpError } from '../lib/http.mjs';
 import { childText } from '../lib/xml.mjs';
@@ -153,7 +153,13 @@ function section(id, path, name, group, topics, description) {
 
 // The web backend takes the site URL of any page, base64url-encoded.
 function bffPageUrl(pageUrl) {
-  return `${BFF_PAGE}${Buffer.from(pageUrl).toString('base64url')}?language=nl`;
+  return `${BFF_PAGE}${base64url(pageUrl)}?language=nl`;
+}
+
+// btoa, not Buffer, so this runs in the wallpaper page too.
+function base64url(text) {
+  const binary = String.fromCharCode(...new TextEncoder().encode(text));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 async function loadList(url, { raw }) {

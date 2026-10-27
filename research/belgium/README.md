@@ -16,12 +16,12 @@ because sections move and feeds get dropped.
 
 ## Resuming
 
-- Add one outlet at a time, as a module in `integrations/outlets/<id>.mjs`. Try it
-  with `npm run check -- --module integrations/outlets/<id>.mjs`, then register it
-  in `integrations/outlets/index.mjs`.
+- Add one outlet at a time, as a module in `sources/outlets/<id>.mjs`. Try it
+  with `npm run check -- --module sources/outlets/<id>.mjs`, then register it
+  in `sources/outlets/index.mjs`.
 - Outlets on one publishing platform (DPG Media, Mediahuis, Rossel, IPM) share
   their feed quirks. Once two outlets need the same fix, put the shared code in
-  `integrations/outlets/shared/<platform>.mjs`.
+  `sources/outlets/shared/<platform>.mjs`.
 - `build-workflow.js` can be relaunched with the Workflow tool (`scriptPath`).
   Its scratchpad paths point to a temporary folder that is gone, so point them at
   this folder first.

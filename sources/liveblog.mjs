@@ -1,4 +1,4 @@
-// VRT NWS integration.
+// VRT NWS liveblogs and the 'wallpaper' payload of the liveblog designs.
 //
 // Two upstream sources, both public:
 //   - the Atom feed of the newsroom, which lists regular articles and liveblogs

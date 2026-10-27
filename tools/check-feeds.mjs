@@ -12,8 +12,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { checkStreams, registerOutlet } from '../integrations/catalog.mjs';
-import { normalizeEntry, parseFeed } from '../integrations/lib/feed.mjs';
+import { checkStreams, normalizeEntry, parseFeed, registerOutlet } from '../sources/index.mjs';
 
 const args = process.argv.slice(2);
 const flag = name => args.includes(`--${name}`);

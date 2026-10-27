@@ -1,4 +1,4 @@
-// HTML and entity helpers shared by all integrations. Feeds ship titles and
+// HTML and entity helpers shared by all sources. Feeds ship titles and
 // summaries as entity-encoded HTML fragments of very mixed quality, so
 // everything that leaves an integration as plain text goes through here.
 

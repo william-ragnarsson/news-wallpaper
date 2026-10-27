@@ -4,8 +4,7 @@
 
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { HttpError } from './integrations/lib/http.mjs';
-import { DEFAULT_SECTIONS, SECTIONS } from './integrations/frontpage.mjs';
+import { DEFAULT_SECTIONS, HttpError, SECTIONS } from './sources/index.mjs';
 import { PRESETS } from './public/presets/index.js';
 
 const FILE = fileURLToPath(new URL('./settings.json', import.meta.url));

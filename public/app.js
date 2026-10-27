@@ -1,10 +1,15 @@
-// Wallpaper host. Plays the role the macOS app will play later: it fetches the
-// normalized news data, picks a preset, renders it full-screen and keeps it fresh.
-// The preset and the followed liveblog come from the settings picked on
-// /customize/ and change live with them, unless the URL pins them.
+// The wallpaper page. It loads the news through the sources (in this page,
+// over the host's /net: see host.js), picks a preset, renders it full-screen
+// and keeps it fresh. The same page runs in a browser on the dev server and in
+// the macOS app, which takes a picture of it for the desktop.
+// The preset and the followed liveblog come from the settings and change with
+// them, unless the URL pins them.
 // Dev controls live in a HUD (press ?) and never become part of the wallpaper.
 
+import * as host from './host.js';
 import { PRESETS } from './presets/index.js';
+
+const { sources } = host;
 
 const SCREENS = [
   { id: 'fill', label: 'Fill window' },
@@ -67,13 +72,13 @@ const imageFallbacks = new Map();
 const SOURCES = {
   // The followed liveblog with its posts, plus the other liveblogs and headlines.
   wallpaper: {
-    url: () => `/api/vrt-nws/wallpaper?follow=${encodeURIComponent(state.follow)}&posts=40&headlines=16`,
+    load: () => sources.getWallpaper({ follow: state.follow, maxPosts: 40, maxHeadlines: 16 }),
     ids: d => [d.focus, ...d.liveblogs].flatMap(b => (b.posts ?? b.recent).map(p => p.id)),
     signature: d => [d.focus.id, d.focus.posts[0]?.id, ...d.liveblogs.map(b => b.updatedAt), d.headlines[0]?.id].join('|'),
   },
   // VRT NWS's front page in its own order, the sections and the running liveblogs.
   front: {
-    url: () => '/api/vrt-nws/frontpage',
+    load: () => sources.getFrontpage(state.settings ?? {}),
     ids: d => frontStories(d).map(s => s.id),
     signature: d => frontStories(d).map(s => `${s.id}@${s.time}`).join('|'),
   },
@@ -102,10 +107,8 @@ function fetchData(options) {
 async function loadData(seq, { markFresh = true } = {}) {
   const source = dataSource();
   try {
-    const res = await fetch(source.url());
-    const body = await res.json();
+    const body = await source.load();
     if (seq !== fetchSeq) return lastFetch;
-    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     const changed = !state.data || source.signature(body) !== source.signature(state.data);
     const ids = source.ids(body);
     if (markFresh) state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
@@ -123,18 +126,7 @@ async function loadData(seq, { markFresh = true } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Settings (picked on /customize/, kept by the server)
-
-async function fetchSettings() {
-  try {
-    const res = await fetch('/api/settings');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.warn('Settings unavailable, using the defaults:', err);
-    return null;
-  }
-}
+// Settings (kept by the host: see host.js)
 
 // What the settings ask for, or the defaults while they are unknown.
 function settingsPreset() {
@@ -146,15 +138,13 @@ function settingsFollow() {
   return state.settings?.liveblogs?.[0] ?? 'auto';
 }
 
-// Hears every change made on Customize, without a reload; EventSource
-// reconnects by itself after a server restart. A page with both the preset and
-// the liveblog pinned (tools/snap.sh renders those) does without: headless
-// Chrome can hold virtual time while a request stays open, so a snapshot might
-// never be taken. Its front page still follows the settings on each refresh.
+// Hears every change made on Customize, without a reload (dev server only).
+// A page with both the preset and the liveblog pinned (tools/snap.sh renders
+// those) does without: headless Chrome can hold virtual time while a request
+// stays open, so a snapshot might never be taken.
 function listen() {
-  if (listen.events) return;
-  listen.events = new EventSource('/api/settings/events');
-  listen.events.addEventListener('settings', e => onSettings(JSON.parse(e.data)));
+  if (listen.stop || host.inApp) return;
+  listen.stop = host.watchSettings(onSettings);
 }
 
 // The stream sends the settings on connecting and again on every change. The
@@ -566,11 +556,40 @@ async function refresh(announce = false) {
   if (announce) toast(state.error ? `Vernieuwen mislukt: ${state.error}` : `Vernieuwd om ${clock(state.fetchedAt)}`);
 }
 
+// What the app calls before each picture: catch up with the settings, fetch,
+// render, and wait until the fonts and images are in, so the picture is
+// complete. Resolves to { ok, error, fetchedAt }; on an error the page still
+// shows the last news it had.
+async function update() {
+  await ready;
+  const settings = await host.loadSettings();
+  if (settings && settings.updatedAt !== state.settings?.updatedAt) {
+    state.settings = settings;
+    await followSettings();
+  } else {
+    await fetchData();
+  }
+  tickClock();
+  render();
+  await settled();
+  return { ok: !state.error, error: state.error, fetchedAt: state.fetchedAt?.toISOString() ?? null };
+}
+
+// Waits for the web fonts (then lays out again) and for every image on the
+// wallpaper, at most `timeoutMs`: an image that never loads must not hold up
+// the picture.
+async function settled(timeoutMs = 8000) {
+  await document.fonts.ready;
+  layout();
+  const images = [...els.wallpaper.querySelectorAll('img')].map(img => img.decode().catch(() => {}));
+  await Promise.race([Promise.all(images), new Promise(resolve => setTimeout(resolve, timeoutMs))]);
+}
+
 async function start() {
   applyScreen();
   tickClock();
   // What the URL does not pin comes from the settings (the defaults without them).
-  state.settings = await fetchSettings();
+  state.settings = await host.loadSettings();
   if (!state.pinned.preset) state.preset = settingsPreset();
   if (!state.pinned.follow) state.follow = settingsFollow();
   try {
@@ -588,20 +607,24 @@ async function start() {
   // browser keeps six connections to this server at most. The server sends
   // the settings again on reconnect, and onSettings catches up from those.
   if (window.self !== window.top) document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { listen.events?.close(); listen.events = null; }
+    if (document.hidden) { listen.stop?.(); listen.stop = null; }
     else if (!(state.pinned.preset && state.pinned.follow)) listen();
   });
   // Web fonts only start loading once text uses them; lay out again when they land.
   document.fonts.ready.then(layout);
   document.fonts.addEventListener?.('loadingdone', layout);
 
-  setInterval(refresh, state.refreshMs);
-  // Re-render on each minute so relative times ("4 min geleden") stay right.
-  setTimeout(function minute() {
-    tickClock();
-    render();
-    setTimeout(minute, 60_000 - (Date.now() % 60_000) + 50);
-  }, 60_000 - (Date.now() % 60_000) + 50);
+  // The app decides when the page refreshes (see update); a browser keeps it
+  // fresh itself, and re-renders each minute so relative times ("4 min
+  // geleden") stay right.
+  if (!host.inApp) {
+    setInterval(refresh, state.refreshMs);
+    setTimeout(function minute() {
+      tickClock();
+      render();
+      setTimeout(minute, 60_000 - (Date.now() % 60_000) + 50);
+    }, 60_000 - (Date.now() % 60_000) + 50);
+  }
 
   let resizeTimer;
   addEventListener('resize', () => {
@@ -620,7 +643,15 @@ async function start() {
   }, true);
 
   if (state.showHint) toast('Druk op ? voor de bediening', 3500);
-  window.wallpaper = { state, setPreset, followCustomize, refresh, render };
 }
 
-start();
+// What the app (and the console) can reach. Set before start() so the app can
+// call refresh() as soon as the page has loaded; it waits for `ready`.
+const ready = start();
+window.wallpaper = {
+  ready,
+  refresh: update,
+  sources,
+  presets: PRESETS,
+  state, setPreset, followCustomize, render,
+};

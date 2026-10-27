@@ -1,20 +1,31 @@
-// Local dev server: serves the wallpaper, the stream explorer and the
-// Customize page from public/ and exposes the news integrations and the
-// settings as JSON under /api. Zero dependencies; run with `npm run dev`.
+// Local dev server, zero dependencies; run with `npm run dev`. It is one of the
+// two hosts of the wallpaper page (the macOS app is the other, see
+// public/host.js) and serves what both serve:
+//   /                   public/: the wallpaper, the explorer, Customize
+//   /sources/           sources/, which the page runs itself
+//   /net?url=<url>      the page's way to VRT (see proxy() below)
+//   /api/settings       the settings
+// and, for the explorer, Customize and tools, the sources as JSON under /api.
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as catalog from './integrations/catalog.mjs';
-import * as vrt from './integrations/vrt-nws.mjs';
-import { getFrontpage, liveblogOptions, SECTIONS } from './integrations/frontpage.mjs';
-import { HttpError } from './integrations/lib/http.mjs';
+import * as sources from './sources/index.mjs';
+import { HttpError, USER_AGENT } from './sources/index.mjs';
 import { getSettings, MAX_LIVEBLOGS, subscribe, updateSettings } from './settings.mjs';
 import { PRESETS } from './public/presets/index.js';
 
 const PORT = Number(process.env.PORT) || 4174;
-const PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
+// URL prefix → directory, the first match wins.
+const STATIC = [
+  ['/sources/', fileURLToPath(new URL('./sources/', import.meta.url))],
+  ['/', fileURLToPath(new URL('./public/', import.meta.url))],
+];
+// What /net may reach: https on VRT's domains, which is all the sources read.
+// Bridge.swift allows the same in the app.
+const NET_HOSTS = /(^|\.)vrt\.be$/;
+const NET_TIMEOUT_MS = 15_000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -31,22 +42,22 @@ const MIME = {
 
 // [path, handler, method]; the method defaults to GET.
 const routes = [
-  [/^\/api\/vrt-nws\/wallpaper$/, (_, q) => vrt.getWallpaper({
+  [/^\/api\/vrt-nws\/wallpaper$/, (_, q) => sources.getWallpaper({
     follow: q.get('follow') || 'auto',
     maxPosts: clampInt(q.get('posts'), 1, 200, 40),
     maxHeadlines: clampInt(q.get('headlines'), 0, 50, 16),
   })],
-  [/^\/api\/vrt-nws\/front$/, () => vrt.getFront()],
-  [/^\/api\/vrt-nws\/frontpage$/, async () => getFrontpage(await getSettings())],
-  [/^\/api\/vrt-nws\/liveblog\/(\d+)$/, ([, id]) => vrt.getLiveblog(id)],
+  [/^\/api\/vrt-nws\/front$/, () => sources.getFront()],
+  [/^\/api\/vrt-nws\/frontpage$/, async () => sources.getFrontpage(await getSettings())],
+  [/^\/api\/vrt-nws\/liveblog\/(\d+)$/, ([, id]) => sources.getLiveblog(id)],
 
   // Outlet catalog, for the explorer and anything built on normalized streams.
-  [/^\/api\/outlets$/, () => catalog.listOutlets()],
-  [/^\/api\/outlets\/([\w-]+)\/streams$/, ([, outlet]) => catalog.listStreams(outlet)],
+  [/^\/api\/outlets$/, () => sources.listOutlets()],
+  [/^\/api\/outlets\/([\w-]+)\/streams$/, ([, outlet]) => sources.listStreams(outlet)],
   [/^\/api\/outlets\/([\w-]+)\/streams\/([\w-]+)$/, ([, outlet, stream], q) =>
-    catalog.loadStream(outlet, stream, { raw: q.get('raw') === '1' })],
-  [/^\/api\/outlets\/([\w-]+)\/health$/, ([, outlet]) => catalog.checkStreams(outlet)],
-  [/^\/api\/health$/, () => catalog.checkStreams()],
+    sources.loadStream(outlet, stream, { raw: q.get('raw') === '1' })],
+  [/^\/api\/outlets\/([\w-]+)\/health$/, ([, outlet]) => sources.checkStreams(outlet)],
+  [/^\/api\/health$/, () => sources.checkStreams()],
 
   // What the wallpaper shows, set on the Customize page.
   [/^\/api\/settings$/, () => getSettings()],
@@ -56,8 +67,8 @@ const routes = [
   }, 'PATCH'],
   [/^\/api\/settings\/options$/, async () => ({
     presets: PRESETS,
-    sections: SECTIONS,
-    liveblogs: await liveblogOptions((await getSettings()).liveblogs),
+    sections: sources.SECTIONS,
+    liveblogs: await sources.liveblogOptions((await getSettings()).liveblogs),
     maxLiveblogs: MAX_LIVEBLOGS,
   })],
 ];
@@ -71,6 +82,9 @@ createServer(async (req, res) => {
     return send(res, 400, { error: 'Bad request' });
   }
   try {
+    if (url.pathname === '/net') {
+      return req.method === 'GET' ? await proxy(url.searchParams, req, res) : send(res, 405, { error: 'Method not allowed' });
+    }
     if (url.pathname === '/api/settings/events') {
       return req.method === 'GET' ? streamSettings(req, res) : send(res, 405, { error: 'Method not allowed' });
     }
@@ -91,9 +105,10 @@ createServer(async (req, res) => {
 });
 
 async function serveStatic(pathname, res) {
-  const rel = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '');
-  const file = join(PUBLIC_DIR, rel.endsWith('/') ? join(rel, 'index.html') : rel);
-  if (!file.startsWith(PUBLIC_DIR)) return send(res, 403, { error: 'Forbidden' });
+  const [prefix, dir] = STATIC.find(([prefix]) => pathname.startsWith(prefix));
+  const rel = normalize(decodeURIComponent(pathname.slice(prefix.length))).replace(/^(\.\.[/\\])+/, '');
+  const file = join(dir, rel === '.' || rel.endsWith('/') ? join(rel, 'index.html') : rel);
+  if (!file.startsWith(dir)) return send(res, 403, { error: 'Forbidden' });
   try {
     const body = await readFile(file);
     res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
@@ -106,6 +121,50 @@ async function serveStatic(pathname, res) {
     }
     send(res, 404, { error: 'Not found' });
   }
+}
+
+// GET /net?url=<url>: a request to a news site on the page's behalf, which
+// CORS keeps from fetching VRT itself (public/host.js is the other end). Sends
+// back the site's status, type and body, the URL it ended at in x-final-url,
+// and, when the site did not answer, a 504 with the reason in x-net-error.
+// The user agent comes from x-user-agent, which a page can set.
+async function proxy(query, req, res) {
+  let target = netUrl(query.get('url'));
+  const headers = { accept: req.headers.accept ?? '*/*', 'user-agent': req.headers['x-user-agent'] ?? USER_AGENT };
+  let upstream;
+  try {
+    // Redirects by hand, so each hop is checked against NET_HOSTS too.
+    for (let hops = 0; ; hops++) {
+      upstream = await fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(NET_TIMEOUT_MS) });
+      const location = upstream.status >= 300 && upstream.status < 400 && upstream.headers.get('location');
+      if (!location) break;
+      if (hops === 5) throw new HttpError(502, 'Too many redirects');
+      target = netUrl(new URL(location, target).href);
+    }
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    const reason = err.name === 'TimeoutError' ? `timed out after ${NET_TIMEOUT_MS / 1000}s` : err.cause?.code ?? err.message;
+    res.writeHead(504, { 'x-net-error': String(reason).replace(/[^\x20-\x7e]/g, ''), 'cache-control': 'no-store' });
+    return res.end();
+  }
+  const body = Buffer.from(await upstream.arrayBuffer());
+  res.writeHead(upstream.status, {
+    'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
+    'x-final-url': target,
+    'cache-control': 'no-store',
+  });
+  res.end(body);
+}
+
+function netUrl(raw) {
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new HttpError(400, 'Expected ?url=<an https URL>');
+  }
+  if (url.protocol !== 'https:' || !NET_HOSTS.test(url.hostname)) throw new HttpError(403, `Not a news source: ${url.host}`);
+  return url.href;
 }
 
 // Server-sent events: the settings now, then again on every change, so open

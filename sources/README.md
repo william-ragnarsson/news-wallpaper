@@ -1,26 +1,58 @@
-# Integrations
+# Sources
 
-Everything that turns a news outlet into data. Each outlet we support is a
+Everything that turns a news outlet into data: the project's backend, except
+that it runs wherever the wallpaper page runs. Each outlet we support is a
 hand-written module with streams we have checked by hand; nothing here guesses at
 an unknown site. The wallpaper presets and the stream explorer (`/explorer/`)
 only ever see the normalized shapes below, never an outlet's raw feed.
 
 ```
-integrations/
+sources/
+  index.mjs            the entry: the one module anything outside sources/ imports
   catalog.mjs          the catalog: list outlets and streams, load a stream, health check
   outlets/index.mjs    the registry: one import per outlet
   outlets/<id>.mjs     one outlet: its streams and quirk fixes
-  vrt-nws.mjs          VRT's web backend: front page, liveblogs, wallpaper payload
+  liveblog.mjs         VRT's web backend: front page, liveblogs, wallpaper payload
   frontpage.mjs        the front-page payload with the settings applied; the options to pick from
   lib/feed.mjs         RSS 2.0 / RDF / Atom reader and normalizeEntry()
-  lib/http.mjs         fetch with charset handling, user agents, in-memory cache
+  lib/http.mjs         fetch with charset handling, user agents, in-memory cache, setTransport()
   lib/xml.mjs          small XML parser and query helpers
   lib/html.mjs         HTML to text and paragraphs, entities, inline images
 ```
 
+## Hosts
+
+The modules are plain JavaScript with no Node or DOM APIs, so they run both in
+Node and in the wallpaper page. Import them from `index.mjs` only.
+
+- **The wallpaper page** (`public/host.js`) imports them from `/sources/` and
+  runs them itself. That is how both the macOS app and the dev preview show
+  the news.
+- **The dev server** (`server.mjs`) runs them for the explorer, the Customize
+  page and `tools/check-feeds.mjs`, and serves the results as JSON (the HTTP
+  API below).
+
+The network is the host's. `setTransport(fn)` replaces the default, the global
+fetch. A transport takes fetch's `(url, { headers, signal })` and resolves to
+`{ ok, status, url, headers, arrayBuffer() }`, where `url` is the final URL
+after redirects. It rejects when the site could not be reached. The page cannot
+fetch VRT itself (CORS), so its transport goes through its host. Both hosts
+answer the same paths:
+
+| Path | Returns |
+| --- | --- |
+| `/` | `public/` |
+| `/sources/…` | `sources/`, as ES modules |
+| `GET /net?url=<url>` | a GET to that URL, made by the host. Only https on `vrt.be` and its subdomains, redirects included. The site's status, content type and body come back, plus the URL it ended at in `x-final-url`. When the site did not answer: 504 with the reason in `x-net-error`. The request's `accept` is passed on and `x-user-agent` becomes the user agent. Any other URL is refused with a 4xx |
+| `GET /api/settings` | the `Settings` (see below) |
+
+The dev server is `http://localhost:4174/` and the app is `wallpaper://app/`
+(`app/Sources/NewsWallpaper/Bridge.swift`).
+
 ## HTTP API
 
-Served by `server.mjs` (`npm run dev`, port 4174).
+Served by `server.mjs` (`npm run dev`, port 4174) only. The macOS app does not
+serve it.
 
 | Route | Returns |
 | --- | --- |
@@ -54,6 +86,10 @@ What the wallpaper shows, picked on the Customize page (`/customize/`).
 gitignored. A missing file means the defaults; a field that is no longer valid
 (a preset or section that was removed) falls back to its default. Saves run one
 at a time and replace the file in one step (`settings.json.tmp`, then a rename).
+The macOS app keeps its own copy in
+`~/Library/Application Support/NewsWallpaper/settings.json`
+(`app/Sources/NewsWallpaper/SettingsStore.swift`) and serves it the same way.
+The page fills in the defaults.
 
 ### Settings
 
@@ -326,6 +362,6 @@ section from a category scheme, the canonical URL.
 fetch: VRT uses it to fill liveblog summaries from the liveblog itself. Cache
 what it fetches (`cached()` in `lib/http.mjs`) so a refresh does not refetch.
 
-Try a new module with `npm run check -- --module integrations/outlets/<id>.mjs`
+Try a new module with `npm run check -- --module sources/outlets/<id>.mjs`
 (it is registered for that run only), then add it to `outlets/index.mjs` and
 open it in the explorer.
