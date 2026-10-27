@@ -1,9 +1,10 @@
 import AppKit
+import WallpaperCore
 
 // Puts a rendered PNG on the desktop. macOS derives the menu bar's tint from
 // the desktop picture, which is why this is a real picture and not a window.
 enum Desktop {
-  static let folder = URL.applicationSupportDirectory.appending(path: "NewsWallpaper", directoryHint: .isDirectory)
+  static let folder = Environment.app.data
 
   static func set(_ png: Data, on screen: NSScreen) throws {
     let files = FileManager.default

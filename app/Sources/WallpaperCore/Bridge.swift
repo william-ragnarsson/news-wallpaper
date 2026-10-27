@@ -11,16 +11,20 @@ import WebKit
 //   /api/settings    the settings (SettingsStore)
 // Nothing here knows about news: the page and its sources do all of that.
 @MainActor
-final class Bridge: NSObject, WKURLSchemeHandler {
-  static let scheme = "wallpaper"
-  static let home = URL(string: "wallpaper://app/")!
+public final class Bridge: NSObject, WKURLSchemeHandler {
+  public nonisolated static let scheme = "wallpaper"
+  public nonisolated static let home = URL(string: "wallpaper://app/")!
+  // The wallpaper without the stand-in menu bar and Dock or the dev hint.
+  public nonisolated static let page = URL(string: "?chrome=0&hud=0", relativeTo: home)!.absoluteURL
 
-  // The page's files: Resources/web in the app (bundle.sh copies public/ and
-  // sources/ there), the repo itself under `swift run`.
-  static let root: URL = Bundle.main.url(forResource: "web", withExtension: nil)
-    ?? URL(filePath: #filePath)
-      .deletingLastPathComponent().deletingLastPathComponent()
-      .deletingLastPathComponent().deletingLastPathComponent()
+  // The page's files (Environment.web) and its settings.
+  private let root: URL
+  private let settings: SettingsStore
+
+  public init(_ environment: Environment) {
+    root = environment.web
+    settings = environment.settings
+  }
 
   // URL prefix → folder under root, the first match wins.
   private static let mounts = [("/sources/", "sources"), ("/", "public")]
@@ -41,7 +45,7 @@ final class Bridge: NSObject, WKURLSchemeHandler {
   // Requests the web view gave up on: answering one of those raises.
   private var stopped = Set<ObjectIdentifier>()
 
-  func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
+  public func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
     guard let url = task.request.url else { return }
     switch url.path() {
     case "/net":
@@ -52,13 +56,13 @@ final class Bridge: NSObject, WKURLSchemeHandler {
         respond(task, reply)
       }
     case "/api/settings":
-      respond(task, Reply(status: 200, type: Self.types["json"]!, body: SettingsStore.load()))
+      respond(task, Reply(status: 200, type: Self.types["json"]!, body: settings.load()))
     default:
       respond(task, file(at: url.path()))
     }
   }
 
-  func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {
+  public func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {
     stopped.insert(ObjectIdentifier(task))
   }
 
@@ -76,7 +80,7 @@ final class Bridge: NSObject, WKURLSchemeHandler {
   private func file(at path: String) -> Reply {
     let decoded = path.removingPercentEncoding ?? path
     guard let (prefix, folder) = Self.mounts.first(where: { decoded.hasPrefix($0.0) }) else { return .notFound }
-    let dir = Self.root.appending(path: folder, directoryHint: .isDirectory).standardizedFileURL
+    let dir = root.appending(path: folder, directoryHint: .isDirectory).standardizedFileURL
     var file = dir.appending(path: String(decoded.dropFirst(prefix.count))).standardizedFileURL
     // Nothing outside the folder (`..`).
     guard file.path().hasPrefix(dir.path()) else { return .notFound }

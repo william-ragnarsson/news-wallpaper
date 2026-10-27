@@ -1,10 +1,11 @@
 import SwiftUI
+import WallpaperCore
 
 // A menu bar icon and the Customize window: the wallpaper is the app. How it
 // is made:
 //   Updater   when to redraw
-//   Renderer  draws the page (public/) offscreen and takes a picture of it
-//   Bridge    serves the page, the sources (sources/) and their network
+//   Renderer  draws the page (public/) offscreen and takes a picture of it (WallpaperRender)
+//   Bridge    serves the page, the sources (sources/) and their network (WallpaperCore)
 //   Desktop   sets the picture
 // Customize (CustomizeView and its panes) edits the settings through the dev
 // server's API for now (Customization).
@@ -32,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   // Where Customize reads and saves the settings: the page when it comes from
   // a server, else the dev server.
   private static var server: URL {
-    let page = Renderer.page
+    let page = Environment.app.page
     return ["http", "https"].contains(page.scheme) ? page : URL(string: "http://localhost:4174/?chrome=0&hud=0")!
   }
 

@@ -23,7 +23,9 @@ app/                host 2: the macOS app (wallpaper://app/)
   Bridge.swift        serves public/ and sources/, /net and /api/settings to that page
   SettingsStore.swift the app's settings.json
   Desktop.swift       sets the picture
+  wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)
 tools/check-feeds.mjs   health check of every stream (`npm run check`)
+tools/check-boundaries.sh  which part may do what (only the app sets the desktop picture)
 ```
 
 The sources are the backend, but they run inside the wallpaper page. The page
@@ -49,6 +51,7 @@ The app needs the Command Line Tools (not Xcode):
 
 ```sh
 app/bundle.sh            # builds app/build/NewsWallpaper.app
+npm run install-app      # builds it, replaces /Applications/NewsWallpaper.app and opens it
 ```
 
 To work on the page with the app showing it, point the app at the dev server:

@@ -1,4 +1,6 @@
 import AppKit
+import WallpaperCore
+import WallpaperRender
 
 // When the wallpaper is redrawn: every few minutes while someone can see it,
 // right away on waking, unlocking or a change of screens, and when asked from
@@ -6,7 +8,7 @@ import AppKit
 // is locked. A failed redraw keeps the picture there is: old news beats none.
 @MainActor
 final class Updater {
-  private let renderer = Renderer()
+  private let renderer = Renderer(.app)
   private var timer: Timer?
   private var soon: Task<Void, Never>?
   private var running = false {
@@ -63,8 +65,10 @@ final class Updater {
     // The screen with the menu bar.
     guard let screen = NSScreen.screens.first else { return }
     do {
-      let png = try await renderer.render(for: screen)
-      try Desktop.set(png, on: screen)
+      // The page is read each time: `defaults write … page` takes effect
+      // without a restart.
+      let snapshot = try await renderer.render(Environment.app.page, in: screen.frame)
+      try Desktop.set(snapshot.png, on: screen)
     } catch {
       NSLog("Refresh failed: \(error)")
     }
