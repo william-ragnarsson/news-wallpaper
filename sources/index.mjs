@@ -11,6 +11,8 @@
 // Payloads for the wallpaper designs.
 export { getFrontpage, liveblogOptions, PROVIDERS, SECTIONS, DEFAULT_SECTIONS } from './frontpage.mjs';
 export { getWallpaper, getFront, getLiveblog } from './liveblog.mjs';
+// Where those payloads read the news from: live (the default) or stored.
+export { setReader } from './lib/reader.mjs';
 
 // The outlet catalog: outlets, their streams and one loader for any stream.
 export { GROUPS, listOutlets, listStreams, loadStream, checkStreams, registerOutlet } from './catalog.mjs';

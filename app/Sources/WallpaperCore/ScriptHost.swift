@@ -3,7 +3,8 @@ import WebKit
 
 // Runs the page's JavaScript for Swift: a web view that is never shown, on an
 // empty page at wallpaper://app/ (public/script-host.html), where the modules
-// in public/ and sources/ import as they do in the wallpaper. Plain
+// in public/ and sources/ import as they do in the wallpaper: the settings'
+// rules (SettingsService) and the fetch (NewsFeed). Plain
 // JavaScriptCore can not run them: no modules, fetch or URL.
 @MainActor
 public final class ScriptHost: NSObject, WKNavigationDelegate {
@@ -78,6 +79,6 @@ public final class ScriptHost: NSObject, WKNavigationDelegate {
   private func fail() {
     guard let loaded else { return }
     self.loaded = nil
-    loaded.resume(throwing: CocoaError(.featureUnsupported, userInfo: [NSLocalizedDescriptionKey: "The settings' web view stopped"]))
+    loaded.resume(throwing: CocoaError(.featureUnsupported, userInfo: [NSLocalizedDescriptionKey: "The script host's web view stopped"]))
   }
 }

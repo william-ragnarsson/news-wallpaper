@@ -16,6 +16,7 @@ sources/
   frontpage.mjs        the front-page payload with the settings applied; the options to pick from
   lib/feed.mjs         RSS 2.0 / RDF / Atom reader and normalizeEntry()
   lib/http.mjs         fetch with charset handling, user agents, in-memory cache, setTransport()
+  lib/reader.mjs       where the payloads read the news from: live, or stored (setReader())
   lib/xml.mjs          small XML parser and query helpers
   lib/html.mjs         HTML to text and paragraphs, entities, inline images
 ```
@@ -31,6 +32,13 @@ Node and in the wallpaper page. Import them from `index.mjs` only.
 - **The dev server** (`server.mjs`) runs them for the explorer, the Customize
   page and `tools/check-feeds.mjs`, and serves the results as JSON (the HTTP
   API below).
+
+The payloads (`getFrontpage`, `liveblogOptions`, `getWallpaper`) read the news
+through `lib/reader.mjs`: `loadStream`, `getFront` and `getLiveblog`, live by
+default. `setReader({ loadStream, getFront, getLiveblog })` swaps in a reader of
+news stored earlier, such as the document `public/harvest.js` makes for the
+app; `setReader(null)` goes back to live. The catalog and the outlets always
+load live.
 
 The network is the host's. `setTransport(fn)` replaces the default, the global
 fetch. A transport takes fetch's `(url, { headers, signal })` and resolves to

@@ -1,17 +1,33 @@
 import AppKit
+import NewsFeed
+import NewsStore
 import WallpaperCore
 import WallpaperRender
 
 // wallpaper-dev: the app's parts from the command line, for agents (and
-// anyone trying a change). It runs in this worktree only: its settings live
-// in .dev/, and it never touches the desktop picture, the installed app or
-// its settings. Every command prints one JSON object; a failure prints
+// anyone trying a change). It runs in this worktree only: its settings and
+// news live in .dev/, and it never touches the desktop picture, the installed
+// app or its settings. Every command prints one JSON object; a failure prints
 // {"error": …} and exits 1.
 //
 //   swift run --package-path app --build-system native wallpaper-dev help
 
 let usage = """
   wallpaper-dev <command> [options]
+
+  fetch
+      Fetches all the news there is to pick from (every section, the running
+      liveblogs and the ones in the settings) and stores it in news.json,
+      keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
+      counts}. What fails is kept from the fetch before and listed in errors;
+      when VRT's feed or front page fails, nothing is stored.
+
+  news [path]
+      Prints the stored news: {fetchedAt, ok, errors, streams, front,
+      liveblogs}, or {path, value} for one part of it. A path is jq's, keys and
+      indexes only, with | length or | keys at the end:
+      .streams.voorpagina.items[0].title  '.streams["liveblog-123"].header'
+      '.streams.voorpagina.items | length'  '.streams | keys'
 
   render --out <file.png> [--size 1512x982] [--scale 2] [--preset <id>] [--follow <liveblog id>]
          [--settings '{"margin": 80}'] [--page <url>]
@@ -34,7 +50,7 @@ let usage = """
       the running liveblogs (from VRT), maxLiveblogs, maxMargin.
 
   Every command takes --data <folder> (default: .dev/ in this worktree), where
-  settings.json is read from.
+  settings.json and news.json are.
   """
 
 struct Failure: Error, CustomStringConvertible {
@@ -69,6 +85,8 @@ struct Arguments {
 func run(_ arguments: Arguments) async throws -> [String: Any] {
   let environment = Environment.dev(data: arguments["data"].map { URL(filePath: $0, directoryHint: .isDirectory) })
   switch arguments.command {
+  case "fetch": return try object(await Fetcher(environment).run())
+  case "news": return try news(arguments, environment)
   case "render": return try await render(arguments, environment)
   case "settings": return try await settings(arguments, environment)
   case "options": return try object(await SettingsService(environment).options())
@@ -119,10 +137,63 @@ func render(_ arguments: Arguments, _ environment: Environment) async throws -> 
   let request = RenderRequest(page: page.url!, size: CGSize(width: sizes[0], height: sizes[1]), scale: scale, settings: settings)
   let snapshot = try await Renderer(environment).render(request)
   let file = try FileOutput(URL(filePath: out)).put(snapshot)
-  var result: [String: Any] = ["path": file.path(), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
+  var result: [String: Any] = ["path": file.path(percentEncoded: false), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
   result["fetchedAt"] = snapshot.fetchedAt
   if let settings { result["settings"] = try object(settings) }
   return result
+}
+
+func news(_ arguments: Arguments, _ environment: Environment) throws -> [String: Any] {
+  let document = try JSONSerialization.jsonObject(with: environment.news.read().data)
+  guard let path = arguments.words.first else { return document as? [String: Any] ?? [:] }
+  return ["path": path, "value": try query(document, path)]
+}
+
+// `path` (jq's .a.b[0]["c-d"], then | length or | keys) in `value`.
+func query(_ value: Any, _ path: String) throws -> Any {
+  let parts = path.split(separator: "|", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+  var value = value
+  var rest = Substring(parts[0])
+  func fail() -> Failure { Failure("Not in the news: \(path)") }
+  while !rest.isEmpty {
+    if rest.hasPrefix("[") {
+      guard let close = rest.firstIndex(of: "]") else { throw Failure("Expected ] in \(path)") }
+      let key = rest[rest.index(after: rest.startIndex)..<close]
+      rest = rest[rest.index(after: close)...]
+      if let index = Int(key) {
+        // As jq: from the end when negative.
+        guard let array = value as? [Any], case let at = index < 0 ? array.count + index : index, array.indices.contains(at) else { throw fail() }
+        value = array[at]
+      } else {
+        guard let field = (value as? [String: Any])?[key.trimmingCharacters(in: CharacterSet(charactersIn: "\""))] else { throw fail() }
+        value = field
+      }
+    } else if rest.hasPrefix(".") {
+      rest = rest.dropFirst()
+      let end = rest.firstIndex { $0 == "." || $0 == "[" } ?? rest.endIndex
+      let key = String(rest[..<end])
+      rest = rest[end...]
+      if key.isEmpty { continue }
+      guard let field = (value as? [String: Any])?[key] else { throw fail() }
+      value = field
+    } else {
+      throw Failure("A path starts with . or [, got \(path)")
+    }
+  }
+  switch parts.count > 1 ? parts[1] : nil {
+  case nil: return value
+  case "length":
+    if let array = value as? [Any] { return array.count }
+    if let object = value as? [String: Any] { return object.count }
+    if let text = value as? String { return text.count }
+    throw Failure("length of what has none: \(path)")
+  case "keys":
+    if let array = value as? [Any] { return Array(array.indices) }
+    if let object = value as? [String: Any] { return object.keys.sorted() }
+    throw Failure("keys of what has none: \(path)")
+  case let filter?:
+    throw Failure("Only | length and | keys, not | \(filter)")
+  }
 }
 
 // An Encodable as what json() prints.

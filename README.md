@@ -13,6 +13,7 @@ sources/            the news: feeds, liveblogs, the front page (plain JS, no Nod
 public/             the pages
   host.js             the wallpaper page's connection to its host: loads sources/, routes its network
   app.js              the wallpaper: runs the sources, renders a preset; window.wallpaper for the app
+  harvest.js          the app's fetch: all the news there is to pick from, as one document
   presets/            the designs
   explorer/, customize/   dev tools, served by the dev server only
 server.mjs          host 1: the dev server (http://localhost:4174/), plus a JSON API for the dev tools
@@ -23,6 +24,9 @@ app/                host 2: the macOS app (wallpaper://app/)
                       (a RenderRequest: size, scale, settings for once), one render at a time
   Bridge.swift        serves public/ and sources/, /net and /api/settings to that page
   SettingsService.swift  the settings: runs public/settings.js, the only writer of settings.json
+  NewsStore           the news fetched last: news.json, and news.prev.json before it
+  NewsFeed            Fetcher: runs public/harvest.js, the only writer of news.json
+                      (wallpaper-dev only so far: the app still fetches as it renders)
   Customize           the window that picks the design, liveblogs and sections (menu bar → Customize)
   DesktopOutput.swift sets the picture
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)

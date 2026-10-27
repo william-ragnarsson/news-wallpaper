@@ -9,6 +9,8 @@ runs the app's parts inside your worktree and touches nothing outside it.
 
 ```sh
 swift run --package-path app --build-system native wallpaper-dev help
+swift run --package-path app --build-system native wallpaper-dev fetch
+swift run --package-path app --build-system native wallpaper-dev news '.streams.voorpagina.items | length'
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/front.png
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/live.png --preset <id> --size 1512x982 --scale 2
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/wide.png --settings '{"margin": 0}'
@@ -21,10 +23,14 @@ swift run --package-path app --build-system native wallpaper-dev options
   `--size` points times `--scale` pixels. Read the PNG to check a change to
   the page or a design. Preset ids are in `public/presets/index.js`.
   `--settings` tries settings for one picture without saving them.
+- `fetch` fetches all the news there is to pick from into `.dev/news.json`
+  (the one before stays as `news.prev.json`) and prints what it got; `news
+  [path]` prints it, or one part (a jq path: keys, indexes, `| length`,
+  `| keys`). Rendering does not read it yet: the page still fetches live.
 - `settings` prints the settings; `settings set <key>=<value>…` checks and saves
   them, as the app's Customize does (the rules are `public/settings.js`).
   `options` lists what there is to pick from.
-- Its data (settings.json) lives in `.dev/` in your worktree (gitignored), or
+- Its data (settings.json, news.json) lives in `.dev/` in your worktree (gitignored), or
   in `--data <folder>`. The dev server (`npm run dev`) in your worktree uses the
   same `.dev/settings.json`.
 
@@ -47,6 +53,8 @@ swift run --package-path app --build-system native wallpaper-dev options
 | `sources/` | the news: feeds, liveblogs, the front page (plain JS) |
 | `public/` | the wallpaper page (`app.js`, `host.js`) and its designs (`presets/`) |
 | `app/Sources/WallpaperCore` | `Environment` (every path), `Bridge` (the page's host), `SettingsService` (the settings, by `public/settings.js`) |
+| `app/Sources/NewsStore` | M1: the news fetched last, `news.json`; `read()`, `meta()`, and `commit` for the fetcher only |
+| `app/Sources/NewsFeed` | M2: `Fetcher`, which runs `public/harvest.js` and commits what it gives |
 | `app/Sources/WallpaperRender` | `Renderer`: draws the page for a `RenderRequest`, returns a PNG; `PNGOutput`, `FileOutput` |
 | `app/Sources/NewsWallpaper` | the app: menu bar, `Updater`, `DesktopOutput`, the Customize window |
 | `app/Sources/wallpaper-dev` | the command line above |

@@ -27,6 +27,9 @@ only_in 'setDesktopImage' NewsWallpaper
 # gets its paths from Environment.
 only_in 'UserDefaults|applicationSupportDirectory' NewsWallpaper WallpaperCore
 only_in 'Environment\.app\b' NewsWallpaper
+# Only the fetcher writes the news: NewsStore's commit is @_spi(Writer).
+only_in '@_spi\(Writer\) import' NewsFeed
+only_in '@_spi\(Writer\)' NewsFeed NewsStore
 
 [ $status = 0 ] && echo "Boundaries hold."
 exit $status

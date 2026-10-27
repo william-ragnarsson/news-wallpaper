@@ -4,6 +4,8 @@
 // touching the desktop (AGENTS.md). Build the app with ./bundle.sh (Command
 // Line Tools only, no Xcode).
 //   WallpaperCore    where things are (Environment), the page's host (Bridge), settings
+//   NewsStore        the news fetched last, news.json (M1)
+//   NewsFeed         fetches the news and stores it, the store's one writer (M2)
 //   WallpaperRender  draws the page for a RenderRequest and returns a PNG; FileOutput (M3)
 //   NewsWallpaper    the app: menu bar, Updater, DesktopOutput, Customize (M4, M5)
 //   wallpaper-dev    the command line for agents
@@ -19,8 +21,11 @@ let package = Package(
   ],
   targets: [
     .target(name: "WallpaperCore", path: "Sources/WallpaperCore"),
+    .target(name: "NewsStore", dependencies: ["WallpaperCore"], path: "Sources/NewsStore"),
+    .target(name: "NewsFeed", dependencies: ["WallpaperCore", "NewsStore"], path: "Sources/NewsFeed"),
     .target(name: "WallpaperRender", dependencies: ["WallpaperCore"], path: "Sources/WallpaperRender"),
     .executableTarget(name: "NewsWallpaper", dependencies: ["WallpaperCore", "WallpaperRender"], path: "Sources/NewsWallpaper"),
-    .executableTarget(name: "wallpaper-dev", dependencies: ["WallpaperCore", "WallpaperRender"], path: "Sources/wallpaper-dev"),
+    .executableTarget(
+      name: "wallpaper-dev", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender"], path: "Sources/wallpaper-dev"),
   ]
 )

@@ -9,6 +9,7 @@
 
 import { decodeEntities, htmlToParagraphs, htmlToText, sanitizeHtml } from './lib/html.mjs';
 import { cached, fetchText, HttpError } from './lib/http.mjs';
+import * as reader from './lib/reader.mjs';
 
 export { HttpError };
 
@@ -55,13 +56,13 @@ export async function getLiveblog(id, feedEntry) {
 // One payload with everything a wallpaper needs: the liveblog in focus, the
 // other liveblogs with their latest posts, and the regular headlines.
 export async function getWallpaper({ follow = 'auto', maxPosts = 40, maxHeadlines = 16 } = {}) {
-  const front = await getFront();
+  const front = await reader.getFront();
   const entries = [...front.liveblogs];
   if (follow !== 'auto' && !entries.some(e => e.liveblogId === follow)) {
     entries.unshift({ liveblogId: follow });
   }
 
-  const settled = await Promise.allSettled(entries.map(e => getLiveblog(e.liveblogId, e)));
+  const settled = await Promise.allSettled(entries.map(e => reader.getLiveblog(e.liveblogId, e)));
   const liveblogs = settled
     .filter(r => r.status === 'fulfilled')
     .map(r => r.value)
