@@ -16,12 +16,13 @@ public/             the pages
   presets/            the designs
   explorer/, customize/   dev tools, served by the dev server only
 server.mjs          host 1: the dev server (http://localhost:4174/), plus a JSON API for the dev tools
-settings.mjs        the dev server's settings.json
+settings.mjs        the dev server's settings: .dev/settings.json, by the rules in public/settings.js
 app/                host 2: the macOS app (wallpaper://app/)
   Updater.swift       when to redraw: every 5 minutes, on wake, unlock and screen changes, from the menu
   Renderer.swift      loads the page offscreen, calls window.wallpaper.refresh(), takes a picture
   Bridge.swift        serves public/ and sources/, /net and /api/settings to that page
-  SettingsStore.swift the app's settings.json
+  SettingsService.swift  the settings: runs public/settings.js, the only writer of settings.json
+  Customize           the window that picks the design, liveblogs and sections (menu bar → Customize)
   Desktop.swift       sets the picture
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)
 tools/check-feeds.mjs   health check of every stream (`npm run check`)
@@ -64,8 +65,9 @@ To work on the page with the app showing it, point the app at the dev server:
 - `/explorer/` the data explorer: outlets, their streams and the normalized items; `?view=health` checks every stream.
 - `/customize/` picks what the wallpaper shows: the design, the liveblogs that lead the front page and the sections.
 
-Customize saves to `settings.json` (gitignored), and every open wallpaper
-follows a change within a second, without a reload.
+Customize saves to `.dev/settings.json` (gitignored), and every open wallpaper
+follows a change within a second, without a reload. The app keeps its own
+settings, picked in its Customize window.
 
 ## Plash
 

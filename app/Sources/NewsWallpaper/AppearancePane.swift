@@ -1,4 +1,5 @@
 import SwiftUI
+import WallpaperCore
 import WebKit
 
 // How the wallpaper looks: a live preview of the desktop, the design and how
@@ -21,7 +22,7 @@ struct AppearancePane: View {
         }
       } header: {
         VStack(alignment: .leading, spacing: 8) {
-          DesktopPreview(url: previewURL, screen: screen)
+          DesktopPreview(url: previewURL, screen: screen, environment: model.environment, revision: "\(settings.updatedAt ?? "") \(model.redraws)")
           Text("Your desktop at \(size), with a stand-in menu bar and Dock. The desktop picture follows a few seconds after a change.")
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -34,10 +35,10 @@ struct AppearancePane: View {
   }
 
   // The page the wallpaper renders, at this screen's size, with the menu bar
-  // and Dock drawn in. It follows the settings by itself.
+  // and Dock drawn in.
   private var previewURL: URL {
     let screen = model.screen
-    var parts = URLComponents(url: model.server, resolvingAgainstBaseURL: true)!
+    var parts = URLComponents(url: model.page, resolvingAgainstBaseURL: true)!
     parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud", "screen"].contains($0.name) } + [
       URLQueryItem(name: "hud", value: "0"),
       URLQueryItem(name: "screen", value: "\(Int(screen.width))x\(Int(screen.height))"),
@@ -90,9 +91,11 @@ struct AppearancePane: View {
 private struct DesktopPreview: View {
   let url: URL
   let screen: CGSize
+  let environment: WallpaperCore.Environment
+  let revision: String  // the settings' updatedAt and the redraws: when to catch up
 
   var body: some View {
-    PageView(url: url, screen: screen)
+    PageView(url: url, screen: screen, environment: environment, revision: revision)
       .aspectRatio(screen, contentMode: .fit)
       .clipShape(RoundedRectangle(cornerRadius: 8))
       .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
@@ -101,27 +104,42 @@ private struct DesktopPreview: View {
   }
 }
 
+// The page from the app's Bridge, as the desktop picture is drawn. It has no
+// push for the settings (the dev server's has) and no timer of its own, so a
+// saved change or a redraw of the desktop asks it to catch up:
+// window.wallpaper.refresh, as the Renderer does.
 private struct PageView: NSViewRepresentable {
   let url: URL
   let screen: CGSize  // the page is laid out at this size
+  let environment: WallpaperCore.Environment
+  let revision: String
 
   func makeCoordinator() -> Coordinator { Coordinator() }
 
   func makeNSView(context: Context) -> ScaledPage {
-    ScaledPage()
+    ScaledPage(environment)
   }
 
   // The page writes its own address as it goes, so compare with what was
   // asked for, not with the web view's URL.
   func updateNSView(_ view: ScaledPage, context: Context) {
     view.screen = screen
-    guard context.coordinator.loaded != url else { return }
-    context.coordinator.loaded = url
-    view.web.load(URLRequest(url: url))
+    let coordinator = context.coordinator
+    if coordinator.loaded != url {
+      coordinator.loaded = url
+      coordinator.revision = revision
+      view.web.load(URLRequest(url: url))
+    } else if coordinator.revision != revision {
+      coordinator.revision = revision
+      if url.scheme == Bridge.scheme {
+        view.web.evaluateJavaScript("window.wallpaper?.refresh?.()")
+      }
+    }
   }
 
   final class Coordinator {
     var loaded: URL?
+    var revision = ""
   }
 }
 
@@ -133,13 +151,17 @@ private struct PageView: NSViewRepresentable {
 // It takes no clicks, scrolls or keys: the page's own shortcuts would change
 // what it shows.
 private final class ScaledPage: NSView {
-  let web = InertWebView()
+  let web: InertWebView
   var screen = CGSize(width: 1512, height: 982) {
     didSet { if screen != oldValue { fit() } }
   }
 
-  override init(frame: NSRect) {
-    super.init(frame: frame)
+  init(_ environment: WallpaperCore.Environment) {
+    let config = WKWebViewConfiguration()
+    config.setURLSchemeHandler(Bridge(environment), forURLScheme: Bridge.scheme)
+    config.websiteDataStore = .nonPersistent()
+    web = InertWebView(frame: .zero, configuration: config)
+    super.init(frame: .zero)
     wantsLayer = true
     addSubview(web)
     fit()

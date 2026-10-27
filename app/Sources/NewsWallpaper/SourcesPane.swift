@@ -1,4 +1,5 @@
 import SwiftUI
+import WallpaperCore
 
 // Where the news comes from: the provider, its feeds on the front page and the
 // liveblogs that lead it, each in the order picked.

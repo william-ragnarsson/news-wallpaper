@@ -81,15 +81,19 @@ when a stream fails (see `tools/check-feeds.mjs`).
 
 ## Wallpaper settings
 
-What the wallpaper shows, picked on the Customize page (`/customize/`).
-`settings.mjs` (repo root) keeps them in `settings.json` next to it, which is
-gitignored. A missing file means the defaults; a field that is no longer valid
-(a preset or section that was removed) falls back to its default. Saves run one
-at a time and replace the file in one step (`settings.json.tmp`, then a rename).
-The macOS app keeps its own copy in
-`~/Library/Application Support/NewsWallpaper/settings.json`
-(`app/Sources/NewsWallpaper/SettingsStore.swift`) and serves it the same way.
-The page fills in the defaults.
+What the wallpaper shows, picked in the app's Customize window or on the
+Customize page (`/customize/`). The rules (the defaults, what each field may be,
+the options) are one module, `public/settings.js`, which every keeper runs: the
+app and `wallpaper-dev` in a web view (`app/Sources/WallpaperCore/SettingsService.swift`),
+the dev server in Node (`settings.mjs`). Each keeps a `settings.json`:
+
+- the app: `~/Library/Application Support/NewsWallpaper/settings.json`
+- the dev server and `wallpaper-dev`: `.dev/settings.json` in the worktree (gitignored)
+
+A missing file means the defaults; a field that is no longer valid (a preset or
+section that was removed) falls back to its default. Saves run one at a time and
+replace the file in one step (a temp file, then a rename). The page fills in the
+defaults.
 
 ### Settings
 

@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-// The app itself: its version, how new versions arrive, the news server it
-// talks to, and whose work is on the desktop.
+// The app itself: its version, how new versions arrive, where it keeps the
+// settings, and whose work is on the desktop.
 struct SettingsPane: View {
   let model: Customization
 
@@ -60,18 +60,23 @@ struct SettingsPane: View {
           : "Run the command in Terminal in the repository’s folder, then quit and reopen the app. Once News Wallpaper is on Homebrew, brew upgrade news-wallpaper will do this.")
       }
 
-      Section("News server") {
-        LabeledContent("Address", value: model.address)
-        LabeledContent("Status") {
-          if model.loadError != nil {
-            HStack {
-              Label("Can’t reach it", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-              Button("Try Again") { Task { await model.load() } }
+      Section("Data") {
+        LabeledContent("Settings") {
+          HStack {
+            Text(model.environment.settings.file.path(percentEncoded: false))
+              .textSelection(.enabled)
+              .truncationMode(.middle)
+              .lineLimit(1)
+            Button("Show in Finder", systemImage: "folder") {
+              // No file until the first change: then its folder, made if need be.
+              let file = model.environment.settings.file
+              let folder = file.deletingLastPathComponent()
+              try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+              NSWorkspace.shared.activateFileViewerSelecting([FileManager.default.fileExists(atPath: file.path) ? file : folder])
             }
-          } else if model.settings != nil {
-            Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
-          } else {
-            Text("Connecting…").foregroundStyle(.secondary)
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+            .help("Show in Finder")
           }
         }
       }
@@ -101,13 +106,6 @@ struct SettingsPane: View {
       }
     }
     .formStyle(.grouped)
-    // The status stays true while this shows: the server can stop or start.
-    .task {
-      while !Task.isCancelled {
-        await model.check()
-        try? await Task.sleep(for: .seconds(5))
-      }
-    }
   }
 
   // From Info.plist; a build run with `swift run` has none.
@@ -128,7 +126,7 @@ struct SettingsPane: View {
       .joined(separator: "\n\n")
   }()
 
-  // Every provider the news server lists, with its owner.
+  // Every provider there is, with its owner.
   private var credits: String {
     let providers = model.options?.providers ?? []
     return providers.isEmpty ? "Its publishers" : providers.map { "\($0.name), © \($0.owner)" }.joined(separator: "\n")

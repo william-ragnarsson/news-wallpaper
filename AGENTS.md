@@ -11,14 +11,20 @@ runs the app's parts inside your worktree and touches nothing outside it.
 swift run --package-path app --build-system native wallpaper-dev help
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/front.png
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/live.png --preset <id> --size 1512x982
+swift run --package-path app --build-system native wallpaper-dev settings set preset=evening margin=80
+swift run --package-path app --build-system native wallpaper-dev options
 ```
 
 - Each command prints one JSON object. A failure prints `{"error": …}` and exits 1.
 - `render` draws the wallpaper page as the app does, and writes the PNG. Read
   the PNG to check a change to the page or a design. Preset ids are in
   `public/presets/index.js`.
+- `settings` prints the settings; `settings set <key>=<value>…` checks and saves
+  them, as the app's Customize does (the rules are `public/settings.js`).
+  `options` lists what there is to pick from.
 - Its data (settings.json) lives in `.dev/` in your worktree (gitignored), or
-  in `--data <folder>`. Edit `.dev/settings.json` to try settings.
+  in `--data <folder>`. The dev server (`npm run dev`) in your worktree uses the
+  same `.dev/settings.json`.
 
 ## Never
 
@@ -38,7 +44,7 @@ swift run --package-path app --build-system native wallpaper-dev render --out .d
 |---|---|
 | `sources/` | the news: feeds, liveblogs, the front page (plain JS) |
 | `public/` | the wallpaper page (`app.js`, `host.js`) and its designs (`presets/`) |
-| `app/Sources/WallpaperCore` | `Environment` (every path), `Bridge` (the page's host), settings |
+| `app/Sources/WallpaperCore` | `Environment` (every path), `Bridge` (the page's host), `SettingsService` (the settings, by `public/settings.js`) |
 | `app/Sources/WallpaperRender` | `Renderer`: draws the page, returns a PNG |
 | `app/Sources/NewsWallpaper` | the app: menu bar, `Updater`, `Desktop`, the Customize window |
 | `app/Sources/wallpaper-dev` | the command line above |

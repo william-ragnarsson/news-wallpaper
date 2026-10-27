@@ -8,7 +8,7 @@ import WebKit
 //   /sources/        sources/, which the page runs itself
 //   /net?url=<url>   a GET to VRT on the page's behalf: CORS keeps the page
 //                    from fetching VRT itself
-//   /api/settings    the settings (SettingsStore)
+//   /api/settings    the settings (SettingsStore; read only, SettingsService writes)
 // Nothing here knows about news: the page and its sources do all of that.
 @MainActor
 public final class Bridge: NSObject, WKURLSchemeHandler {

@@ -17,6 +17,18 @@ let usage = """
       Draws the wallpaper page and writes the PNG. Prints {path, width, height}.
       The pixel size is the size times the main screen's scale.
 
+  settings
+      Prints the settings, with the defaults for what settings.json does not have.
+
+  settings set <key>=<value>…
+      Saves the changes and prints the settings. A value is JSON, or else a
+      string: preset=evening margin=80 otherLiveblogs=false sections='["sport"]'.
+      An unknown key or invalid value saves nothing and fails.
+
+  options
+      Prints what there is to pick from: presets, providers and their sections,
+      the running liveblogs (from VRT), maxLiveblogs, maxMargin.
+
   Every command takes --data <folder> (default: .dev/ in this worktree), where
   settings.json is read from.
   """
@@ -26,9 +38,10 @@ struct Failure: Error, CustomStringConvertible {
   init(_ description: String) { self.description = description }
 }
 
-// The command and its --name value pairs.
+// The command, the words after it, and its --name value pairs.
 struct Arguments {
   var command: String?
+  var words: [String] = []
   var values: [String: String] = [:]
 
   init(_ arguments: [String]) throws {
@@ -40,7 +53,7 @@ struct Arguments {
       } else if command == nil {
         command = next
       } else {
-        throw Failure("Unexpected argument: \(next)")
+        words.append(next)
       }
     }
   }
@@ -53,8 +66,30 @@ func run(_ arguments: Arguments) async throws -> [String: Any] {
   let environment = Environment.dev(data: arguments["data"].map { URL(filePath: $0, directoryHint: .isDirectory) })
   switch arguments.command {
   case "render": return try await render(arguments, environment)
+  case "settings": return try await settings(arguments, environment)
+  case "options": return try object(await SettingsService(environment).options())
   case "help", nil: return ["usage": usage]
   case let command?: throw Failure("Unknown command: \(command). Try help.")
+  }
+}
+
+@MainActor
+func settings(_ arguments: Arguments, _ environment: Environment) async throws -> [String: Any] {
+  let service = SettingsService(environment)
+  switch arguments.words.first {
+  case nil:
+    return try object(await service.get())
+  case "set":
+    var patch: [String: Any] = [:]
+    for pair in arguments.words.dropFirst() {
+      guard let equals = pair.firstIndex(of: "="), equals != pair.startIndex else { throw Failure("Expected <key>=<value>, got \(pair)") }
+      let value = String(pair[pair.index(after: equals)...])
+      patch[String(pair[..<equals])] = (try? JSONSerialization.jsonObject(with: Data(value.utf8), options: .fragmentsAllowed)) ?? value
+    }
+    guard !patch.isEmpty else { throw Failure("settings set needs <key>=<value>") }
+    return try object(await service.update(JSONSerialization.data(withJSONObject: patch)))
+  case let word?:
+    throw Failure("Unknown: settings \(word). Try help.")
   }
 }
 
@@ -78,6 +113,11 @@ func render(_ arguments: Arguments, _ environment: Environment) async throws -> 
   try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
   try snapshot.png.write(to: file, options: .atomic)
   return ["path": file.path(), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
+}
+
+// An Encodable as what json() prints.
+func object(_ value: some Encodable) throws -> [String: Any] {
+  try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? [String: Any] ?? [:]
 }
 
 func json(_ object: [String: Any]) -> String {

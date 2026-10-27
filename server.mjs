@@ -4,7 +4,7 @@
 //   /                   public/: the wallpaper, the explorer, Customize
 //   /sources/           sources/, which the page runs itself
 //   /net?url=<url>      the page's way to VRT (see proxy() below)
-//   /api/settings       the settings
+//   /api/settings       the settings (settings.mjs: .dev/settings.json)
 // and, for the explorer, Customize and tools, the sources as JSON under /api.
 
 import { createServer } from 'node:http';
@@ -13,8 +13,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sources from './sources/index.mjs';
 import { HttpError, USER_AGENT } from './sources/index.mjs';
-import { getSettings, MAX_LIVEBLOGS, MAX_MARGIN, subscribe, updateSettings } from './settings.mjs';
-import { PRESETS } from './public/presets/index.js';
+import { getSettings, options, subscribe, updateSettings } from './settings.mjs';
 
 const PORT = Number(process.env.PORT) || 4174;
 // URL prefix → directory, the first match wins.
@@ -65,14 +64,7 @@ const routes = [
     if (!fromThisMac(req)) throw new HttpError(403, 'The settings can only be changed on this Mac');
     return readJson(req).then(updateSettings);
   }, 'PATCH'],
-  [/^\/api\/settings\/options$/, async () => ({
-    presets: PRESETS,
-    providers: sources.PROVIDERS,
-    sections: sources.SECTIONS,
-    liveblogs: await sources.liveblogOptions((await getSettings()).liveblogs),
-    maxLiveblogs: MAX_LIVEBLOGS,
-    maxMargin: MAX_MARGIN,
-  })],
+  [/^\/api\/settings\/options$/, async () => options(await getSettings())],
 ];
 
 createServer(async (req, res) => {

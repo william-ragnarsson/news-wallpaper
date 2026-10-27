@@ -7,8 +7,8 @@ import WallpaperCore
 //   Renderer  draws the page (public/) offscreen and takes a picture of it (WallpaperRender)
 //   Bridge    serves the page, the sources (sources/) and their network (WallpaperCore)
 //   Desktop   sets the picture
-// Customize (CustomizeView and its panes) edits the settings through the dev
-// server's API for now (Customization).
+// Customize (CustomizeView and its panes) edits the settings through
+// SettingsService (WallpaperCore), in this process (Customization).
 @main
 struct NewsWallpaperApp: App {
   @NSApplicationDelegateAdaptor private var delegate: AppDelegate
@@ -28,19 +28,12 @@ struct NewsWallpaperApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   let updater = Updater()
   private var window: NSWindow?
-  private lazy var customization = Customization(server: Self.server) { [weak self] in self?.updater.refreshSoon() }
-
-  // Where Customize reads and saves the settings: the page when it comes from
-  // a server, else the dev server.
-  private static var server: URL {
-    let page = Environment.app.page
-    return ["http", "https"].contains(page.scheme) ? page : URL(string: "http://localhost:4174/?chrome=0&hud=0")!
-  }
+  private lazy var customization = Customization(service: SettingsService(.app)) { [weak self] in self?.updater.refreshSoon() }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     // Info.plist's LSUIElement does this for the .app; this covers `swift run`.
     NSApp.setActivationPolicy(.accessory)
-    updater.redrawing = { [weak self] in self?.customization.rendering = $0 }
+    updater.redrawing = { [weak self] in self?.customization.redrawing($0) }
     customization.screen = mainScreen
     // A new resolution or display: the preview takes the new size (Updater
     // draws the picture again).

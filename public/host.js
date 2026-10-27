@@ -1,6 +1,6 @@
 // The page's one connection to what serves it. Two hosts serve the same paths:
 //   - the dev server (server.mjs, `npm run dev`): http://localhost:4174/
-//   - the macOS app (app/Sources/NewsWallpaper/Bridge.swift): wallpaper://app/
+//   - the macOS app (app/Sources/WallpaperCore/Bridge.swift): wallpaper://app/
 // and answer the same requests:
 //   /sources/…          the news sources (sources/), as ES modules
 //   /net?url=<url>      a GET to a news site, made by the host on the page's
