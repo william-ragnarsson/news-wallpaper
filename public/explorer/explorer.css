@@ -88,7 +88,7 @@ nav {
 #outlets { background: var(--side); }
 #streams { background: var(--pane); }
 
-/* The other pages: the wallpaper and the Customize page. */
+/* The other page: the wallpaper. */
 .pages {
   display: flex;
   flex-wrap: wrap;
@@ -196,7 +196,7 @@ nav {
 
 .dot.live { background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 20%, transparent); }
 
-/* Picked on the Customize page; the lead liveblog gets a ring. */
+/* Picked in the settings; the lead liveblog gets a ring. */
 .dot.pick { background: var(--accent); }
 .dot.pick.lead { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 

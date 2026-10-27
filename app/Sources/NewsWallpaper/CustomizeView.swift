@@ -2,11 +2,11 @@ import SwiftUI
 import WallpaperCore
 
 // The Customize window: a sidebar with how the wallpaper looks, where its news
-// comes from, and the app itself. Every change saves at once; the desktop
-// picture follows a few seconds later.
+// comes from, and the app itself. Every change saves at once and redraws from
+// the news fetched last; the desktop picture follows a few seconds later.
 struct CustomizeView: View {
   let model: Customization
-  let refresh: () -> Void  // redraws the desktop picture now
+  let refresh: () -> Void  // fetches the news now, then redraws the desktop picture
   // Not @State: its macro plugin does not come with the Command Line Tools.
   private let sidebar = Sidebar()
 
@@ -30,10 +30,10 @@ struct CustomizeView: View {
         .navigationSubtitle(status)
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
-            Button("Refresh now", systemImage: "arrow.clockwise", action: refresh)
+            Button("Update news", systemImage: "arrow.clockwise", action: refresh)
               .keyboardShortcut("r")
               .disabled(model.rendering)
-              .help("Redraw the desktop picture with these settings now")
+              .help("Fetch the news now and redraw the desktop picture")
           }
         }
     }
@@ -71,7 +71,7 @@ struct CustomizeView: View {
   private var status: String {
     if model.saving { return "Saving…" }
     if let error = model.saveError { return "Not saved: \(error)" }
-    if model.rendering { return "Redrawing the desktop picture…" }
+    if model.rendering { return "Updating the desktop picture…" }
     return ""
   }
 }

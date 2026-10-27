@@ -1,8 +1,9 @@
 // The rules of the settings: what each one may be, what it is when missing,
 // and what there is to pick from. One copy for everything that keeps them:
 // the app and wallpaper-dev run this module in a web view (ScriptHost.swift,
-// SettingsService.swift), the dev server imports it (settings.mjs). Nothing
-// here reads or writes a file: the callers keep settings.json.
+// SettingsService.swift), and the dev server reads the settings by it
+// (settings.mjs). Nothing here reads or writes a file: the callers keep
+// settings.json.
 
 import { DEFAULT_SECTIONS, HttpError, PROVIDERS, SECTIONS, liveblogOptions } from '../sources/index.mjs';
 import { PRESETS } from './presets/index.js';
@@ -62,7 +63,8 @@ export function apply(current, patch, now) {
 
 // What there is to pick from. The liveblogs are the running ones, plus those
 // in `settings` that ended, so a picked one stays listed. They come from the
-// network, through whatever transport the caller set (host.js in a page).
+// sources' reader: the stored news in the app (host.js useStoredNews), the
+// network by default.
 export async function options(settings) {
   return {
     presets: PRESETS,

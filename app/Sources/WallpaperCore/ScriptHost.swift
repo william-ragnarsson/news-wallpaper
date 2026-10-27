@@ -15,9 +15,11 @@ public final class ScriptHost: NSObject, WKNavigationDelegate {
   private var navigation: WKNavigation?
   private var loaded: CheckedContinuation<Void, Error>?
 
-  public init(_ environment: Environment) {
+  // Without the network (`network: false`), the scripts read nothing from
+  // the sites: /net fails, as a site that is down would.
+  public init(_ environment: Environment, network: Bool = true) {
     let config = WKWebViewConfiguration()
-    config.setURLSchemeHandler(Bridge(environment), forURLScheme: Bridge.scheme)
+    config.setURLSchemeHandler(Bridge(environment, network: network), forURLScheme: Bridge.scheme)
     config.websiteDataStore = .nonPersistent()
     webView = WKWebView(frame: .zero, configuration: config)
     super.init()

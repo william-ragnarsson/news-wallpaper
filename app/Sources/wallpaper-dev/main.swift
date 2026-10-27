@@ -19,7 +19,7 @@ let usage = """
       Fetches all the news there is to pick from (every section, the running
       liveblogs and the ones in the settings) and stores it in news.json,
       keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
-      counts}. What fails is kept from the fetch before and listed in errors;
+      counts}, with counts.items the items in each stream. What fails is kept from the fetch before and listed in errors;
       when VRT's feed fails (or its front page, with none from before),
       nothing is stored.
 
@@ -50,7 +50,8 @@ let usage = """
 
   options
       Prints what there is to pick from: presets, providers and their sections,
-      the running liveblogs (from VRT), maxLiveblogs, maxMargin.
+      the liveblogs in the stored news and the picked ones (fetch first; before,
+      only the picked ones, by id), maxLiveblogs, maxMargin. Nothing is fetched.
 
   Every command takes --data <folder> (default: .dev/ in this worktree), where
   settings.json and news.json are.
@@ -92,7 +93,7 @@ func run(_ arguments: Arguments) async throws -> [String: Any] {
   case "news": return try news(arguments, environment)
   case "render": return try await render(arguments, environment)
   case "settings": return try await settings(arguments, environment)
-  case "options": return try object(await SettingsService(environment).options())
+  case "options": return try object(await SettingsService(environment).options(news: try? environment.news.read().data))
   case "help", nil: return ["usage": usage]
   case let command?: throw Failure("Unknown command: \(command). Try help.")
   }

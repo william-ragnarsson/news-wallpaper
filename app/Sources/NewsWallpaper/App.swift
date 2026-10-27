@@ -3,12 +3,14 @@ import WallpaperCore
 
 // A menu bar icon and the Customize window: the wallpaper is the app. How it
 // is made:
-//   Updater   when to redraw
-//   Renderer  draws the page (public/) offscreen and takes a picture of it (WallpaperRender)
-//   Bridge    serves the page, the sources (sources/) and their network (WallpaperCore)
+//   Updater   when to fetch and when to redraw
+//   Fetcher   fetches the news with the sources (sources/) into the store (NewsFeed, NewsStore)
+//   Renderer  draws the page (public/) from the stored news offscreen and takes a picture of it (WallpaperRender)
+//   Bridge    serves the page, the sources and their network (WallpaperCore)
 //   DesktopOutput  sets the picture
 // Customize (CustomizeView and its panes) edits the settings through
-// SettingsService (WallpaperCore), in this process (Customization).
+// SettingsService (WallpaperCore), in this process (Customization), and
+// previews them with a Renderer of its own.
 @main
 struct NewsWallpaperApp: App {
   @NSApplicationDelegateAdaptor private var delegate: AppDelegate
@@ -17,7 +19,7 @@ struct NewsWallpaperApp: App {
     MenuBarExtra("News Wallpaper", systemImage: "newspaper") {
       Button("Customize…") { delegate.customize() }
         .keyboardShortcut(",")
-      Button("Refresh now") { delegate.updater.refresh() }
+      Button("Update news") { delegate.updater.refresh() }
       Divider()
       Button("Quit") { NSApp.terminate(nil) }
     }
@@ -34,6 +36,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Info.plist's LSUIElement does this for the .app; this covers `swift run`.
     NSApp.setActivationPolicy(.accessory)
     updater.redrawing = { [weak self] in self?.customization.redrawing($0) }
+    // New news: an open Customize lists it and draws its preview again.
+    updater.fetched = { [weak self] in
+      guard let self, window != nil else { return }
+      Task { await self.customization.load() }
+    }
     customization.screen = mainScreen
     // A new resolution or display: the preview takes the new size (Updater
     // draws the picture again).
@@ -84,9 +91,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     Task { await customization.load() }
   }
 
-  // A closed window goes, with the preview's web page in it; the next
-  // Customize… makes a new one.
+  // A closed window goes, with the preview and the web view that drew it;
+  // the next Customize… makes a new one.
   func windowWillClose(_ notification: Notification) {
     window = nil
+    customization.closed()
   }
 }

@@ -1,8 +1,10 @@
 import SwiftUI
 import WallpaperCore
 
-// Where the news comes from: the provider, its feeds on the front page and the
-// liveblogs that lead it, each in the order picked.
+// Where the news comes from (M5): the provider, its feeds on the front page and
+// the liveblogs that lead it, each in the order picked. What there is to pick
+// from is what the app fetched last (NewsStore), with how many items each feed
+// had; nothing here goes to the network.
 struct SourcesPane: View {
   let model: Customization
   let settings: WallpaperSettings
@@ -17,6 +19,7 @@ struct SourcesPane: View {
         feedSections(provider, design)
       }
       liveblogSections(design)
+      fetchedSection
     }
     .formStyle(.grouped)
   }
@@ -42,7 +45,7 @@ struct SourcesPane: View {
     } header: {
       Text("Provider")
     } footer: {
-      Text("The news server lists the providers it can build a front page from.")
+      Text("The providers the app can build a front page from.")
     }
   }
 
@@ -59,7 +62,7 @@ struct SourcesPane: View {
           .foregroundStyle(.secondary)
       }
       ForEach(Array(picked.enumerated()), id: \.element) { index, id in
-        PickedRow(index: index, count: picked.count, title: feed(id)?.name ?? id, detail: feed(id)?.group) { offset in
+        PickedRow(index: index, count: picked.count, title: feed(id)?.name ?? id, detail: [feed(id)?.group, items(id)].compactMap { $0 }.joined(separator: " · ")) { offset in
           model.move(\.sections, index, by: offset)
         } remove: {
           model.toggle(\.sections, id, on: false)
@@ -78,7 +81,7 @@ struct SourcesPane: View {
         HStack {
           Text(section.name)
           Spacer()
-          Text(section.group).foregroundStyle(.secondary)
+          Text([section.group, items(section.id)].compactMap { $0 }.joined(separator: " · ")).foregroundStyle(.secondary)
           Button("Add", systemImage: "plus.circle") { model.toggle(\.sections, section.id, on: true) }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
@@ -135,7 +138,7 @@ struct SourcesPane: View {
     Section {
       let rest = options.liveblogs.filter { !picked.contains($0.id) }
       if rest.isEmpty {
-        Text("No other liveblogs right now.").foregroundStyle(.secondary)
+        Text(model.news == nil ? "None yet: Update news fetches them." : "No other liveblogs in the news fetched last.").foregroundStyle(.secondary)
       }
       ForEach(rest) { blog in
         HStack {
@@ -155,7 +158,41 @@ struct SourcesPane: View {
       }
     } header: {
       Text("Liveblogs")
+    } footer: {
+      Text("The liveblogs running when the news was fetched last, and the ones picked then.")
     }
+  }
+
+  // MARK: Fetched
+
+  // When the news was fetched, and what of it failed (kept from the fetch
+  // before, when that had it).
+  private var fetchedSection: some View {
+    Section {
+      if let news = model.news {
+        LabeledContent("Fetched", value: Self.date(news.fetchedAt).map { $0.formatted(date: .abbreviated, time: .shortened) } ?? news.fetchedAt)
+        LabeledContent("Feeds and liveblogs", value: "\(news.counts.streams)")
+        if !news.errors.isEmpty {
+          Text(news.errors.count == 1 ? "One did not load: it is kept from the fetch before, if that had it." : "\(news.errors.count) did not load: they are kept from the fetch before, if that had them.")
+            .foregroundStyle(.secondary)
+        }
+      } else {
+        Text("No news fetched yet. Update news fetches it.").foregroundStyle(.secondary)
+      }
+    } header: {
+      Text("News")
+    } footer: {
+      Text("The app fetches the news every few minutes while the screen is on, and when you click Update news. A change here only redraws the picture from the news fetched last.")
+    }
+  }
+
+  // How many items the news fetched last has from a feed.
+  private func items(_ id: String) -> String? {
+    model.news?.counts.items[id].map { $0 == 1 ? "1 item" : "\($0) items" }
+  }
+
+  private static func date(_ text: String) -> Date? {
+    try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text)
   }
 
   private func meta(_ blog: Options.Liveblog) -> String {

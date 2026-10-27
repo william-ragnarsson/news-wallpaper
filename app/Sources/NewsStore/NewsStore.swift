@@ -81,7 +81,8 @@ public struct NewsSnapshot: Sendable {
 }
 
 // What a fetch got: when, whether all of it loaded, what failed (kept from
-// the fetch before, when that had it), and how many streams and liveblogs.
+// the fetch before, when that had it), how many streams and liveblogs, and
+// how many items each stream has.
 public struct StoreMeta: Codable, Sendable {
   public struct Failure: Codable, Sendable {
     // "streams.<id>" or "liveblogs.<id>": where it is (or would be) in the document.
@@ -92,6 +93,8 @@ public struct StoreMeta: Codable, Sendable {
   public struct Counts: Codable, Sendable {
     public let streams: Int
     public let liveblogs: Int
+    // By stream id: "binnenland", "liveblog-123".
+    public let items: [String: Int]
   }
 
   public let fetchedAt: String
@@ -114,7 +117,10 @@ public struct StoreMeta: Codable, Sendable {
     self.fetchedAt = fetchedAt
     self.ok = object["ok"] as? Bool ?? errors.isEmpty
     self.errors = errors
-    counts = Counts(streams: streams.count, liveblogs: (object["liveblogs"] as? [String: Any])?.count ?? 0)
+    counts = Counts(
+      streams: streams.count,
+      liveblogs: (object["liveblogs"] as? [String: Any])?.count ?? 0,
+      items: streams.compactMapValues { (($0 as? [String: Any])?["items"] as? [Any])?.count })
   }
 }
 

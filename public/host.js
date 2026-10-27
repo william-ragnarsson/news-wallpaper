@@ -52,8 +52,15 @@ export async function loadStoredNews() {
   const res = await fetch('/api/news', { cache: 'no-store' });
   const body = await res.json().catch(() => null);
   if (!res.ok || !body?.streams) throw new Error(body?.error ?? `No stored news (HTTP ${res.status})`);
-  sources.setReader(storedReader(body));
+  useStoredNews(body);
   return body.fetchedAt;
+}
+
+// Points the sources at `doc`, a stored document, as loadStoredNews does with
+// the host's. The app's settings (SettingsService.swift) list the liveblogs
+// from it.
+export function useStoredNews(doc) {
+  sources.setReader(storedReader(doc));
 }
 
 // The reader for a stored document ({fetchedAt, streams, front, liveblogs},

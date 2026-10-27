@@ -15,9 +15,9 @@ public/             the pages
   app.js              the wallpaper: runs the sources, renders a preset; window.wallpaper for the app
   harvest.js          the app's fetch: all the news there is to pick from, as one document
   presets/            the designs
-  explorer/, customize/   dev tools, served by the dev server only
-server.mjs          host 1: the dev server (http://localhost:4174/), plus a JSON API for the dev tools
-settings.mjs        the dev server's settings: .dev/settings.json, by the rules in public/settings.js
+  explorer/           the data explorer, served by the dev server only
+server.mjs          host 1: the dev server (http://localhost:4174/), plus a JSON API for the explorer
+settings.mjs        the dev server reads the settings: .dev/settings.json, by the rules in public/settings.js
 app/                host 2: the macOS app (wallpaper://app/)
   Updater.swift       when to redraw: every 5 minutes, on wake, unlock and screen changes, from the menu
   Renderer.swift      loads the page offscreen, calls window.wallpaper.refresh(), takes a picture
@@ -27,7 +27,8 @@ app/                host 2: the macOS app (wallpaper://app/)
   SettingsService.swift  the settings: runs public/settings.js, the only writer of settings.json
   NewsStore           the news fetched last: news.json, and news.prev.json before it
   NewsFeed            Fetcher: runs public/harvest.js, the only writer of news.json
-  Customize           the window that picks the design, liveblogs and sections (menu bar → Customize)
+  Customize           the window that picks the design, liveblogs and sections (menu bar → Customize);
+                      its preview is a render, and what it lists comes from the stored news
   DesktopOutput.swift sets the picture
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)
 tools/check-feeds.mjs   health check of every stream (`npm run check`)
@@ -40,11 +41,12 @@ cannot fetch VRT itself (CORS), so it sends its requests to its host
 the page runs the same in a browser and in the app. The contract is in
 `sources/README.md` under Hosts.
 
-In the app, fetching and drawing are apart. Every 5 minutes, on wake and from
-the menu, the Fetcher runs the sources (`public/harvest.js`) and stores all the
+In the app, fetching and drawing are apart. Every 5 minutes, on wake and on
+Update news (the menu, Customize), the Fetcher runs the sources (`public/harvest.js`) and stores all the
 news there is to pick from in `news.json`; then the page is drawn from that
 (`?data=store`: it reads `/api/news`, and has no `/net`). A change in Customize
-only draws again. The page's one call is `window.wallpaper.refresh()`: it
+only draws again, unless it picks a liveblog the store lacks (one whose own
+fetch failed): that is fetched first. The page's one call is `window.wallpaper.refresh()`: it
 renders and resolves to `{ ok, error, fetchedAt }` once fonts and images are
 in. When it is not ok, the app keeps the picture it has.
 
@@ -72,11 +74,12 @@ To work on the page with the app showing it, point the app at the dev server:
 
 - `/` the wallpaper, in Dutch. Press `?` for the dev controls.
 - `/explorer/` the data explorer: outlets, their streams and the normalized items; `?view=health` checks every stream.
-- `/customize/` picks what the wallpaper shows: the design, the liveblogs that lead the front page and the sections.
 
-Customize saves to `.dev/settings.json` (gitignored), and every open wallpaper
-follows a change within a second, without a reload. The app keeps its own
-settings, picked in its Customize window.
+The dev server's settings are `.dev/settings.json` (gitignored), the file
+`wallpaper-dev settings set` changes (AGENTS.md); every open wallpaper follows a
+change within a second, without a reload. The app keeps its own settings,
+picked in its Customize window. `wallpaper-dev render` draws the page as the
+app does, from the stored news, into a PNG.
 
 ## Plash
 
@@ -89,7 +92,7 @@ http://localhost:4174/?chrome=0&hud=0
 
 `chrome=0` drops the simulated menu bar and Dock (Plash shows the real ones)
 and `hud=0` the hint for the dev controls. Leave `preset` out so the design
-follows Customize; `?preset=<id>` pins one (ids in `public/presets/index.js`).
+follows the settings; `?preset=<id>` pins one (ids in `public/presets/index.js`).
 
 The sources, the hosts' contract, the API and the data shapes are in
 `sources/README.md`; how a design is built is in `public/presets/README.md`.

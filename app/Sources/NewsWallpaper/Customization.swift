@@ -1,22 +1,28 @@
-import Foundation
+import AppKit
+import NewsStore
 import Observation
 import WallpaperCore
+import WallpaperRender
 
 // Loads the settings into the Customize window and saves every change at
 // once, one save at a time; a change made during a save goes out after it,
 // or is dropped with it when that save fails. The settings come from
-// SettingsService, in this process: no server.
+// SettingsService, in this process: no server. What there is to pick from
+// comes from the stored news (NewsStore), never the network, and so does the
+// preview, which the Renderer draws as it draws the desktop picture.
 // `saved` runs each time a change is saved, to render the wallpaper.
 @MainActor
 @Observable
 final class Customization {
   private(set) var settings: WallpaperSettings?  // what the window shows: saved, plus a change on its way
   private(set) var options: Options?
+  private(set) var news: StoreMeta?  // the stored news; nil before the first fetch
   private(set) var loadError: String?
   private(set) var saveError: String?
   private(set) var saving = false
-  private(set) var rendering = false  // the app is redrawing the desktop picture
-  private(set) var redraws = 0  // redraws finished, for the preview to fetch the news again
+  private(set) var rendering = false  // the app is fetching or redrawing the desktop picture
+  private(set) var preview: NSImage?
+  private(set) var previewError: String?
   // The screen with the menu bar, which the desktop picture is drawn for.
   var screen = CGSize(width: 1512, height: 982)
 
@@ -26,6 +32,9 @@ final class Customization {
   private var edits = 0  // changes made so far, to tell whether one came during a load
   private var confirmed: WallpaperSettings?  // what was last saved
   private var failures = 0  // saves that failed, to tell whether one failed during a load
+  // The preview's own, so it never waits behind the desktop picture; made
+  // when the preview is first drawn and let go when the window closes.
+  @ObservationIgnored private var renderer: Renderer?
 
   init(service: SettingsService, saved: @escaping () -> Void) {
     self.service = service
@@ -33,40 +42,80 @@ final class Customization {
   }
 
   // Where the wallpaper's files and settings are.
-  var environment: Environment { service.environment }
+  var environment: WallpaperCore.Environment { service.environment }
 
   // The page the desktop picture is drawn from. Read again on each load, as
   // the Updater reads it on each redraw: the `page` default can change while
   // the app runs (see Environment.app).
-  private(set) var page = Environment.app.page
+  private(set) var page = WallpaperCore.Environment.app.page
 
   // The page keeps its own settings when it comes from a server, so changes
   // here do not reach it.
   var server: URL? { page.scheme == Bridge.scheme ? nil : page }
 
   func redrawing(_ on: Bool) {
-    if rendering, !on { redraws += 1 }
     rendering = on
   }
 
-  // Again each time the window comes forward: liveblogs start and end, and
-  // settings.json can change by hand. A load also clears the last failed
-  // save's message, except the one that follows that save and one begun
-  // before it.
+  // Again each time the window comes forward and after each fetch: the news
+  // changes, and settings.json can change by hand. A load also clears the
+  // last failed save's message, except the one that follows that save and one
+  // begun before it.
   func load(keepingSaveError: Bool = false) async {
-    page = Environment.app.page
-    guard !saving, !unsaved else { return }
+    page = WallpaperCore.Environment.app.page
     let start = edits, failed = failures
     do {
-      // Options first: it waits on VRT for the liveblogs, and the settings
-      // should be as fresh as they can be.
-      options = try await service.options()
+      // The news first, read off the main thread, and what there is to pick
+      // from in it, even during a save; then the settings, as fresh as they
+      // can be.
+      let store = environment.news
+      let stored = await Task.detached { try? store.read() }.value
+      options = try await service.options(news: stored?.data)
+      news = stored?.meta
+      guard !saving, !unsaved else { return }
       take(try await service.get(), since: start)
       loadError = nil
       if !keepingSaveError, failures == failed { saveError = nil }
     } catch {
       loadError = error.localizedDescription
     }
+  }
+
+  // Draws the preview: the page as the desktop picture is drawn, with the
+  // settings in the window (saved or not), at the screen's size in points.
+  func drawPreview() async {
+    guard let settings else { return }
+    let renderer = self.renderer ?? Renderer(environment)
+    self.renderer = renderer
+    // With the stand-in menu bar and Dock, which only cover the page, and
+    // without the page's own status line.
+    var parts = URLComponents(url: page, resolvingAgainstBaseURL: true)!
+    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud"].contains($0.name) } + [URLQueryItem(name: "hud", value: "0")]
+    // A page from a server reads its own settings.
+    let request = RenderRequest(page: parts.url!, size: screen, scale: 1, settings: server == nil ? settings : nil)
+    do {
+      let snapshot = try await renderer.render(request)
+      // A newer one is on its way, or the window closed.
+      guard !Task.isCancelled, self.renderer === renderer else { return }
+      preview = NSImage(data: snapshot.png)
+      previewError = nil
+    } catch StoreError.empty {
+      guard self.renderer === renderer else { return }
+      preview = nil
+      previewError = "No news fetched yet. Update news fetches it."
+    } catch {
+      guard !Task.isCancelled, self.renderer === renderer else { return }
+      // Not the picture before, which was for other settings.
+      preview = nil
+      previewError = error.localizedDescription
+    }
+  }
+
+  // The window closed: its preview goes, with the renderer's web view.
+  func closed() {
+    renderer = nil
+    preview = nil
+    previewError = nil
   }
 
   // Settings loaded, unless a change was made since the load began: that

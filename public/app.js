@@ -25,7 +25,7 @@ const IMAGE_WIDTHS = [320, 480, 640, 960, 1280, 1600, 1920];
 // real one, `?dock=0` for a Dock that hides itself. Default: 12 icons of 52.
 const DOCK_DEFAULT = { width: 12 * (52 + 6) + 28, height: 52 + 26 };
 // The column at the right edge where Finder puts files and folders on the
-// desktop, in points: one icon with its label. Customize sets its width
+// desktop, in points: one icon with its label. The settings set its width
 // (settings.margin); this is the width until the settings load.
 const DESKTOP_ICONS = 104;
 
@@ -144,10 +144,9 @@ function settingsFollow() {
   return state.settings?.liveblogs?.[0] ?? 'auto';
 }
 
-// Hears every change made on Customize, without a reload (dev server only).
-// A page with both the preset and the liveblog pinned (tools/snap.sh renders
-// those) does without: headless Chrome can hold virtual time while a request
-// stays open, so a snapshot might never be taken.
+// Hears every change to the settings (wallpaper-dev settings set), without a
+// reload (dev server only). A page with both the preset and the liveblog
+// pinned in its URL does without: it shows what its URL says.
 function listen() {
   if (listen.stop || host.inApp) return;
   listen.stop = host.watchSettings(onSettings);
@@ -174,11 +173,11 @@ async function followSettings() {
   renderHud();
 }
 
-// Drops both pins (key C): back to what Customize says.
-async function followCustomize() {
+// Drops both pins (key C): back to what the settings say.
+async function followAll() {
   state.pinned = { preset: false, follow: false };
   syncUrl();
-  toast('Volgt Customize');
+  toast('Volgt de instellingen');
   listen();
   await followSettings();
 }
@@ -407,7 +406,7 @@ function tickClock() {
 // Dev HUD
 
 // Only pinned choices go in the URL: a plain one (Plash's /?chrome=0&hud=0)
-// keeps following Customize.
+// keeps following the settings.
 function syncUrl() {
   const p = new URLSearchParams();
   if (state.pinned.preset) p.set('preset', state.preset);
@@ -431,7 +430,7 @@ function toast(text, ms = 1600) {
 }
 
 function renderHud() {
-  // A front design takes its liveblogs and sections from Customize even when
+  // A front design takes its liveblogs and sections from the settings even when
   // pinned in the URL; the liveblog pin does nothing there.
   const front = dataSource() === SOURCES.front;
   const pinned = ['preset', 'follow'].filter(k => state.pinned[k] && !(k === 'follow' && front));
@@ -440,7 +439,7 @@ function renderHud() {
     h('dl', null,
       row('← →', 'Preset', PRESETS.find(p => p.id === state.preset)?.name, origin('preset')),
       front ? leadRow() : row('L', 'Liveblog', followLabel(), origin('follow')),
-      row('C', 'Follow Customize', pinned.length === 2 ? 'off: pinned in URL'
+      row('C', 'Follow the settings', pinned.length === 2 ? 'off: pinned in URL'
         : pinned.length ? `partly: ${pinned[0] === 'preset' ? 'preset' : 'liveblog'} pinned in URL` : 'on'),
       row('S', 'Screen', SCREENS.find(s => s.id === state.screen)?.label ?? state.screen.replace('x', '×')),
       row('M', 'macOS overlay', state.chrome ? 'on' : 'off'),
@@ -452,7 +451,6 @@ function renderHud() {
       h('li', { class: p.id === state.preset ? 'is-active' : null, 'data-preset': p.id }, h('b', null, p.name), ' ', p.description),
     )),
     h('p', { class: 'hud-links' },
-      h('a', { href: '/customize/', target: '_blank' }, 'Customize'),
       h('a', { href: '/explorer/', target: '_blank' }, 'Explorer')),
   );
 
@@ -466,7 +464,7 @@ function renderHud() {
   // Where the preset or the liveblog comes from.
   function origin(key) {
     if (state.pinned[key]) return 'pinned in URL';
-    return state.settings ? 'from Customize' : 'default: settings not loaded';
+    return state.settings ? 'from the settings' : 'default: settings not loaded';
   }
 
   function followLabel() {
@@ -478,12 +476,12 @@ function renderHud() {
     return d?.follow === state.follow && d.focus ? `${state.follow} not loaded → ${d.focus.topic}` : state.follow;
   }
 
-  // Front-page designs: the server puts the liveblogs picked on Customize
+  // Front-page designs: the server puts the liveblogs picked in the settings
   // first (L does not apply to them).
   function leadRow() {
     const picked = (state.data?.top ?? []).filter(s => s.featured);
     return row(null, 'Lead liveblog', picked[0]?.title ?? "none: VRT's own lead",
-      state.settings ? `${picked.length} picked on Customize` : 'settings not loaded');
+      state.settings ? `${picked.length} picked in the settings` : 'settings not loaded');
   }
 }
 
@@ -541,7 +539,7 @@ function onKey(e) {
     case 'ArrowRight': setPreset(PRESETS[(i + 1) % PRESETS.length].id); break;
     case 'ArrowLeft': setPreset(PRESETS[(i - 1 + PRESETS.length) % PRESETS.length].id); break;
     case 'l': case 'L': cycleFollow(); break;
-    case 'c': case 'C': followCustomize(); break;
+    case 'c': case 'C': followAll(); break;
     case 'm': case 'M':
       state.chrome = !state.chrome;
       applyScreen(); syncUrl(); render(); renderHud(); // the menu bar inset may change
@@ -631,7 +629,7 @@ async function start() {
   render();
   renderHud();
   if (!(state.pinned.preset && state.pinned.follow)) listen();
-  // The Customize preview lets go of its stream while that tab is hidden: a
+  // In a frame, the page lets go of its stream while its tab is hidden: a
   // browser keeps six connections to this server at most. The server sends
   // the settings again on reconnect, and onSettings catches up from those.
   if (window.self !== window.top) document.addEventListener('visibilitychange', () => {
@@ -676,5 +674,5 @@ window.wallpaper = {
   refresh: update,
   sources,
   presets: PRESETS,
-  state, setPreset, followCustomize, render,
+  state, setPreset, followAll, render,
 };

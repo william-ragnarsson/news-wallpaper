@@ -1,22 +1,19 @@
-// The dev server's settings: .dev/settings.json in this worktree, the same
-// file wallpaper-dev keeps (AGENTS.md). The rules are public/settings.js, which
-// the app runs too. The wallpaper and the explorer read the settings from
-// /api/settings and hear about changes on /api/settings/events: those saved
-// here, and those wallpaper-dev writes to the file.
+// The dev server's settings, read only: .dev/settings.json in this worktree,
+// the file wallpaper-dev keeps and changes (AGENTS.md). The rules are
+// public/settings.js, which the app runs too. The wallpaper and the explorer
+// read the settings from /api/settings and hear about changes on
+// /api/settings/events.
 
 import { mkdirSync, watch } from 'node:fs';
-import { link, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, readFile, unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { apply, normalize } from './public/settings.js';
-
-export { DEFAULTS, MAX_LIVEBLOGS, MAX_MARGIN, options } from './public/settings.js';
+import { normalize } from './public/settings.js';
 
 const FOLDER = fileURLToPath(new URL('./.dev/', import.meta.url));
 const FILE = `${FOLDER}settings.json`;
 // Where the settings were before .dev/.
 const OLD_FILE = fileURLToPath(new URL('./settings.json', import.meta.url));
 
-let saving = Promise.resolve();
 const listeners = new Set();
 let announced;  // the updatedAt listeners last heard
 let watcher;
@@ -24,22 +21,6 @@ let watcher;
 // Read each time: wallpaper-dev writes the same file.
 export async function getSettings() {
   return normalize(await load());
-}
-
-// Applies a partial update and saves it. Rejects the whole update if any field
-// is unknown or invalid. Updates run one at a time, each on top of the last.
-export function updateSettings(patch) {
-  const run = saving.then(async () => {
-    const next = apply(await load(), patch, new Date().toISOString());
-    // Write to a temp file and rename it over the old one, so a crash never leaves half a file.
-    await mkdir(FOLDER, { recursive: true });
-    await writeFile(`${FILE}.tmp`, `${JSON.stringify(next, null, 2)}\n`);
-    await rename(`${FILE}.tmp`, FILE);
-    announce(next);
-    return next;
-  });
-  saving = run.catch(() => {});
-  return run;
 }
 
 export function subscribe(fn) {
@@ -54,7 +35,7 @@ function announce(settings) {
   listeners.forEach(fn => fn(settings));
 }
 
-// Changes from outside (wallpaper-dev) reach the listeners too. The folder,
+// Changes to the file (wallpaper-dev settings set) reach the listeners. The folder,
 // not the file: a save replaces the file.
 function watchFile() {
   if (watcher) return;

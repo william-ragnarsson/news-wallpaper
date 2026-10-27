@@ -5,12 +5,12 @@ import WallpaperCore
 import WallpaperRender
 
 // When the news is fetched and the wallpaper redrawn: every few minutes while
-// someone can see it, right away on waking or unlocking, and when asked from
-// the menu, it fetches (NewsFeed) and then draws the stored news. A change of
-// screens or a saved change only draws again: the store has all there is to
-// pick from, but a liveblog that started after the last fetch. Nothing is fetched while the Mac sleeps, its screens sleep or it
-// is locked. A failed fetch still draws what is stored, and a failed redraw
-// keeps the picture there is: old news beats none.
+// someone can see it, right away on waking or unlocking, and on Update news
+// (the menu, Customize), it fetches (NewsFeed) and then draws the stored news.
+// A change of screens or a saved change only draws again: the store has all
+// there is to pick from. Nothing is fetched while the Mac sleeps, its screens
+// sleep or it is locked. A failed fetch still draws what is stored, and a
+// failed redraw keeps the picture there is: old news beats none.
 @MainActor
 final class Updater {
   private let fetcher = Fetcher(.app)
@@ -28,6 +28,9 @@ final class Updater {
   private var resumed: Date?
   // Told when a redraw starts and when it ends (Customize shows it).
   var redrawing: (Bool) -> Void = { _ in }
+  // Told when a fetch stored news (Customize lists it and draws its preview
+  // from it).
+  var fetched: () -> Void = {}
 
   // Seconds between fetches, at least 60:
   // `defaults write io.github.william-ragnarsson.news-wallpaper interval 120`
@@ -68,8 +71,8 @@ final class Updater {
   }
 
   // After a saved change, which only needs a redraw: a slider sends a few in a
-  // row, so wait for a pause. A liveblog picked that is not stored yet is
-  // fetched first.
+  // row, so wait for a pause. A liveblog picked that is not stored (one whose
+  // own fetch failed, or one put in settings.json by hand) is fetched first.
   func refreshSoon() {
     soon?.cancel()
     soon = Task {
@@ -91,6 +94,7 @@ final class Updater {
     if fetching {
       do {
         let meta = try await fetcher.run()
+        fetched()
         if !meta.ok { NSLog("Fetched, but kept from before: \(meta.errors.map(\.id).joined(separator: ", "))") }
       } catch {
         NSLog("Fetch failed: \(error)")

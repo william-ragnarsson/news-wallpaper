@@ -242,7 +242,7 @@ public struct Snapshot: Sendable {
   public let fetchedAt: String?
 }
 
-public enum RenderError: Error, CustomStringConvertible {
+public enum RenderError: Error, LocalizedError, CustomStringConvertible {
   case noImage
   case timedOut
   case pageCrashed
@@ -256,11 +256,14 @@ public enum RenderError: Error, CustomStringConvertible {
     case .settingsNeedBridge(let page): "Settings for one render need a wallpaper:// page, not \(page.absoluteString)"
     }
   }
+
+  public var errorDescription: String? { description }
 }
 
 // The page could not load the news: from the store, or from a site when a
 // server serves it (a site down, no network).
-public struct PageError: Error, CustomStringConvertible {
+public struct PageError: Error, LocalizedError, CustomStringConvertible {
   public let reason: String
   public var description: String { "The page could not load the news: \(reason)" }
+  public var errorDescription: String? { description }
 }

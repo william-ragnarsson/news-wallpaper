@@ -29,9 +29,9 @@ Node and in the wallpaper page. Import them from `index.mjs` only.
 - **The wallpaper page** (`public/host.js`) imports them from `/sources/` and
   runs them itself. That is how both the macOS app and the dev preview show
   the news.
-- **The dev server** (`server.mjs`) runs them for the explorer, the Customize
-  page and `tools/check-feeds.mjs`, and serves the results as JSON (the HTTP
-  API below).
+- **The dev server** (`server.mjs`) runs them for the explorer and
+  `tools/check-feeds.mjs`, and serves the results as JSON (the HTTP API
+  below).
 
 The payloads (`getFrontpage`, `liveblogOptions`, `getWallpaper`) read the news
 through `lib/reader.mjs`: `loadStream`, `getFront` and `getLiveblog`, live by
@@ -72,10 +72,7 @@ serve it.
 | `GET /api/outlets/:outlet/streams/:stream` | a `StreamPayload`; add `?raw=1` for each item's source |
 | `GET /api/outlets/:outlet/health` | a `HealthReport` for that outlet's listed streams |
 | `GET /api/health` | a `HealthReport` for every outlet |
-| `GET /api/vrt-nws/frontpage` | the front page for the `'front'` designs, with the `Settings` applied (see below; shape in `public/presets/README.md`) |
 | `GET /api/settings` | the `Settings` |
-| `PATCH /api/settings` | the new `Settings`; the body is a JSON object with any of `preset`, `provider`, `liveblogs`, `otherLiveblogs`, `sections`, `margin`; only from this Mac (`localhost`), 403 otherwise |
-| `GET /api/settings/options` | `SettingsOptions`: what the Customize page picks from |
 | `GET /api/settings/events` | server-sent events: `settings` with the `Settings` on connect and after every change |
 
 Errors come back as `{ error }` with the upstream's status where it makes sense:
@@ -83,20 +80,17 @@ Errors come back as `{ error }` with the upstream's status where it makes sense:
 something that is not a feed, 504 when it did not answer. A known route asked
 with another method gets 405.
 
-`PATCH /api/settings` saves all or nothing: 400 for invalid JSON, an unknown
-key or an invalid value, 415 when the body is not `application/json`, 413 for a
-body over 10 kB.
-
 `npm run check` runs the health report from the command line and exits non-zero
 when a stream fails (see `tools/check-feeds.mjs`).
 
 ## Wallpaper settings
 
-What the wallpaper shows, picked in the app's Customize window or on the
-Customize page (`/customize/`). The rules (the defaults, what each field may be,
+What the wallpaper shows, picked in the app's Customize window or with
+`wallpaper-dev settings set` (AGENTS.md). The rules (the defaults, what each field may be,
 the options) are one module, `public/settings.js`, which every keeper runs: the
 app and `wallpaper-dev` in a web view (`app/Sources/WallpaperCore/SettingsService.swift`),
-the dev server in Node (`settings.mjs`). Each keeps a `settings.json`:
+the dev server in Node (`settings.mjs`, which only reads them). Each keeps a
+`settings.json`:
 
 - the app: `~/Library/Application Support/NewsWallpaper/settings.json`
 - the dev server and `wallpaper-dev`: `.dev/settings.json` in the worktree (gitignored)
@@ -126,19 +120,24 @@ Defaults: `preset: 'newsprint'`, `provider: 'vrt-nws'`, `liveblogs: []`, `otherL
 `sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`,
 `margin: 104`.
 
-`PATCH /api/settings` takes any of the fields but `updatedAt`; each one sent
-replaces the saved value (arrays whole), and the server sets `updatedAt`. A
+A change (`SettingsService.update`) takes any of the fields but `updatedAt`;
+each one sent replaces the saved value (arrays whole), and the keeper sets
+`updatedAt`. It saves all or nothing: an unknown key or an invalid value is
+turned down. A
 liveblog id matches the stream `liveblog-<id>` of outlet `vrt-nws`; a section id
 is that outlet's stream of the same id.
 
 ### SettingsOptions
 
+What there is to pick from (`SettingsService.options`, `wallpaper-dev options`).
+Its liveblogs come from the stored news, never the network.
+
 ```js
 {
   presets: [{                    // public/presets/index.js, in order
     id: 'newsprint', name: 'Newsprint', description: '…',
-    data: 'front',               // a front-page design (/api/vrt-nws/frontpage); absent for
-                                 // the liveblog designs (/api/vrt-nws/wallpaper)
+    data: 'front',               // a front-page design (getFrontpage); absent for
+                                 // the liveblog designs (getWallpaper)
     sections: true,              // front-page designs that show `sections`; absent otherwise
     live: true,                  // front-page designs that list the running liveblogs (`live`)
     margin: true,                // designs that keep the `margin` clear; absent otherwise
@@ -148,7 +147,7 @@ is that outlet's stream of the same id.
     sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // its section streams
   }],
   sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // every section stream, catalog order
-  liveblogs: [{                  // every liveblog in VRT's feed, live first, then picked ones that left it
+  liveblogs: [{                  // every liveblog in the stored news, live first, then picked ones that left it
     id: '1792507723130',
     title: '…',
     section: 'Binnenland' | null,
@@ -177,7 +176,7 @@ new EventSource('/api/settings/events').addEventListener('settings', e => apply(
 
 ### The front page with the settings applied
 
-`GET /api/vrt-nws/frontpage` reads the settings on every request:
+`getFrontpage(settings)`, which the page calls on every refresh:
 
 - `top` starts with the picked liveblogs, in order, as stories with
   `featured: true` (kind `liveblog` with `live`, `postCount`, `startedAt`; the

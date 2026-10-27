@@ -3,8 +3,7 @@
 // Plain JavaScript with no Node or DOM APIs. It runs in two places:
 //   - in the wallpaper page (public/app.js), which is how the app and the dev
 //     preview both show the news
-//   - in the dev server (server.mjs) for the explorer, the Customize page and
-//     tools/check-feeds.mjs
+//   - in the dev server (server.mjs) for the explorer and tools/check-feeds.mjs
 // The only thing a host supplies is the network (setTransport); the default
 // is the global fetch, which is what Node uses.
 

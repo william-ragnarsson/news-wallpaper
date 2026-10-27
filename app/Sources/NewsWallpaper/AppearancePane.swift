@@ -1,10 +1,9 @@
 import NewsStore
 import SwiftUI
 import WallpaperCore
-import WebKit
 
-// How the wallpaper looks: a live preview of the desktop, the design and how
-// wide the page is.
+// How the wallpaper looks (M4): a preview of the desktop, drawn by the
+// Renderer from the stored news, the design and how wide the page is.
 struct AppearancePane: View {
   let model: Customization
   let settings: WallpaperSettings
@@ -23,8 +22,14 @@ struct AppearancePane: View {
         }
       } header: {
         VStack(alignment: .leading, spacing: 8) {
-          DesktopPreview(url: previewURL, screen: screen, environment: model.environment, revision: "\(settings.updatedAt ?? "") \(model.redraws)")
-          Text("Your desktop at \(size), with a stand-in menu bar and Dock. The desktop picture follows a few seconds after a change.")
+          DesktopPreview(model: model, screen: screen)
+            .task(id: previewKey) {
+              // A slider sends a few changes in a row: draw after a pause.
+              try? await Task.sleep(for: .milliseconds(500))
+              guard !Task.isCancelled else { return }
+              await model.drawPreview()
+            }
+          Text("Your desktop at \(size), with a stand-in menu bar and Dock, drawn from the news fetched last as the desktop picture is. The desktop picture follows a few seconds after a change.")
             .font(.callout)
             .foregroundStyle(.secondary)
         }
@@ -35,16 +40,12 @@ struct AppearancePane: View {
     .formStyle(.grouped)
   }
 
-  // The page the wallpaper renders, at this screen's size, with the menu bar
-  // and Dock drawn in.
-  private var previewURL: URL {
-    let screen = model.screen
-    var parts = URLComponents(url: model.page, resolvingAgainstBaseURL: true)!
-    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud", "screen"].contains($0.name) } + [
-      URLQueryItem(name: "hud", value: "0"),
-      URLQueryItem(name: "screen", value: "\(Int(screen.width))x\(Int(screen.height))"),
-    ]
-    return parts.url!
+  // The settings as the window has them, saved or not; when they were saved
+  // does not change the picture.
+  private var previewKey: PreviewKey {
+    var drawn = settings
+    drawn.updatedAt = nil
+    return PreviewKey(settings: drawn, screen: model.screen, page: model.page, fetchedAt: model.news?.fetchedAt)
   }
 
   private var designPicker: some View {
@@ -88,106 +89,35 @@ struct AppearancePane: View {
   }
 }
 
-// The page in the screen's proportions, scaled down.
+// The preview in the screen's proportions, scaled down: the PNG the Renderer
+// drew last, while the next is drawn.
 private struct DesktopPreview: View {
-  let url: URL
+  let model: Customization
   let screen: CGSize
-  let environment: WallpaperCore.Environment
-  let revision: String  // the settings' updatedAt and the redraws: when to catch up
 
   var body: some View {
-    PageView(url: url, screen: screen, environment: environment, revision: revision)
-      .aspectRatio(screen, contentMode: .fit)
-      .clipShape(RoundedRectangle(cornerRadius: 8))
-      .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
-      .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
-      .frame(maxWidth: .infinity)
-  }
-}
-
-// The page from the app's Bridge, as the desktop picture is drawn. It has no
-// push for the settings (the dev server's has) and no timer of its own, so a
-// saved change or a redraw of the desktop asks it to catch up:
-// window.wallpaper.refresh, as the Renderer does.
-private struct PageView: NSViewRepresentable {
-  let url: URL
-  let screen: CGSize  // the page is laid out at this size
-  let environment: WallpaperCore.Environment
-  let revision: String
-
-  func makeCoordinator() -> Coordinator { Coordinator() }
-
-  func makeNSView(context: Context) -> ScaledPage {
-    ScaledPage(environment)
-  }
-
-  // The page writes its own address as it goes, so compare with what was
-  // asked for, not with the web view's URL.
-  func updateNSView(_ view: ScaledPage, context: Context) {
-    view.screen = screen
-    let coordinator = context.coordinator
-    if coordinator.loaded != url {
-      coordinator.loaded = url
-      coordinator.revision = revision
-      view.web.load(URLRequest(url: url))
-    } else if coordinator.revision != revision {
-      coordinator.revision = revision
-      if url.scheme == Bridge.scheme {
-        view.web.evaluateJavaScript("window.wallpaper?.refresh?.()")
+    ZStack {
+      Rectangle().fill(.background)
+      if let image = model.preview {
+        Image(nsImage: image).resizable().interpolation(.high)
+      } else if let error = model.previewError {
+        Text(error).foregroundStyle(.secondary).multilineTextAlignment(.center).padding()
+      } else {
+        ProgressView()
       }
     }
-  }
-
-  final class Coordinator {
-    var loaded: URL?
-    var revision = ""
-  }
-}
-
-// The page laid out at the screen's full size, as the desktop picture is, then
-// drawn smaller. Scaled down by a CSS transform or zoomed out instead, it fits
-// its text differently: Broadsheet measures its headline after the transform,
-// and WebKit keeps zoomed-out text from getting small.
-//
-// It takes no clicks, scrolls or keys: the page's own shortcuts would change
-// what it shows.
-private final class ScaledPage: NSView {
-  let web: InertWebView
-  var screen = CGSize(width: 1512, height: 982) {
-    didSet { if screen != oldValue { fit() } }
-  }
-
-  init(_ environment: WallpaperCore.Environment) {
-    let config = WKWebViewConfiguration()
-    // As the Renderer's: the stored news, no network.
-    let bridge = Bridge(environment, network: false)
-    bridge.news = { try environment.news.read().data }
-    config.setURLSchemeHandler(bridge, forURLScheme: Bridge.scheme)
-    config.websiteDataStore = .nonPersistent()
-    web = InertWebView(frame: .zero, configuration: config)
-    super.init(frame: .zero)
-    wantsLayer = true
-    addSubview(web)
-    fit()
-  }
-
-  required init?(coder: NSCoder) { fatalError("not from a nib") }
-
-  override func hitTest(_ point: NSPoint) -> NSView? { nil }
-
-  override func setFrameSize(_ newSize: NSSize) {
-    super.setFrameSize(newSize)
-    fit()
-  }
-
-  // Bounds the size of the screen inside a frame the size of the preview
-  // scale everything in them down.
-  private func fit() {
-    web.frame = CGRect(origin: .zero, size: screen)
-    setBoundsSize(screen)
+    .aspectRatio(screen, contentMode: .fit)
+    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
+    .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+    .frame(maxWidth: .infinity)
   }
 }
 
-private final class InertWebView: WKWebView {
-  override var acceptsFirstResponder: Bool { false }
+// What the preview is drawn from: when one of these changes, it is drawn again.
+private struct PreviewKey: Equatable {
+  let settings: WallpaperSettings
+  let screen: CGSize
+  let page: URL
+  let fetchedAt: String?
 }

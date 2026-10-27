@@ -18,11 +18,10 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/"
 cp Info.plist "$app/Contents/"
-# The wallpaper page and what it runs; the explorer and Customize stay with
-# the dev server.
+# The wallpaper page and what it runs; the explorer stays with the dev server.
 web="$app/Contents/Resources/web"
 mkdir -p "$web"
-rsync -a --exclude explorer --exclude customize --exclude '*.md' ../public/ "$web/public/"
+rsync -a --exclude explorer --exclude '*.md' ../public/ "$web/public/"
 rsync -a --exclude '*.md' ../sources/ "$web/sources/"
 # Settings shows it.
 cp ../LICENSE "$app/Contents/Resources/"

@@ -4,6 +4,7 @@ import Foundation
 // wallpaper-dev both come here. The rules are public/settings.js, run in a
 // ScriptHost, so they are the ones the dev server uses; this keeps the file
 // (SettingsStore). Changes are saved one at a time, each on top of the last.
+// It never fetches: what there is to pick from comes from the stored news.
 @MainActor
 public final class SettingsService {
   public let environment: Environment
@@ -14,7 +15,7 @@ public final class SettingsService {
   public init(_ environment: Environment) {
     self.environment = environment
     store = environment.settings
-    scripts = ScriptHost(environment)
+    scripts = ScriptHost(environment, network: false)
   }
 
   // The settings, with the defaults for whatever the file does not have.
@@ -49,19 +50,24 @@ public final class SettingsService {
       ["patch": String(decoding: patch, as: UTF8.self)])
   }
 
-  // What there is to pick from. The liveblogs come from VRT.
-  public func options() async throws -> Options {
-    try await call("await rules.options(saved)")
+  // What there is to pick from. The liveblogs are those in `news`, the
+  // stored news (NewsStore's document), and the picked ones; with no news
+  // stored, the picked ones only, by id.
+  public func options(news: Data?) async throws -> Options {
+    try await call(
+      "(host.useStoredNews(news ? JSON.parse(news) : { streams: {}, liveblogs: {} }), await rules.options(saved))",
+      ["news": news.map { String(decoding: $0, as: UTF8.self) } ?? ""])
   }
 
-  // `expression` with `rules` (public/settings.js), `saved` (what the file
-  // holds, {} when it is not JSON) and `values` in scope.
+  // `expression` with `host` (public/host.js), `rules` (public/settings.js),
+  // `saved` (what the file holds, {} when it is not JSON) and `values` in
+  // scope.
   private func call<T: Decodable>(_ expression: String, _ values: [String: String] = [:]) async throws -> T {
     // The imports inside the try too: WebKit reports an exception that
     // escapes only as "A JavaScript exception occurred".
     let body = """
       try {
-        await import('/host.js');  // the sources' network: /net
+        const host = await import('/host.js');
         const rules = await import('/settings.js');
         let saved = {};
         try { saved = JSON.parse(file); } catch {}

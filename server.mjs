@@ -1,13 +1,17 @@
 // Local dev server, zero dependencies; run with `npm run dev`. It is one of the
 // two hosts of the wallpaper page (the macOS app is the other, see
 // public/host.js) and serves what both serve:
-//   /                   public/: the wallpaper, the explorer, Customize
+//   /                   public/: the wallpaper and the explorer
 //   /sources/           sources/, which the page runs itself
 //   /net?url=<url>      the page's way to VRT (see proxy() below)
 //   /api/news           the stored news: .dev/news.json, which wallpaper-dev
 //                       fetch writes (the page reads it with ?data=store)
-//   /api/settings       the settings (settings.mjs: .dev/settings.json)
-// and, for the explorer, Customize and tools, the sources as JSON under /api.
+//   /api/settings       the settings (settings.mjs: .dev/settings.json), read
+//                       only, and their changes on /api/settings/events
+// and, for the explorer, the outlets and their streams, live, under
+// /api/outlets. The settings are changed with wallpaper-dev settings set, and
+// the wallpaper is drawn as the app draws it with wallpaper-dev render
+// (AGENTS.md).
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -15,7 +19,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sources from './sources/index.mjs';
 import { HttpError, USER_AGENT } from './sources/index.mjs';
-import { getSettings, options, subscribe, updateSettings } from './settings.mjs';
+import { getSettings, subscribe } from './settings.mjs';
 
 const PORT = Number(process.env.PORT) || 4174;
 // URL prefix → directory, the first match wins.
@@ -45,15 +49,6 @@ const MIME = {
 
 // [path, handler, method]; the method defaults to GET.
 const routes = [
-  [/^\/api\/vrt-nws\/wallpaper$/, (_, q) => sources.getWallpaper({
-    follow: q.get('follow') || 'auto',
-    maxPosts: clampInt(q.get('posts'), 1, 200, 40),
-    maxHeadlines: clampInt(q.get('headlines'), 0, 50, 16),
-  })],
-  [/^\/api\/vrt-nws\/front$/, () => sources.getFront()],
-  [/^\/api\/vrt-nws\/frontpage$/, async () => sources.getFrontpage(await getSettings())],
-  [/^\/api\/vrt-nws\/liveblog\/(\d+)$/, ([, id]) => sources.getLiveblog(id)],
-
   // Outlet catalog, for the explorer and anything built on normalized streams.
   [/^\/api\/outlets$/, () => sources.listOutlets()],
   [/^\/api\/outlets\/([\w-]+)\/streams$/, ([, outlet]) => sources.listStreams(outlet)],
@@ -64,13 +59,9 @@ const routes = [
 
   [/^\/api\/news$/, () => storedNews()],
 
-  // What the wallpaper shows, set on the Customize page.
+  // What the wallpaper shows: the app's Customize sets it in the app, and
+  // wallpaper-dev settings set here (.dev/settings.json).
   [/^\/api\/settings$/, () => getSettings()],
-  [/^\/api\/settings$/, (_, __, req) => {
-    if (!fromThisMac(req)) throw new HttpError(403, 'The settings can only be changed on this Mac');
-    return readJson(req).then(updateSettings);
-  }, 'PATCH'],
-  [/^\/api\/settings\/options$/, async () => options(await getSettings())],
 ];
 
 createServer(async (req, res) => {
@@ -168,7 +159,8 @@ function netUrl(raw) {
 }
 
 // Server-sent events: the settings now, then again on every change, so open
-// wallpapers (Plash too) follow the Customize page without a reload.
+// wallpapers (Plash too) and the explorer follow wallpaper-dev settings set
+// without a reload.
 function streamSettings(req, res) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store' });
   const push = settings => res.write(`event: settings\ndata: ${JSON.stringify(settings)}\n\n`);
@@ -183,30 +175,6 @@ function streamSettings(req, res) {
   });
 }
 
-// A small JSON body. Only application/json, which a page on another site can
-// not send here without the browser asking first (CORS preflight).
-async function readJson(req) {
-  if (!/^application\/json\b/.test(req.headers['content-type'] ?? '')) throw new HttpError(415, 'Expected application/json');
-  let body = '';
-  for await (const chunk of req) {
-    body += chunk;
-    if (body.length > 10_000) throw new HttpError(413, 'Body too large');
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    throw new HttpError(400, 'Invalid JSON');
-  }
-}
-
-// The server listens on every interface, so other machines can read the
-// wallpaper; only this Mac may change it. The Host check also stops a site
-// that points its own domain at 127.0.0.1 (DNS rebinding): it sends that domain.
-function fromThisMac(req) {
-  const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
-  return loopback && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(req.headers.host ?? '');
-}
-
 async function storedNews() {
   try {
     return JSON.parse(await readFile(NEWS_FILE, 'utf8'));
@@ -219,9 +187,4 @@ async function storedNews() {
 function send(res, status, data) {
   res.writeHead(status, { 'content-type': MIME['.json'], 'cache-control': 'no-store' });
   res.end(JSON.stringify(data));
-}
-
-function clampInt(value, min, max, fallback) {
-  const n = Number.parseInt(value, 10);
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 }
