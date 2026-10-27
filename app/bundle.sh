@@ -13,8 +13,10 @@ bin="$($build --show-bin-path)/NewsWallpaper"
 
 app=build/NewsWallpaper.app
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/"
 cp Info.plist "$app/Contents/"
+# Settings shows it.
+cp ../LICENSE "$app/Contents/Resources/"
 codesign --force --sign - "$app"
 echo "Built $app"
