@@ -243,7 +243,7 @@ function liveblogBlock() {
       : `Up to ${max}. The first is the liveblog the design follows; the others only matter for front-page designs.`),
     picked.length
       ? h('ol', { class: 'list' }, picked.map((id, i) => liveblogRow(liveblogById(id), { index: i, count: picked.length })))
-      : h('p', { class: 'none' }, front ? 'None picked: VRT’s own front-page order leads.' : 'None picked: the most active live liveblog is followed.'),
+      : h('p', { class: 'none' }, front ? 'None picked: VRT’s own front-page order leads.' : 'None picked: the most active live liveblog is followed, or the last one updated when none is live.'),
 
     h('h3', null, 'Other liveblogs'),
     full ? h('p', { class: 'hint' }, `${max} picked, the most there can be: remove one to add another.`) : null,
