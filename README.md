@@ -20,10 +20,11 @@ settings.mjs        the dev server's settings: .dev/settings.json, by the rules 
 app/                host 2: the macOS app (wallpaper://app/)
   Updater.swift       when to redraw: every 5 minutes, on wake, unlock and screen changes, from the menu
   Renderer.swift      loads the page offscreen, calls window.wallpaper.refresh(), takes a picture
+                      (a RenderRequest: size, scale, settings for once), one render at a time
   Bridge.swift        serves public/ and sources/, /net and /api/settings to that page
   SettingsService.swift  the settings: runs public/settings.js, the only writer of settings.json
   Customize           the window that picks the design, liveblogs and sections (menu bar → Customize)
-  Desktop.swift       sets the picture
+  DesktopOutput.swift sets the picture
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)
 tools/check-feeds.mjs   health check of every stream (`npm run check`)
 tools/check-boundaries.sh  which part may do what (only the app sets the desktop picture)

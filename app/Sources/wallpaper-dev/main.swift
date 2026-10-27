@@ -13,9 +13,13 @@ import WallpaperRender
 let usage = """
   wallpaper-dev <command> [options]
 
-  render --out <file.png> [--size 1512x982] [--preset <id>] [--follow <liveblog id>] [--page <url>]
-      Draws the wallpaper page and writes the PNG. Prints {path, width, height}.
-      The pixel size is the size times the main screen's scale.
+  render --out <file.png> [--size 1512x982] [--scale 2] [--preset <id>] [--follow <liveblog id>]
+         [--settings '{"margin": 80}'] [--page <url>]
+      Draws the wallpaper page and writes the PNG, --size points at --scale
+      pixels a point (default: the main screen's). Prints {path, width,
+      height, fetchedAt, page}. --settings are changes to the saved settings
+      for this picture only: checked as settings set checks them, not saved,
+      and printed as settings. --preset and --follow pin the page over them.
 
   settings
       Prints the settings, with the defaults for what settings.json does not have.
@@ -98,6 +102,10 @@ func render(_ arguments: Arguments, _ environment: Environment) async throws -> 
   guard let out = arguments["out"] else { throw Failure("render needs --out <file.png>") }
   let sizes = (arguments["size"] ?? "1512x982").split(separator: "x").compactMap { Double($0) }
   guard sizes.count == 2, sizes.allSatisfy({ $0 >= 100 }) else { throw Failure("--size is <width>x<height> in points, e.g. 1512x982") }
+  let scale = try arguments["scale"].map { text in
+    guard let scale = Double(text), scale >= 0.5, scale <= 4 else { throw Failure("--scale is pixels a point, from 0.5 to 4, e.g. 2") }
+    return CGFloat(scale)
+  } ?? NSScreen.screens.first?.backingScaleFactor ?? 2
 
   var page = URLComponents(url: arguments["page"].flatMap(URL.init(string:)) ?? environment.page, resolvingAgainstBaseURL: true)!
   for name in ["preset", "follow"] {
@@ -106,13 +114,15 @@ func render(_ arguments: Arguments, _ environment: Environment) async throws -> 
     }
   }
 
-  // At the main screen's corner, so the page gets its pixel density.
-  let origin = NSScreen.screens.first?.frame.origin ?? .zero
-  let snapshot = try await Renderer(environment).render(page.url!, in: CGRect(origin: origin, size: CGSize(width: sizes[0], height: sizes[1])))
-  let file = URL(filePath: out)
-  try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-  try snapshot.png.write(to: file, options: .atomic)
-  return ["path": file.path(), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
+  var settings: WallpaperSettings?
+  if let patch = arguments["settings"] { settings = try await SettingsService(environment).preview(Data(patch.utf8)) }
+  let request = RenderRequest(page: page.url!, size: CGSize(width: sizes[0], height: sizes[1]), scale: scale, settings: settings)
+  let snapshot = try await Renderer(environment).render(request)
+  let file = try FileOutput(URL(filePath: out)).put(snapshot)
+  var result: [String: Any] = ["path": file.path(), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
+  result["fetchedAt"] = snapshot.fetchedAt
+  if let settings { result["settings"] = try object(settings) }
+  return result
 }
 
 // An Encodable as what json() prints.

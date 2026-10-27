@@ -41,6 +41,14 @@ public final class SettingsService {
     return try await save.value
   }
 
+  // What saving `patch` would give, without saving it: settings to render
+  // with once. Throws as update does.
+  public func preview(_ patch: Data) async throws -> WallpaperSettings {
+    try await call(
+      "rules.apply(saved, JSON.parse(patch), new Date().toISOString())",
+      ["patch": String(decoding: patch, as: UTF8.self)])
+  }
+
   // What there is to pick from. The liveblogs come from VRT.
   public func options() async throws -> Options {
     try await call("await rules.options(saved)")

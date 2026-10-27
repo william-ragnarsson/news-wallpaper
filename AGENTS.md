@@ -10,15 +10,17 @@ runs the app's parts inside your worktree and touches nothing outside it.
 ```sh
 swift run --package-path app --build-system native wallpaper-dev help
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/front.png
-swift run --package-path app --build-system native wallpaper-dev render --out .dev/live.png --preset <id> --size 1512x982
+swift run --package-path app --build-system native wallpaper-dev render --out .dev/live.png --preset <id> --size 1512x982 --scale 2
+swift run --package-path app --build-system native wallpaper-dev render --out .dev/wide.png --settings '{"margin": 0}'
 swift run --package-path app --build-system native wallpaper-dev settings set preset=evening margin=80
 swift run --package-path app --build-system native wallpaper-dev options
 ```
 
 - Each command prints one JSON object. A failure prints `{"error": …}` and exits 1.
-- `render` draws the wallpaper page as the app does, and writes the PNG. Read
-  the PNG to check a change to the page or a design. Preset ids are in
-  `public/presets/index.js`.
+- `render` draws the wallpaper page as the app does, and writes the PNG:
+  `--size` points times `--scale` pixels. Read the PNG to check a change to
+  the page or a design. Preset ids are in `public/presets/index.js`.
+  `--settings` tries settings for one picture without saving them.
 - `settings` prints the settings; `settings set <key>=<value>…` checks and saves
   them, as the app's Customize does (the rules are `public/settings.js`).
   `options` lists what there is to pick from.
@@ -45,8 +47,8 @@ swift run --package-path app --build-system native wallpaper-dev options
 | `sources/` | the news: feeds, liveblogs, the front page (plain JS) |
 | `public/` | the wallpaper page (`app.js`, `host.js`) and its designs (`presets/`) |
 | `app/Sources/WallpaperCore` | `Environment` (every path), `Bridge` (the page's host), `SettingsService` (the settings, by `public/settings.js`) |
-| `app/Sources/WallpaperRender` | `Renderer`: draws the page, returns a PNG |
-| `app/Sources/NewsWallpaper` | the app: menu bar, `Updater`, `Desktop`, the Customize window |
+| `app/Sources/WallpaperRender` | `Renderer`: draws the page for a `RenderRequest`, returns a PNG; `PNGOutput`, `FileOutput` |
+| `app/Sources/NewsWallpaper` | the app: menu bar, `Updater`, `DesktopOutput`, the Customize window |
 | `app/Sources/wallpaper-dev` | the command line above |
 | `server.mjs` | the dev server for the explorer (`npm run dev`, port 4174) |
 

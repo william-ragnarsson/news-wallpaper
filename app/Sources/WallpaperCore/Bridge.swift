@@ -8,7 +8,8 @@ import WebKit
 //   /sources/        sources/, which the page runs itself
 //   /net?url=<url>   a GET to VRT on the page's behalf: CORS keeps the page
 //                    from fetching VRT itself
-//   /api/settings    the settings (SettingsStore; read only, SettingsService writes)
+//   /api/settings    the settings (SettingsStore; read only, SettingsService
+//                    writes), or settingsOverride while it is set
 // Nothing here knows about news: the page and its sources do all of that.
 @MainActor
 public final class Bridge: NSObject, WKURLSchemeHandler {
@@ -20,6 +21,9 @@ public final class Bridge: NSObject, WKURLSchemeHandler {
   // The page's files (Environment.web) and its settings.
   private let root: URL
   private let settings: SettingsStore
+  // Settings (JSON) served instead of the saved ones while set: the Renderer
+  // sets them for one picture.
+  public var settingsOverride: Data?
 
   public init(_ environment: Environment) {
     root = environment.web
@@ -56,7 +60,7 @@ public final class Bridge: NSObject, WKURLSchemeHandler {
         respond(task, reply)
       }
     case "/api/settings":
-      respond(task, Reply(status: 200, type: Self.types["json"]!, body: settings.load()))
+      respond(task, Reply(status: 200, type: Self.types["json"]!, body: settingsOverride ?? settings.load()))
     default:
       respond(task, file(at: url.path()))
     }

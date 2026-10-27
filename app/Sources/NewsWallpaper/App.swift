@@ -6,7 +6,7 @@ import WallpaperCore
 //   Updater   when to redraw
 //   Renderer  draws the page (public/) offscreen and takes a picture of it (WallpaperRender)
 //   Bridge    serves the page, the sources (sources/) and their network (WallpaperCore)
-//   Desktop   sets the picture
+//   DesktopOutput  sets the picture
 // Customize (CustomizeView and its panes) edits the settings through
 // SettingsService (WallpaperCore), in this process (Customization).
 @main

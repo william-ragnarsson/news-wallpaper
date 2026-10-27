@@ -67,8 +67,8 @@ final class Updater {
     do {
       // The page is read each time: `defaults write … page` takes effect
       // without a restart.
-      let snapshot = try await renderer.render(Environment.app.page, in: screen.frame)
-      try Desktop.set(snapshot.png, on: screen)
+      let snapshot = try await renderer.render(RenderRequest(page: Environment.app.page, for: screen))
+      _ = try DesktopOutput(screen: screen).put(snapshot)
     } catch {
       NSLog("Refresh failed: \(error)")
     }

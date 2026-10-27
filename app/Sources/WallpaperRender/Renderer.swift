@@ -3,25 +3,32 @@ import WallpaperCore
 import WebKit
 
 // Draws the wallpaper page in a web view that is never shown on screen and
-// returns it as a PNG at the screen's pixel size. The page stays loaded
-// between pictures: each one asks it for the latest news
+// returns it as a PNG (a RenderRequest says at what size). The page stays
+// loaded between pictures: each one asks it for the latest news
 // (window.wallpaper.refresh, in public/app.js) and waits until it is drawn.
-// Where the PNG goes is up to the caller: the app puts it on the desktop,
-// wallpaper-dev in a file.
+// Where the PNG goes is up to the caller (PNGOutput): the app puts it on the
+// desktop, wallpaper-dev in a file.
 @MainActor
 public final class Renderer: NSObject, WKNavigationDelegate {
   private let window = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
   private let webView: WKWebView
+  private let bridge: Bridge
   // The page as it is loaded; nil when it has to load (again).
   private var loaded: URL?
   private var navigation: WKNavigation?
-  // The one thing render waits for at a time, a load or a refresh.
+  // The one thing a render waits for at a time, a load or a refresh.
   private var waiting: (id: Int, continuation: CheckedContinuation<Void, Error>)?
   private var lastID = 0
+  // What the page's last refresh said about the news it drew.
+  private var fetchedAt: String?
+  // Renders run one at a time, in the order asked: this ends after the last.
+  private var queue: Task<Void, Never>?
+  private var stamps = 0
 
   public init(_ environment: Environment) {
+    bridge = Bridge(environment)
     let config = WKWebViewConfiguration()
-    config.setURLSchemeHandler(Bridge(environment), forURLScheme: Bridge.scheme)
+    config.setURLSchemeHandler(bridge, forURLScheme: Bridge.scheme)
     // Nothing kept on disk, so two renderers (the app, an agent's
     // wallpaper-dev) share no state.
     config.websiteDataStore = .nonPersistent()
@@ -34,25 +41,55 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     webView.isInspectable = true
   }
 
-  // Draws `page` at the size of `frame`. The window sits there, so the page
-  // gets the pixel density of the screen at that spot (a screen's frame for
-  // the desktop picture), but it is never ordered in.
-  public func render(_ page: URL, in frame: CGRect) async throws -> Snapshot {
+  // Draws the page as `request` asks, after the renders asked for before it.
+  public func render(_ request: RenderRequest) async throws -> Snapshot {
+    let previous = queue
+    let render = Task {
+      await previous?.value
+      return try await draw(request)
+    }
+    queue = Task { _ = await render.result }
+    return try await render.value
+  }
+
+  private func draw(_ request: RenderRequest) async throws -> Snapshot {
+    if request.settings != nil, request.page.scheme != Bridge.scheme {
+      throw RenderError.settingsNeedBridge(request.page)
+    }
+    // On a screen with the scale asked for, if there is one, so the page
+    // gets that pixel density; but the window is never ordered in.
+    let screen = NSScreen.screens.first { $0.backingScaleFactor == request.scale } ?? NSScreen.screens.first
+    let frame = CGRect(origin: screen?.frame.origin ?? .zero, size: request.size)
     if window.frame != frame {
       window.setFrame(frame, display: false)
       loaded = nil
     }
-    if loaded != page {
+
+    // The settings for this picture alone, served instead of the saved ones.
+    // A stamp of their own, so the page takes them in (it skips settings
+    // with the updatedAt it has), and takes the saved ones in again after.
+    if var settings = request.settings {
+      stamps += 1
+      settings.updatedAt = "render \(stamps)"
+      bridge.settingsOverride = try JSONEncoder().encode(settings)
+    }
+    defer { bridge.settingsOverride = nil }
+
+    if loaded != request.page {
       try await wait(seconds: 30) { _ in
-        navigation = webView.load(URLRequest(url: page, cachePolicy: .reloadIgnoringLocalCacheData))
+        navigation = webView.load(URLRequest(url: request.page, cachePolicy: .reloadIgnoringLocalCacheData))
       }
-      loaded = page
+      loaded = request.page
     }
 
     do {
+      fetchedAt = nil
       try await wait(seconds: 60) { id in
         webView.callAsyncJavaScript(Self.refresh, in: nil, in: .page) { [weak self] result in
-          self?.end(id, result.flatMap(Self.outcome))
+          guard let self else { return }
+          let answer = try? result.get() as? [String: Any]
+          if id == waiting?.id { fetchedAt = answer?["fetchedAt"] as? String }
+          end(id, result.flatMap(Self.outcome))
         }
       }
     } catch {
@@ -62,12 +99,33 @@ public final class Renderer: NSObject, WKNavigationDelegate {
       throw error
     }
 
-    let image = try await webView.takeSnapshot(configuration: nil)
-    guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
-          let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:])
+    // The page is laid out at the window's pixel density; a snapshot of
+    // another width is drawn again at that size by WebKit, not scaled up.
+    let pixels = CGSize(width: (request.size.width * request.scale).rounded(), height: (request.size.height * request.scale).rounded())
+    let config = WKSnapshotConfiguration()
+    config.snapshotWidth = NSNumber(value: pixels.width / window.backingScaleFactor)
+    let image = try await webView.takeSnapshot(configuration: config)
+    guard var cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw RenderError.noImage }
+    if cgImage.width != Int(pixels.width) || cgImage.height != Int(pixels.height) {
+      cgImage = try Self.resized(cgImage, to: pixels)
+    }
+    guard let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) else { throw RenderError.noImage }
+    NSLog("Rendered \(cgImage.width)×\(cgImage.height) px for \(Int(request.size.width))×\(Int(request.size.height)) pt")
+    return Snapshot(png: png, width: cgImage.width, height: cgImage.height, fetchedAt: fetchedAt)
+  }
+
+  // Exactly `size`: a snapshot can come out a pixel off when the scale does
+  // not divide evenly.
+  private static func resized(_ image: CGImage, to size: CGSize) throws -> CGImage {
+    guard let context = CGContext(
+      data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: 0,
+      space: image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
     else { throw RenderError.noImage }
-    NSLog("Rendered \(cgImage.width)×\(cgImage.height) px for \(Int(frame.width))×\(Int(frame.height)) pt")
-    return Snapshot(png: png, width: cgImage.width, height: cgImage.height)
+    context.interpolationQuality = .high
+    context.draw(image, in: CGRect(origin: .zero, size: size))
+    guard let resized = context.makeImage() else { throw RenderError.noImage }
+    return resized
   }
 
   // Asks the page for the latest news and waits until it is drawn. WebKit can
@@ -126,17 +184,53 @@ public final class Renderer: NSObject, WKNavigationDelegate {
   }
 }
 
-// A picture of the page: the PNG and its size in pixels.
+// What to draw: `page` at `size` points, `scale` pixels to the point, so the
+// PNG is size × scale pixels. `settings`, when given, are used for this
+// picture instead of the saved ones (and not saved); they need a page the
+// Bridge serves (wallpaper://), as a server keeps its own.
+public struct RenderRequest: Sendable {
+  public var page: URL
+  public var size: CGSize
+  public var scale: CGFloat
+  public var settings: WallpaperSettings?
+
+  public init(page: URL, size: CGSize, scale: CGFloat, settings: WallpaperSettings? = nil) {
+    self.page = page
+    self.size = size
+    self.scale = scale
+    self.settings = settings
+  }
+
+  // The whole of `screen`, at its pixel density: a desktop picture.
+  @MainActor
+  public init(page: URL, for screen: NSScreen, settings: WallpaperSettings? = nil) {
+    self.init(page: page, size: screen.frame.size, scale: screen.backingScaleFactor, settings: settings)
+  }
+}
+
+// A picture of the page: the PNG, its size in pixels, and when the news on it
+// was fetched (an ISO date, from the page).
 public struct Snapshot: Sendable {
   public let png: Data
   public let width: Int
   public let height: Int
+  public let fetchedAt: String?
 }
 
-public enum RenderError: Error {
+public enum RenderError: Error, CustomStringConvertible {
   case noImage
   case timedOut
   case pageCrashed
+  case settingsNeedBridge(URL)
+
+  public var description: String {
+    switch self {
+    case .noImage: "The page gave no image"
+    case .timedOut: "The page did not answer in time"
+    case .pageCrashed: "The page's web view stopped"
+    case .settingsNeedBridge(let page): "Settings for one render need a wallpaper:// page, not \(page.absoluteString)"
+    }
+  }
 }
 
 // The page could not fetch the news (a site down, no network).
