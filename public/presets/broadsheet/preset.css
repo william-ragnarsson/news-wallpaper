@@ -74,13 +74,14 @@
 }
 
 .preset-broadsheet .bs-page {
-  --col: calc((100cqw - 2 * var(--mx) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  /* The margin for the desktop files (--safe-right) on both sides: centered. */
+  --col: calc((100cqw - 2 * (var(--mx) + var(--safe-right)) - (var(--cols) - 1) * var(--gap)) / var(--cols));
   position: absolute;
   inset: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) calc(var(--safe-bottom) + 1.1 * var(--u));
   row-gap: calc(1.2 * var(--u));
-  padding: calc(var(--safe-top) + 1.1 * var(--u)) var(--mx) 0;
+  padding: calc(var(--safe-top) + 1.1 * var(--u)) calc(var(--mx) + var(--safe-right)) 0;
 }
 
 /* --- masthead ------------------------------------------------------------- */
@@ -448,7 +449,10 @@
   font: 650 calc(1.82 * var(--u)) / 1.1 var(--serif);
   letter-spacing: -0.006em;
   text-wrap: balance;
-  hyphens: manual;
+  /* Only long compound words break, so they fit a narrow column. */
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 14 6 6;
   break-after: avoid;
   break-inside: avoid;
 }

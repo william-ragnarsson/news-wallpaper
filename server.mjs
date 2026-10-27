@@ -13,7 +13,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sources from './sources/index.mjs';
 import { HttpError, USER_AGENT } from './sources/index.mjs';
-import { getSettings, MAX_LIVEBLOGS, subscribe, updateSettings } from './settings.mjs';
+import { getSettings, MAX_LIVEBLOGS, MAX_MARGIN, subscribe, updateSettings } from './settings.mjs';
 import { PRESETS } from './public/presets/index.js';
 
 const PORT = Number(process.env.PORT) || 4174;
@@ -67,9 +67,11 @@ const routes = [
   }, 'PATCH'],
   [/^\/api\/settings\/options$/, async () => ({
     presets: PRESETS,
+    providers: sources.PROVIDERS,
     sections: sources.SECTIONS,
     liveblogs: await sources.liveblogOptions((await getSettings()).liveblogs),
     maxLiveblogs: MAX_LIVEBLOGS,
+    maxMargin: MAX_MARGIN,
   })],
 ];
 

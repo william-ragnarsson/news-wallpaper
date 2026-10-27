@@ -14,7 +14,7 @@ bin="$($build --show-bin-path)/NewsWallpaper"
 
 app=build/NewsWallpaper.app
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/"
 cp Info.plist "$app/Contents/"
 # The wallpaper page and what it runs; the explorer and Customize stay with
@@ -23,5 +23,7 @@ web="$app/Contents/Resources/web"
 mkdir -p "$web"
 rsync -a --exclude explorer --exclude customize --exclude '*.md' ../public/ "$web/public/"
 rsync -a --exclude '*.md' ../sources/ "$web/sources/"
+# Settings shows it.
+cp ../LICENSE "$app/Contents/Resources/"
 codesign --force --sign - "$app"
 echo "Built $app"

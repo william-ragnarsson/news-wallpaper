@@ -25,7 +25,7 @@ export default {
     const posts = focus.posts ?? [];
     const leadPost = posts[0] ?? null;
     const photo = pickPhoto(leadPost, focus);
-    const geo = geometry(ctx.screen, photo);
+    const geo = geometry(ctx.screen, photo, ctx.safe);
     const live = focus.status === 'live';
 
     root.setAttribute('lang', 'nl');
@@ -87,19 +87,22 @@ function compose(page, ctx, pull) {
 // ---------------------------------------------------------------------------
 // Grid
 
-function geometry(screen, photo) {
+// Columns fill the width between the margins for the desktop files
+// (safe.right), kept on both sides so the page stays centered.
+function geometry(screen, photo, safe) {
   const W = screen.width;
   const H = screen.height;
   const u = Math.min(W, H) / 100; // 1cqmin
   const mx = Math.max(28, 2.4 * u + 0.011 * W);
   const gap = 2.2 * u;
   const target = 22 * u;
-  const cols = Math.max(5, Math.min(11, Math.floor((W - 2 * mx + gap) / (target + gap))));
+  const inner = W - 2 * (mx + safe.right);
+  const cols = Math.max(5, Math.min(11, Math.floor((inner + gap) / (target + gap))));
   const rail = cols >= 8 ? 2 : 1;
   const lead = cols - rail;
   let photoCols = 0;
   if (photo) photoCols = photo.ratio < 1 ? (lead >= 7 ? 2 : 1) : Math.round(lead * 0.42);
-  return { cols, rail, lead, photo: photoCols, u, colW: (W - 2 * mx - (cols - 1) * gap) / cols };
+  return { cols, rail, lead, photo: photoCols, u, colW: (inner - (cols - 1) * gap) / cols };
 }
 
 // ---------------------------------------------------------------------------

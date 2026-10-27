@@ -8,8 +8,13 @@ import AppKit
 final class Updater {
   private let renderer = Renderer()
   private var timer: Timer?
-  private var running = false
+  private var soon: Task<Void, Never>?
+  private var running = false {
+    didSet { redrawing(running) }
+  }
   private var again = false
+  // Told when a redraw starts and when it ends (Customize shows it).
+  var redrawing: (Bool) -> Void = { _ in }
 
   // Seconds between redraws, at least 60:
   // `defaults write io.github.william-ragnarsson.news-wallpaper interval 120`
@@ -32,6 +37,8 @@ final class Updater {
 
   // Redraws now, or once more right after the redraw that is running.
   func refresh() {
+    // Now instead of after the pause, when asked for.
+    soon?.cancel()
     guard !running else { again = true; return }
     running = true
     Task {
@@ -40,6 +47,15 @@ final class Updater {
         await redraw()
       } while again
       running = false
+    }
+  }
+
+  // After a saved change: a slider sends a few in a row, so wait for a pause.
+  func refreshSoon() {
+    soon?.cancel()
+    soon = Task {
+      try? await Task.sleep(for: .seconds(1))
+      if !Task.isCancelled { refresh() }
     }
   }
 

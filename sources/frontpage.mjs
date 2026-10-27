@@ -8,11 +8,22 @@
 import * as catalog from './catalog.mjs';
 import vrtNws from './outlets/vrt-nws.mjs';
 
-const OUTLET = 'vrt-nws';
+const OUTLET = vrtNws.id;
 // Every section stream the front page can show, in catalog order.
 export const SECTIONS = vrtNws.streams
   .filter(s => !['Top stories', 'Live'].includes(s.group))
   .map(s => ({ id: s.id, name: s.name, group: s.group }));
+// The news providers a front page can come from, each with its sections, for
+// Customize. So far only VRT NWS: the front page reads its own streams.
+export const PROVIDERS = [{
+  id: vrtNws.id,
+  name: vrtNws.name,
+  owner: vrtNws.owner,
+  language: vrtNws.language,
+  homepage: vrtNws.homepage,
+  description: vrtNws.description,
+  sections: SECTIONS,
+}];
 export const DEFAULT_SECTIONS = ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap'];
 
 export async function getFrontpage({

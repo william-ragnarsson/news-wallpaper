@@ -25,7 +25,8 @@ const IMAGE_WIDTHS = [320, 480, 640, 960, 1280, 1600, 1920];
 // real one, `?dock=0` for a Dock that hides itself. Default: 12 icons of 52.
 const DOCK_DEFAULT = { width: 12 * (52 + 6) + 28, height: 52 + 26 };
 // The column at the right edge where Finder puts files and folders on the
-// desktop, in points: one icon with its label.
+// desktop, in points: one icon with its label. Customize sets its width
+// (settings.margin); this is the width until the settings load.
 const DESKTOP_ICONS = 104;
 
 const params = new URLSearchParams(location.search);
@@ -37,7 +38,7 @@ const state = {
   pinned: { preset: Boolean(urlPreset), follow: Boolean(params.get('follow')) },
   settings: null,
   chrome: params.get('chrome') !== '0',
-  screen: SCREENS.some(s => s.id === params.get('screen')) ? params.get('screen') : 'fill',
+  screen: parseScreen(params.get('screen')),
   dock: parseDock(params.get('dock')),
   dockHidden: params.get('dock') === '0',
   refreshMs: Math.max(15, Number(params.get('refresh')) || 60) * 1000,
@@ -159,6 +160,7 @@ function onSettings(settings) {
 // Takes what is not pinned from the settings, then fetches and renders at
 // once: the front page changes with the settings even when the preset stays.
 async function followSettings() {
+  applyScreen(); // the margin for the desktop files
   if (!state.pinned.follow) state.follow = settingsFollow();
   const id = state.pinned.preset ? state.preset : settingsPreset();
   if (id !== state.preset) return setPreset(id, { pin: false });
@@ -233,7 +235,7 @@ function makeContext() {
   return {
     now: new Date(),
     screen: { width, height, id: state.screen },
-    safe: { top: menubarInset(width), right: DESKTOP_ICONS, bottom: dockArea().height, dockWidth: dockArea().width },
+    safe: { top: menubarInset(width), right: filesColumn(), bottom: dockArea().height, dockWidth: dockArea().width },
     fresh: state.fresh,
     follow: state.follow,
     image,
@@ -336,9 +338,22 @@ function menubarInset(width) {
   return Math.max(0, height - Math.max(0, screen.height - innerHeight));
 }
 
+// One of SCREENS, or any `WxH` in points: the app previews the page at the
+// size of the real screen.
+function parseScreen(value) {
+  if (SCREENS.some(s => s.id === value)) return value;
+  const [width, height] = (value ?? '').split('x').map(Number);
+  return /^\d+x\d+$/.test(value) && width >= 320 && height >= 240 && width <= 8192 && height <= 8192 ? value : 'fill';
+}
+
 function parseDock(value) {
   const [width, height] = (value ?? '').split('x').map(Number);
   return width > 0 && height > 0 ? { width, height } : DOCK_DEFAULT;
+}
+
+function filesColumn() {
+  const margin = state.settings?.margin;
+  return Number.isInteger(margin) ? margin : DESKTOP_ICONS;
 }
 
 function dockArea() {
@@ -358,7 +373,7 @@ function applyScreen() {
   d.style.setProperty('--screen-h', `${height}px`);
   d.style.setProperty('--screen-scale', screenScale());
   d.style.setProperty('--safe-top', `${menubarInset(width)}px`);
-  d.style.setProperty('--safe-right', `${DESKTOP_ICONS}px`);
+  d.style.setProperty('--safe-right', `${filesColumn()}px`);
   d.style.setProperty('--safe-bottom', `${dockArea().height}px`);
   d.style.setProperty('--dock-width', `${dockArea().width}px`);
   d.style.setProperty('--dock-tile', `${dockTile()}px`);
@@ -421,7 +436,7 @@ function renderHud() {
       front ? leadRow() : row('L', 'Liveblog', followLabel(), origin('follow')),
       row('C', 'Follow Customize', pinned.length === 2 ? 'off: pinned in URL'
         : pinned.length ? `partly: ${pinned[0] === 'preset' ? 'preset' : 'liveblog'} pinned in URL` : 'on'),
-      row('S', 'Screen', SCREENS.find(s => s.id === state.screen)?.label),
+      row('S', 'Screen', SCREENS.find(s => s.id === state.screen)?.label ?? state.screen.replace('x', '×')),
       row('M', 'macOS overlay', state.chrome ? 'on' : 'off'),
       row('D', 'Dock', state.dockHidden ? 'hides itself (dock=0)' : `${state.dock.width}×${state.dock.height} kept clear`),
       row('R', 'Refresh', state.fetchedAt ? `last ${clock(state.fetchedAt)}${state.error ? ' (error)' : ''}` : '…'),
@@ -586,10 +601,17 @@ async function settled(timeoutMs = 8000) {
 }
 
 async function start() {
-  applyScreen();
-  tickClock();
+  // Listen from the start: a window resized while the page loads must scale it
+  // again too. render() waits until there is a preset and news to draw.
+  let resizeTimer;
+  addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { applyScreen(); render(); }, 120);
+  });
   // What the URL does not pin comes from the settings (the defaults without them).
   state.settings = await host.loadSettings();
+  applyScreen();
+  tickClock();
   if (!state.pinned.preset) state.preset = settingsPreset();
   if (!state.pinned.follow) state.follow = settingsFollow();
   try {
@@ -626,11 +648,6 @@ async function start() {
     }, 60_000 - (Date.now() % 60_000) + 50);
   }
 
-  let resizeTimer;
-  addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { applyScreen(); render(); }, 120);
-  });
   addEventListener('keydown', onKey);
   els.hud.addEventListener('click', e => {
     const id = e.target.closest('[data-preset]')?.dataset.preset;
