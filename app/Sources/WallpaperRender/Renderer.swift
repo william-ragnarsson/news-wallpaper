@@ -1,11 +1,14 @@
 import AppKit
+import NewsStore
 import WallpaperCore
 import WebKit
 
 // Draws the wallpaper page in a web view that is never shown on screen and
 // returns it as a PNG (a RenderRequest says at what size). The page stays
-// loaded between pictures: each one asks it for the latest news
+// loaded between pictures: each one asks it to draw the news stored last
 // (window.wallpaper.refresh, in public/app.js) and waits until it is drawn.
+// Its Bridge has no network: a picture shows the stored news (NewsStore) or
+// fails, it never fetches.
 // Where the PNG goes is up to the caller (PNGOutput): the app puts it on the
 // desktop, wallpaper-dev in a file.
 @MainActor
@@ -13,6 +16,7 @@ public final class Renderer: NSObject, WKNavigationDelegate {
   private let window = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
   private let webView: WKWebView
   private let bridge: Bridge
+  private let store: NewsStore
   // The page as it is loaded; nil when it has to load (again).
   private var loaded: URL?
   private var navigation: WKNavigation?
@@ -26,7 +30,8 @@ public final class Renderer: NSObject, WKNavigationDelegate {
   private var stamps = 0
 
   public init(_ environment: Environment) {
-    bridge = Bridge(environment)
+    bridge = Bridge(environment, network: false)
+    store = environment.news
     let config = WKWebViewConfiguration()
     config.setURLSchemeHandler(bridge, forURLScheme: Bridge.scheme)
     // Nothing kept on disk, so two renderers (the app, an agent's
@@ -56,6 +61,9 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     if request.settings != nil, request.page.scheme != Bridge.scheme {
       throw RenderError.settingsNeedBridge(request.page)
     }
+    // A page of the Bridge draws the stored news, asked for or not: it has
+    // no network to fetch with.
+    let page = request.page.scheme == Bridge.scheme ? Self.fromStore(request.page) : request.page
     // On a screen with the scale asked for, if there is one, so the page
     // gets that pixel density; but the window is never ordered in.
     let screen = NSScreen.screens.first { $0.backingScaleFactor == request.scale } ?? NSScreen.screens.first
@@ -63,6 +71,16 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     if window.frame != frame {
       window.setFrame(frame, display: false)
       loaded = nil
+    }
+
+    // The news for this picture: read once, so the page and the snapshot's
+    // fetchedAt agree. Before the first fetch this throws StoreError.empty.
+    // A page from a server reads its own.
+    var stored: NewsSnapshot?
+    if request.page.scheme == Bridge.scheme {
+      let news = try store.read()
+      bridge.news = { news.data }
+      stored = news
     }
 
     // The settings for this picture alone, served instead of the saved ones.
@@ -75,11 +93,11 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     }
     defer { bridge.settingsOverride = nil }
 
-    if loaded != request.page {
+    if loaded != page {
       try await wait(seconds: 30) { _ in
-        navigation = webView.load(URLRequest(url: request.page, cachePolicy: .reloadIgnoringLocalCacheData))
+        navigation = webView.load(URLRequest(url: page, cachePolicy: .reloadIgnoringLocalCacheData))
       }
-      loaded = request.page
+      loaded = page
     }
 
     do {
@@ -111,7 +129,14 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     }
     guard let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) else { throw RenderError.noImage }
     NSLog("Rendered \(cgImage.width)×\(cgImage.height) px for \(Int(request.size.width))×\(Int(request.size.height)) pt")
-    return Snapshot(png: png, width: cgImage.width, height: cgImage.height, fetchedAt: fetchedAt)
+    return Snapshot(png: png, width: cgImage.width, height: cgImage.height, fetchedAt: fetchedAt ?? stored?.meta.fetchedAt)
+  }
+
+  // `page` with data=store.
+  private static func fromStore(_ page: URL) -> URL {
+    guard var components = URLComponents(url: page, resolvingAgainstBaseURL: false) else { return page }
+    components.queryItems = (components.queryItems ?? []).filter { $0.name != "data" } + [URLQueryItem(name: "data", value: "store")]
+    return components.url ?? page
   }
 
   // Exactly `size`: a snapshot can come out a pixel off when the scale does
@@ -137,7 +162,7 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     """
 
   // What the page's refresh resolved to: {ok, error, fetchedAt}. Not ok means
-  // the news could not be fetched, and the picture on the desktop stays.
+  // the news could not be loaded, and the picture on the desktop stays.
   private static func outcome(_ value: Any) -> Result<Void, Error> {
     let result = value as? [String: Any]
     if result?["ok"] as? Bool == true { return .success(()) }
@@ -233,8 +258,9 @@ public enum RenderError: Error, CustomStringConvertible {
   }
 }
 
-// The page could not fetch the news (a site down, no network).
+// The page could not load the news: from the store, or from a site when a
+// server serves it (a site down, no network).
 public struct PageError: Error, CustomStringConvertible {
   public let reason: String
-  public var description: String { "The page could not fetch the news: \(reason)" }
+  public var description: String { "The page could not load the news: \(reason)" }
 }

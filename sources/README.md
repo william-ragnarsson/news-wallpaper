@@ -35,9 +35,11 @@ Node and in the wallpaper page. Import them from `index.mjs` only.
 
 The payloads (`getFrontpage`, `liveblogOptions`, `getWallpaper`) read the news
 through `lib/reader.mjs`: `loadStream`, `getFront` and `getLiveblog`, live by
-default. `setReader({ loadStream, getFront, getLiveblog })` swaps in a reader of
-news stored earlier, such as the document `public/harvest.js` makes for the
-app; `setReader(null)` goes back to live. The catalog and the outlets always
+default. `setReader({ loadStream, getFront, getLiveblog, now })` swaps in a
+reader of news stored earlier, such as the document `public/harvest.js` makes
+for the app (`public/host.js` does, with `?data=store`); `now()` is when that
+news was fetched, which the payloads give as `generatedAt`. `setReader(null)`
+goes back to live. The catalog and the outlets always
 load live.
 
 The network is the host's. `setTransport(fn)` replaces the default, the global
@@ -52,10 +54,11 @@ answer the same paths:
 | `/` | `public/` |
 | `/sources/…` | `sources/`, as ES modules |
 | `GET /net?url=<url>` | a GET to that URL, made by the host. Only https on `vrt.be` and its subdomains, redirects included. The site's status, content type and body come back, plus the URL it ended at in `x-final-url`. When the site did not answer: 504 with the reason in `x-net-error`. The request's `accept` is passed on and `x-user-agent` becomes the user agent. Any other URL is refused with a 4xx |
+| `GET /api/news` | the news stored last, as `public/harvest.js` makes it (the app's `news.json`; the dev server's `.dev/news.json`, from `wallpaper-dev fetch`). 503 with `{ error }` when there is none |
 | `GET /api/settings` | the `Settings` (see below) |
 
-The dev server is `http://localhost:4174/` and the app is `wallpaper://app/`
-(`app/Sources/NewsWallpaper/Bridge.swift`).
+The page drawn in the app has no `/net`: it reads `/api/news` only. The dev server is `http://localhost:4174/` and the app is `wallpaper://app/`
+(`app/Sources/WallpaperCore/Bridge.swift`).
 
 ## HTTP API
 

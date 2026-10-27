@@ -28,6 +28,13 @@ public struct NewsStore: Sendable {
     return NewsSnapshot(data: data, meta: try StoreMeta(data))
   }
 
+  // The ids of the liveblogs stored: those running at the fetch, and those
+  // picked then.
+  public func liveblogs() throws -> Set<String> {
+    let document = try JSONSerialization.jsonObject(with: read().data) as? [String: Any]
+    return Set((document?["liveblogs"] as? [String: Any] ?? [:]).keys)
+  }
+
   // What read() would give, without the news.
   public func meta() throws -> StoreMeta {
     try read().meta

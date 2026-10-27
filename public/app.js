@@ -1,6 +1,6 @@
 // The wallpaper page. It loads the news through the sources (in this page,
-// over the host's /net: see host.js), picks a preset, renders it full-screen
-// and keeps it fresh. The same page runs in a browser on the dev server and in
+// over the host's /net, or with ?data=store from the news the host stored:
+// see host.js), picks a preset, renders it full-screen and keeps it fresh. The same page runs in a browser on the dev server and in
 // the macOS app, which takes a picture of it for the desktop.
 // The preset and the followed liveblog come from the settings and change with
 // them, unless the URL pins them.
@@ -108,15 +108,20 @@ function fetchData(options) {
 async function loadData(seq, { markFresh = true } = {}) {
   const source = dataSource();
   try {
+    // The stored news says when it was fetched; live news is fetched now.
+    const fetchedAt = host.fromStore ? await host.loadStoredNews() : null;
     const body = await source.load();
     if (seq !== fetchSeq) return lastFetch;
     const changed = !state.data || source.signature(body) !== source.signature(state.data);
     const ids = source.ids(body);
-    if (markFresh) state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
+    // The same stored news again (the fetch failed, or nothing was fetched)
+    // brings nothing new: what was Nieuw stays so.
+    const again = fetchedAt && state.fetchedAt?.toISOString() === fetchedAt;
+    if (markFresh && !again) state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
     ids.forEach(id => state.seenPostIds.add(id));
     state.data = body;
     state.error = null;
-    state.fetchedAt = new Date();
+    state.fetchedAt = fetchedAt ? new Date(fetchedAt) : new Date();
     return changed;
   } catch (err) {
     if (seq !== fetchSeq) return lastFetch;
@@ -412,6 +417,7 @@ function syncUrl() {
   else if (state.dock !== DOCK_DEFAULT) p.set('dock', `${state.dock.width}x${state.dock.height}`);
   if (!state.chrome) p.set('chrome', '0');
   if (params.has('refresh')) p.set('refresh', params.get('refresh'));
+  if (params.has('data')) p.set('data', params.get('data'));
   if (!state.showHint) p.set('hud', '0');
   const query = String(p);
   history.replaceState(null, '', query ? `?${query}` : location.pathname);

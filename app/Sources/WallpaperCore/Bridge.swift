@@ -7,16 +7,20 @@ import WebKit
 //   /                public/
 //   /sources/        sources/, which the page runs itself
 //   /net?url=<url>   a GET to VRT on the page's behalf: CORS keeps the page
-//                    from fetching VRT itself
+//                    from fetching VRT itself. Only in a Bridge with the
+//                    network: the one that renders has none, so a picture
+//                    can only show the stored news
+//   /api/news        the stored news (NewsStore's document), from `news`
 //   /api/settings    the settings (SettingsStore; read only, SettingsService
 //                    writes), or settingsOverride while it is set
-// Nothing here knows about news: the page and its sources do all of that.
+// Nothing here knows what is in the news: the page and its sources do.
 @MainActor
 public final class Bridge: NSObject, WKURLSchemeHandler {
   public nonisolated static let scheme = "wallpaper"
   public nonisolated static let home = URL(string: "wallpaper://app/")!
   // The wallpaper without the stand-in menu bar and Dock or the dev hint.
-  public nonisolated static let page = URL(string: "?chrome=0&hud=0", relativeTo: home)!.absoluteURL
+  // The news is the stored news (?data=store, see public/host.js).
+  public nonisolated static let page = URL(string: "?chrome=0&hud=0&data=store", relativeTo: home)!.absoluteURL
 
   // The page's files (Environment.web) and its settings.
   private let root: URL
@@ -24,10 +28,17 @@ public final class Bridge: NSObject, WKURLSchemeHandler {
   // Settings (JSON) served instead of the saved ones while set: the Renderer
   // sets them for one picture.
   public var settingsOverride: Data?
+  // The stored news (JSON) for /api/news, set by whoever has a store to read
+  // (WallpaperCore does not know it). nil, or a throw, is a 503 with
+  // {error}, the reason, which the page shows as its error.
+  public var news: (() throws -> Data)?
+  // Whether /net reaches VRT.
+  private let network: Bool
 
-  public init(_ environment: Environment) {
+  public init(_ environment: Environment, network: Bool = true) {
     root = environment.web
     settings = environment.settings
+    self.network = network
   }
 
   // URL prefix → folder under root, the first match wins.
@@ -52,12 +63,24 @@ public final class Bridge: NSObject, WKURLSchemeHandler {
   public func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
     guard let url = task.request.url else { return }
     switch url.path() {
+    case "/net" where !network:
+      NSLog("Refused /net in a Bridge without the network: \(url.query() ?? "")")
+      respond(task, Reply(status: 403, type: "text/plain; charset=utf-8", body: Data("No network here: draw from the stored news".utf8)))
     case "/net":
       Task {
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
         let target = query?.first { $0.name == "url" }?.value.flatMap(URL.init(string:))
         let reply = await net.get(target, headers: task.request.allHTTPHeaderFields ?? [:])
         respond(task, reply)
+      }
+    case "/api/news":
+      do {
+        guard let news else { throw NoNews() }
+        respond(task, Reply(status: 200, type: Self.types["json"]!, body: try news()))
+      } catch {
+        // {error}, as the dev server answers.
+        let body = try? JSONSerialization.data(withJSONObject: ["error": "\(error)"])
+        respond(task, Reply(status: 503, type: Self.types["json"]!, body: body ?? Data()))
       }
     case "/api/settings":
       respond(task, Reply(status: 200, type: Self.types["json"]!, body: settingsOverride ?? settings.load()))
@@ -92,6 +115,10 @@ public final class Bridge: NSObject, WKURLSchemeHandler {
     guard let body = try? Data(contentsOf: file) else { return .notFound }
     return Reply(status: 200, type: Self.types[file.pathExtension] ?? "application/octet-stream", body: body)
   }
+}
+
+struct NoNews: Error, CustomStringConvertible {
+  var description: String { "No news here" }
 }
 
 struct Reply: Sendable {

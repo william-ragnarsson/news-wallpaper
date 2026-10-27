@@ -5,8 +5,8 @@ import WallpaperCore
 // M2: fetches all the news there is to pick from and stores it (NewsStore),
 // the store's one writer. The sources do the fetching, in a ScriptHost
 // (public/harvest.js) with the Bridge's /net as their network. What fails is
-// kept from the fetch before; when VRT's feed or front page fails, nothing
-// is stored and run() throws. Runs go one at a time.
+// kept from the fetch before; when VRT's feed fails (or its front page, with
+// none from before), nothing is stored and run() throws. Runs go one at a time.
 @MainActor
 public final class Fetcher {
   public let environment: Environment

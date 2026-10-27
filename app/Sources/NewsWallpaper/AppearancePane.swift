@@ -1,3 +1,4 @@
+import NewsStore
 import SwiftUI
 import WallpaperCore
 import WebKit
@@ -158,7 +159,10 @@ private final class ScaledPage: NSView {
 
   init(_ environment: WallpaperCore.Environment) {
     let config = WKWebViewConfiguration()
-    config.setURLSchemeHandler(Bridge(environment), forURLScheme: Bridge.scheme)
+    // As the Renderer's: the stored news, no network.
+    let bridge = Bridge(environment, network: false)
+    bridge.news = { try environment.news.read().data }
+    config.setURLSchemeHandler(bridge, forURLScheme: Bridge.scheme)
     config.websiteDataStore = .nonPersistent()
     web = InertWebView(frame: .zero, configuration: config)
     super.init(frame: .zero)

@@ -4,6 +4,8 @@
 //   /                   public/: the wallpaper, the explorer, Customize
 //   /sources/           sources/, which the page runs itself
 //   /net?url=<url>      the page's way to VRT (see proxy() below)
+//   /api/news           the stored news: .dev/news.json, which wallpaper-dev
+//                       fetch writes (the page reads it with ?data=store)
 //   /api/settings       the settings (settings.mjs: .dev/settings.json)
 // and, for the explorer, Customize and tools, the sources as JSON under /api.
 
@@ -25,6 +27,8 @@ const STATIC = [
 // Bridge.swift allows the same in the app.
 const NET_HOSTS = /(^|\.)vrt\.be$/;
 const NET_TIMEOUT_MS = 15_000;
+// The news wallpaper-dev fetched last in this worktree (app/Sources/NewsStore).
+const NEWS_FILE = fileURLToPath(new URL('./.dev/news.json', import.meta.url));
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -57,6 +61,8 @@ const routes = [
     sources.loadStream(outlet, stream, { raw: q.get('raw') === '1' })],
   [/^\/api\/outlets\/([\w-]+)\/health$/, ([, outlet]) => sources.checkStreams(outlet)],
   [/^\/api\/health$/, () => sources.checkStreams()],
+
+  [/^\/api\/news$/, () => storedNews()],
 
   // What the wallpaper shows, set on the Customize page.
   [/^\/api\/settings$/, () => getSettings()],
@@ -199,6 +205,15 @@ async function readJson(req) {
 function fromThisMac(req) {
   const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
   return loopback && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(req.headers.host ?? '');
+}
+
+async function storedNews() {
+  try {
+    return JSON.parse(await readFile(NEWS_FILE, 'utf8'));
+  } catch (err) {
+    if (err.code === 'ENOENT') throw new HttpError(503, `No news stored in ${NEWS_FILE} yet: fetch first (wallpaper-dev fetch)`);
+    throw err;
+  }
 }
 
 function send(res, status, data) {

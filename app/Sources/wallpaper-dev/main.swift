@@ -20,7 +20,8 @@ let usage = """
       liveblogs and the ones in the settings) and stores it in news.json,
       keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
       counts}. What fails is kept from the fetch before and listed in errors;
-      when VRT's feed or front page fails, nothing is stored.
+      when VRT's feed fails (or its front page, with none from before),
+      nothing is stored.
 
   news [path]
       Prints the stored news: {fetchedAt, ok, errors, streams, front,
@@ -31,11 +32,13 @@ let usage = """
 
   render --out <file.png> [--size 1512x982] [--scale 2] [--preset <id>] [--follow <liveblog id>]
          [--settings '{"margin": 80}'] [--page <url>]
-      Draws the wallpaper page and writes the PNG, --size points at --scale
-      pixels a point (default: the main screen's). Prints {path, width,
-      height, fetchedAt, page}. --settings are changes to the saved settings
-      for this picture only: checked as settings set checks them, not saved,
-      and printed as settings. --preset and --follow pin the page over them.
+      Draws the stored news (fetch first) as the app does, and writes the PNG,
+      --size points at --scale pixels a point (default: the main screen's).
+      Prints {path, width, height, fetchedAt, page}: fetchedAt is when the
+      news drawn was fetched. Nothing is fetched while drawing. --settings are
+      changes to the saved settings for this picture only: checked as settings
+      set checks them, not saved, and printed as settings. --preset and
+      --follow pin the page over them.
 
   settings
       Prints the settings, with the defaults for what settings.json does not have.

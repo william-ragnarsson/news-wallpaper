@@ -70,7 +70,8 @@ export async function getWallpaper({ follow = 'auto', maxPosts = 40, maxHeadline
 
   if (!liveblogs.length) throw new HttpError(502, 'No liveblogs could be loaded from VRT NWS');
 
-  const now = Date.now();
+  // When the news was loaded: now, or when it was stored.
+  const now = reader.now();
   // 'auto', or a followed liveblog that could not be loaded: the most active
   // one. `follow` in the payload still says what was asked for.
   const focus = liveblogs.find(b => b.id === follow)

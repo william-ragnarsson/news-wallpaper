@@ -17,7 +17,8 @@ const OUTLET = PROVIDERS[0].id;
 
 // `liveblogs`: the ids picked in the settings. `previous`: the document stored
 // last; what fails now is kept from it, and listed in errors. Throws, and so
-// stores nothing, when VRT's feed or its front page fails.
+// stores nothing, when VRT's feed fails, or its front page with none from
+// before.
 export async function harvest({ liveblogs = [], previous = null } = {}) {
   const fetchedAt = new Date().toISOString();
   const errors = [];
@@ -32,7 +33,7 @@ export async function harvest({ liveblogs = [], previous = null } = {}) {
     settle('liveblogs', ids, id => getLiveblog(id, entries.get(id)), previous?.liveblogs, errors),
   ]);
   const failed = errors.find(e => e.id === 'streams.voorpagina');
-  if (failed) throw new Error(`The front page failed: ${failed.message}`);
+  if (failed && !streams.voorpagina) throw new Error(`The front page failed: ${failed.message}`);
   return { fetchedAt, ok: errors.length === 0, errors, streams, front, liveblogs: blogs };
 }
 

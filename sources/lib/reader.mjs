@@ -1,10 +1,13 @@
 // Where the wallpaper payloads (getFrontpage, liveblogOptions, getWallpaper)
 // read the news from: live from the sites, the default, or from news the app
-// fetched earlier (public/harvest.js) and stored. A reader is three functions,
-// the ones the payloads are built from:
+// fetched earlier (public/harvest.js) and stored. A reader is the functions
+// the payloads are built from:
 //   loadStream(outletId, streamId)  as catalog.loadStream
 //   getFront()                      as liveblog.getFront
 //   getLiveblog(id, feedEntry)      as liveblog.getLiveblog
+//   now()                           when the news was loaded, in ms: the
+//                                   payloads' generatedAt (optional, default
+//                                   Date.now())
 // The sources' own loading (catalog, outlets) and harvest.js always go live.
 
 import * as liveblog from '../liveblog.mjs';
@@ -30,3 +33,4 @@ export function setReader(next) {
 export const loadStream = (outletId, streamId) => reader.loadStream(outletId, streamId);
 export const getFront = () => reader.getFront();
 export const getLiveblog = (id, feedEntry) => reader.getLiveblog(id, feedEntry);
+export const now = () => reader.now?.() ?? Date.now();

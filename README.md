@@ -22,11 +22,11 @@ app/                host 2: the macOS app (wallpaper://app/)
   Updater.swift       when to redraw: every 5 minutes, on wake, unlock and screen changes, from the menu
   Renderer.swift      loads the page offscreen, calls window.wallpaper.refresh(), takes a picture
                       (a RenderRequest: size, scale, settings for once), one render at a time
-  Bridge.swift        serves public/ and sources/, /net and /api/settings to that page
+  Bridge.swift        serves public/ and sources/, /api/news and /api/settings to that page
+                      (and /net, but not to the page drawn: only to the fetch)
   SettingsService.swift  the settings: runs public/settings.js, the only writer of settings.json
   NewsStore           the news fetched last: news.json, and news.prev.json before it
   NewsFeed            Fetcher: runs public/harvest.js, the only writer of news.json
-                      (wallpaper-dev only so far: the app still fetches as it renders)
   Customize           the window that picks the design, liveblogs and sections (menu bar → Customize)
   DesktopOutput.swift sets the picture
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)
@@ -40,9 +40,13 @@ cannot fetch VRT itself (CORS), so it sends its requests to its host
 the page runs the same in a browser and in the app. The contract is in
 `sources/README.md` under Hosts.
 
-The app and the page talk through one call: `window.wallpaper.refresh()`
-fetches the news, renders it and resolves to `{ ok, error, fetchedAt }` once
-fonts and images are in. When it is not ok, the app keeps the picture it has.
+In the app, fetching and drawing are apart. Every 5 minutes, on wake and from
+the menu, the Fetcher runs the sources (`public/harvest.js`) and stores all the
+news there is to pick from in `news.json`; then the page is drawn from that
+(`?data=store`: it reads `/api/news`, and has no `/net`). A change in Customize
+only draws again. The page's one call is `window.wallpaper.refresh()`: it
+renders and resolves to `{ ok, error, fetchedAt }` once fonts and images are
+in. When it is not ok, the app keeps the picture it has.
 
 ## Run
 

@@ -58,7 +58,7 @@ export async function getFrontpage({
 
   return {
     source: { id: OUTLET, name: front.value.outlet.name, language: 'nl', homepage: front.value.outlet.homepage },
-    generatedAt: new Date().toISOString(),
+    generatedAt: new Date(reader.now()).toISOString(),
     top: [...featured, ...fresh(front.value.items).map(story)],
     sections: sectionPayloads.filter(Boolean).map(s => ({
       id: s.stream.id,

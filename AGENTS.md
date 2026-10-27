@@ -19,14 +19,16 @@ swift run --package-path app --build-system native wallpaper-dev options
 ```
 
 - Each command prints one JSON object. A failure prints `{"error": …}` and exits 1.
-- `render` draws the wallpaper page as the app does, and writes the PNG:
-  `--size` points times `--scale` pixels. Read the PNG to check a change to
+- `render` draws the stored news on the wallpaper page as the app does, and
+  writes the PNG: `--size` points times `--scale` pixels. It fetches nothing, so
+  `fetch` first; with no news stored it fails. Read the PNG to check a change to
   the page or a design. Preset ids are in `public/presets/index.js`.
   `--settings` tries settings for one picture without saving them.
 - `fetch` fetches all the news there is to pick from into `.dev/news.json`
   (the one before stays as `news.prev.json`) and prints what it got; `news
   [path]` prints it, or one part (a jq path: keys, indexes, `| length`,
-  `| keys`). Rendering does not read it yet: the page still fetches live.
+  `| keys`). The page reads it with `?data=store`, from `/api/news`: the
+  app and `render` always do, the dev server when you add it to the URL.
 - `settings` prints the settings; `settings set <key>=<value>…` checks and saves
   them, as the app's Customize does (the rules are `public/settings.js`).
   `options` lists what there is to pick from.
