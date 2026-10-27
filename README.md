@@ -38,3 +38,8 @@ follows Customize; `?preset=<id>` pins one (ids in `public/presets/index.js`).
 
 The API and the data shapes are in `integrations/README.md`; how a design is
 built is in `public/presets/README.md`.
+
+## License
+
+MIT, see `LICENSE`. It covers this code, not the news: headlines, text and
+photos belong to their publishers.
