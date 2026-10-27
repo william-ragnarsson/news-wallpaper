@@ -3,11 +3,13 @@
 A preset turns the normalized news data into a full-screen desktop wallpaper.
 The host (`public/app.js`) fetches data, loads the preset, and calls it again
 whenever data changes, the minute ticks over, or the screen size changes. It
-also follows the settings picked on the Customize page (`/customize/`): when
-they change it switches to the picked preset unless the URL pins one
-(`?preset=`), follows the first picked liveblog unless the URL pins one
-(`?follow=`), and fetches again and re-renders at once. A URL that pins both
-(tools/snap.sh) does not listen for changes.
+also follows the settings (in the app, picked in Customize; on the dev server,
+`.dev/settings.json`, set with `wallpaper-dev settings set`): when they change
+it switches to the picked preset unless the URL pins one (`?preset=`), follows
+the first picked liveblog unless the URL pins one (`?follow=`), and fetches
+again and re-renders at once. A URL that pins both does not listen for
+changes. To see a design as the app draws it, use `wallpaper-dev render
+--preset <id>` (AGENTS.md).
 
 Each preset lives in its own folder and is registered in `index.js`, where
 `data` says which payload it gets: `'front'` (the front page, below) or
@@ -60,7 +62,7 @@ simulated screen (not the browser window).
 
 ## Front-page data (`data: 'front'`)
 
-From `GET /api/vrt-nws/frontpage`. VRT NWS's own front page, in its order,
+From `getFrontpage(settings)` (`sources/frontpage.mjs`), which the page runs. VRT NWS's own front page, in its order,
 with the newest stories per section and the running liveblogs. A story is in
 `top` or in one section, never both; `live` and `latest` may repeat them.
 Titles and summaries are trimmed plain text.
@@ -176,9 +178,9 @@ Block =
   | { type: 'embed', network: 'x' | 'datawrapper' | 'truthsocial' | 'facebook' | …, text, title?, attribution, url }
 ```
 
-Live data: `curl localhost:4174/api/vrt-nws/wallpaper` (add `?follow=<id>` to
-pick a liveblog; ids are in `liveblogs[].id`). The host follows the liveblog in
-the page's `?follow=`, else the first one picked on Customize, else `auto`.
+The data a design got: `wallpaper.state.data` in the page's console. The host
+follows the liveblog in the page's `?follow=` (ids are in `liveblogs[].id`),
+else the first one picked on Customize, else `auto`.
 
 ## Designing for a wallpaper
 

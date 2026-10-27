@@ -21,7 +21,7 @@
   <!-- Menu bar only: no Dock icon, no app menu. -->
   <key>LSUIElement</key>
   <true/>
-  <!-- The page comes from http://localhost while developing. -->
+  <!-- Only for the `page` override, which can point at the dev server on localhost. -->
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsLocalNetworking</key>

@@ -1,107 +1,79 @@
-import Foundation
+import AppKit
+import NewsStore
 import Observation
-
-// What the wallpaper shows, as the news server keeps it (settings.mjs).
-struct WallpaperSettings: Codable, Equatable, Sendable {
-  var preset: String
-  var provider: String
-  var liveblogs: [String]
-  var otherLiveblogs: Bool
-  var sections: [String]
-  var margin: Int
-  var updatedAt: String?
-}
-
-// What there is to pick from: /api/settings/options.
-struct Options: Decodable, Sendable {
-  struct Design: Decodable, Identifiable, Sendable {
-    let id: String
-    let name: String
-    let description: String
-    let data: String?
-    let sections: Bool?
-    let live: Bool?  // lists the other running liveblogs
-    let margin: Bool?
-  }
-
-  // A news outlet the front page can come from, with its section feeds.
-  struct Provider: Decodable, Identifiable, Sendable {
-    let id: String
-    let name: String
-    let owner: String
-    let language: String
-    let homepage: URL
-    let description: String?
-    let sections: [Section]
-  }
-
-  struct Section: Decodable, Identifiable, Sendable {
-    let id: String
-    let name: String
-    let group: String
-  }
-
-  struct Liveblog: Decodable, Identifiable, Sendable {
-    let id: String
-    let title: String
-    let section: String?
-    let live: Bool?
-    let postCount: Int?
-  }
-
-  let presets: [Design]
-  let providers: [Provider]
-  let liveblogs: [Liveblog]
-  let maxLiveblogs: Int
-  let maxMargin: Int
-}
+import WallpaperCore
+import WallpaperRender
 
 // Loads the settings into the Customize window and saves every change at
 // once, one save at a time; a change made during a save goes out after it,
-// or is dropped with it when that save fails.
-// `saved` runs each time the server takes a change, to render the wallpaper.
+// or is dropped with it when that save fails. The settings come from
+// SettingsService, in this process: no server. What there is to pick from
+// comes from the stored news (NewsStore), never the network, and so does the
+// preview, which the Renderer draws as it draws the desktop picture.
+// `saved` runs each time a change is saved, to render the wallpaper.
 @MainActor
 @Observable
 final class Customization {
   private(set) var settings: WallpaperSettings?  // what the window shows: saved, plus a change on its way
   private(set) var options: Options?
+  private(set) var news: StoreMeta?  // the stored news; nil before the first fetch
   private(set) var loadError: String?
   private(set) var saveError: String?
   private(set) var saving = false
-  var rendering = false  // the app is redrawing the desktop picture
+  private(set) var rendering = false  // the app is fetching or redrawing the desktop picture
+  private(set) var preview: NSImage?
+  private(set) var previewError: String?
   // The screen with the menu bar, which the desktop picture is drawn for.
   var screen = CGSize(width: 1512, height: 982)
 
-  let server: URL  // the page the wallpaper renders, on the news server
+  let service: SettingsService
   private let saved: () -> Void
   private var unsaved = false
   private var edits = 0  // changes made so far, to tell whether one came during a load
-  private var confirmed: WallpaperSettings?  // what the server last said it has
+  private var confirmed: WallpaperSettings?  // what was last saved
   private var failures = 0  // saves that failed, to tell whether one failed during a load
+  // The preview's own, so it never waits behind the desktop picture; made
+  // when the preview is first drawn and let go when the window closes.
+  @ObservationIgnored private var renderer: Renderer?
 
-  init(server: URL, saved: @escaping () -> Void) {
-    self.server = server
+  init(service: SettingsService, saved: @escaping () -> Void) {
+    self.service = service
     self.saved = saved
   }
 
-  // Where the settings come from, for the error when nothing answers.
-  var address: String {
-    [server.host, server.port.map(String.init)].compactMap { $0 }.joined(separator: ":")
+  // Where the wallpaper's files and settings are.
+  var environment: WallpaperCore.Environment { service.environment }
+
+  // The page the desktop picture is drawn from. Read again on each load, as
+  // the Updater reads it on each redraw: the `page` default can change while
+  // the app runs (see Environment.app).
+  private(set) var page = WallpaperCore.Environment.app.page
+
+  // The page keeps its own settings when it comes from a server, so changes
+  // here do not reach it.
+  var server: URL? { page.scheme == Bridge.scheme ? nil : page }
+
+  func redrawing(_ on: Bool) {
+    rendering = on
   }
 
-  // Again each time the window comes forward: liveblogs start and end, and the
-  // web Customize page changes the settings too. A load also clears the last
-  // failed save's message, except the one that follows that save and one
+  // Again each time the window comes forward and after each fetch: the news
+  // changes, and settings.json can change by hand. A load also clears the
+  // last failed save's message, except the one that follows that save and one
   // begun before it.
   func load(keepingSaveError: Bool = false) async {
-    guard !saving, !unsaved else { return }
+    page = WallpaperCore.Environment.app.page
     let start = edits, failed = failures
     do {
-      // Options first: it waits on the provider, and the settings should be
-      // as fresh as they can be.
-      options = try await Self.send(URLRequest(url: url("/api/settings/options")))
-      let settings: WallpaperSettings = try await Self.send(URLRequest(url: url("/api/settings")))
-      take(settings, since: start)
+      // The news first, read off the main thread, and what there is to pick
+      // from in it, even during a save; then the settings, as fresh as they
+      // can be.
+      let store = environment.news
+      let stored = await Task.detached { try? store.read() }.value
+      options = try await service.options(news: stored?.data)
+      news = stored?.meta
+      guard !saving, !unsaved else { return }
+      take(try await service.get(), since: start)
       loadError = nil
       if !keepingSaveError, failures == failed { saveError = nil }
     } catch {
@@ -109,22 +81,45 @@ final class Customization {
     }
   }
 
-  // Whether the server still answers, and what it has: the settings alone,
-  // which come back at once. Until a load has worked, a load: the panes need
-  // the options too.
-  func check() async {
-    guard options != nil else { return await load() }
-    let start = edits
+  // Draws the preview: the page as the desktop picture is drawn, with the
+  // settings in the window (saved or not), at the screen's size in points.
+  func drawPreview() async {
+    guard let settings else { return }
+    let renderer = self.renderer ?? Renderer(environment)
+    self.renderer = renderer
+    // With the stand-in menu bar and Dock, which only cover the page, and
+    // without the page's own status line.
+    var parts = URLComponents(url: page, resolvingAgainstBaseURL: true)!
+    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud"].contains($0.name) } + [URLQueryItem(name: "hud", value: "0")]
+    // A page from a server reads its own settings.
+    let request = RenderRequest(page: parts.url!, size: screen, scale: 1, settings: server == nil ? settings : nil)
     do {
-      take(try await Self.send(URLRequest(url: url("/api/settings"))), since: start)
-      loadError = nil
+      let snapshot = try await renderer.render(request)
+      // A newer one is on its way, or the window closed.
+      guard !Task.isCancelled, self.renderer === renderer else { return }
+      preview = NSImage(data: snapshot.png)
+      previewError = nil
+    } catch StoreError.empty {
+      guard self.renderer === renderer else { return }
+      preview = nil
+      previewError = "No news fetched yet. Update news fetches it."
     } catch {
-      loadError = error.localizedDescription
+      guard !Task.isCancelled, self.renderer === renderer else { return }
+      // Not the picture before, which was for other settings.
+      preview = nil
+      previewError = error.localizedDescription
     }
   }
 
-  // Settings fetched from the server, unless a change was made since the
-  // fetch began: that change is newer.
+  // The window closed: its preview goes, with the renderer's web view.
+  func closed() {
+    renderer = nil
+    preview = nil
+    previewError = nil
+  }
+
+  // Settings loaded, unless a change was made since the load began: that
+  // change is newer.
   private func take(_ settings: WallpaperSettings, since start: Int) {
     guard edits == start, !saving, !unsaved else { return }
     self.settings = settings
@@ -147,25 +142,20 @@ final class Customization {
     let patch = Patch(sent, since: confirmed)
     guard !patch.isEmpty else { return }  // changed and changed back
     saving = true
-    var request = URLRequest(url: url("/api/settings"))
-    request.httpMethod = "PATCH"
-    request.setValue("application/json", forHTTPHeaderField: "content-type")
-    request.httpBody = try? JSONEncoder().encode(patch)
     do {
-      let answer: WallpaperSettings = try await Self.send(request)
+      let answer = try await service.update(JSONEncoder().encode(patch))
       confirmed = answer
-      // A change made during the save goes on top of what the server has now,
-      // so the next save sends that change alone and not the rest of what the
-      // window had: the web Customize page may have changed that meanwhile.
+      // A change made during the save goes on top of what was saved, so the
+      // next save sends that change alone and not the rest of what the
+      // window had.
       if unsaved, let current = settings {
         settings = Patch(current, since: sent).applied(to: answer)
       } else {
         settings = answer
       }
       saveError = nil
-      loadError = nil  // it answered
     } catch {
-      // Back to what the server has; a change made meanwhile goes too. At
+      // Back to what was saved; a change made meanwhile goes too. At
       // once, so a change made during the load below sends that change alone.
       saveError = error.localizedDescription
       failures += 1
@@ -180,25 +170,10 @@ final class Customization {
     saved()
     if unsaved { await save() }
   }
-
-  private func url(_ path: String) -> URL {
-    URL(string: path, relativeTo: server)!.absoluteURL
-  }
-
-  private nonisolated static func send<T: Decodable>(_ request: URLRequest) async throws -> T {
-    let (body, response) = try await URLSession.shared.data(for: request)
-    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-    guard (200..<300).contains(status) else {
-      let message = (try? JSONDecoder().decode(ServerError.self, from: body))?.error
-      throw ServerError(error: message ?? "HTTP \(status)")
-    }
-    return try JSONDecoder().decode(T.self, from: body)
-  }
 }
 
-// What a PATCH sends: only the fields changed here since the server last
-// answered, so a change made elsewhere meanwhile (the web Customize page)
-// stays. Fields left nil are left out.
+// What a save sends: only the fields changed here since the last save, so a
+// change made to the file meanwhile stays. Fields left nil are left out.
 private struct Patch: Encodable {
   var preset: String?
   var provider: String?
@@ -220,7 +195,7 @@ private struct Patch: Encodable {
     preset == nil && provider == nil && liveblogs == nil && otherLiveblogs == nil && sections == nil && margin == nil
   }
 
-  // These fields over the others, as the server does with a PATCH.
+  // These fields over the others, as SettingsService does with a patch.
   func applied(to s: WallpaperSettings) -> WallpaperSettings {
     var s = s
     s.preset = preset ?? s.preset
@@ -231,9 +206,4 @@ private struct Patch: Encodable {
     s.margin = margin ?? s.margin
     return s
   }
-}
-
-private struct ServerError: Decodable, LocalizedError {
-  let error: String
-  var errorDescription: String? { error }
 }

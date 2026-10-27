@@ -198,7 +198,7 @@ html, body {
   white-space: nowrap;
 }
 
-/* The value, then where it comes from (Customize or the URL). */
+/* The value, then where it comes from (the settings or the URL). */
 #hud dd > span,
 #hud dd > small {
   display: block;

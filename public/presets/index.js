@@ -2,7 +2,7 @@
 // `data` picks the payload (presets/README.md), default 'wallpaper'. A front-page
 // design that shows the sections or the running liveblogs says so (`sections`,
 // `live`), and one that keeps the margin for the desktop files (`margin`), for
-// the Customize page.
+// Customize.
 export const PRESETS = [
   { id: 'newsprint', data: 'front', sections: true, live: true, margin: true, name: 'Newsprint', description: 'Classic broadsheet front page on warm newsprint.' },
   { id: 'evening', data: 'front', live: true, name: 'Evening Edition', description: 'The classic front page in dark ink: calm for a desktop.' },

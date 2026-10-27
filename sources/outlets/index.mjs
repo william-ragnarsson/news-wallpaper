@@ -1,5 +1,5 @@
 // Every integrated outlet, in sidebar order. Each module is hand-verified:
-// see integrations/README.md before adding one.
+// see sources/README.md before adding one.
 
 import vrtNws from './vrt-nws.mjs';
 

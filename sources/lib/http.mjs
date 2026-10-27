@@ -1,4 +1,6 @@
-// Fetching and caching shared by all integrations.
+// Fetching and caching shared by every source. Plain JavaScript with no Node or
+// DOM APIs, so it runs the same in Node and in the wallpaper page. The network
+// itself is the host's: see setTransport().
 
 export const USER_AGENT = 'news-wallpaper/0.1 (personal prototype)';
 // For outlets whose CDN turns away anything that does not look like a browser.
@@ -12,6 +14,17 @@ export class HttpError extends Error {
   }
 }
 
+// How a request reaches the network. Defaults to the global fetch; a host
+// that cannot fetch other sites directly (the wallpaper page, which CORS
+// stops) passes its own. A transport takes fetch()'s (url, { headers, signal })
+// and resolves to { ok, status, url, headers, arrayBuffer() }, where url is
+// the final URL after redirects. It rejects when the site could not be reached.
+let transport = (url, init) => fetch(url, { ...init, redirect: 'follow' });
+
+export function setTransport(fn) {
+  transport = fn;
+}
+
 export async function fetchText(url, options) {
   return (await fetchResource(url, options)).text;
 }
@@ -22,9 +35,8 @@ export async function fetchResource(url, { accept = '*/*', userAgent = USER_AGEN
   const started = Date.now();
   let res;
   try {
-    res = await fetch(url, {
+    res = await transport(url, {
       headers: { accept, 'user-agent': userAgent, ...headers },
-      redirect: 'follow',
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {

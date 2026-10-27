@@ -1,26 +1,69 @@
-# Integrations
+# Sources
 
-Everything that turns a news outlet into data. Each outlet we support is a
+Everything that turns a news outlet into data: the project's backend, except
+that it runs wherever the wallpaper page runs. Each outlet we support is a
 hand-written module with streams we have checked by hand; nothing here guesses at
 an unknown site. The wallpaper presets and the stream explorer (`/explorer/`)
 only ever see the normalized shapes below, never an outlet's raw feed.
 
 ```
-integrations/
+sources/
+  index.mjs            the entry: the one module anything outside sources/ imports
   catalog.mjs          the catalog: list outlets and streams, load a stream, health check
   outlets/index.mjs    the registry: one import per outlet
   outlets/<id>.mjs     one outlet: its streams and quirk fixes
-  vrt-nws.mjs          VRT's web backend: front page, liveblogs, wallpaper payload
+  liveblog.mjs         VRT's web backend: front page, liveblogs, wallpaper payload
   frontpage.mjs        the front-page payload with the settings applied; the options to pick from
   lib/feed.mjs         RSS 2.0 / RDF / Atom reader and normalizeEntry()
-  lib/http.mjs         fetch with charset handling, user agents, in-memory cache
+  lib/http.mjs         fetch with charset handling, user agents, in-memory cache, setTransport()
+  lib/reader.mjs       where the payloads read the news from: live, or stored (setReader())
   lib/xml.mjs          small XML parser and query helpers
   lib/html.mjs         HTML to text and paragraphs, entities, inline images
 ```
 
+## Hosts
+
+The modules are plain JavaScript with no Node or DOM APIs, so they run both in
+Node and in the wallpaper page. Import them from `index.mjs` only.
+
+- **The wallpaper page** (`public/host.js`) imports them from `/sources/` and
+  runs them itself. That is how both the macOS app and the dev preview show
+  the news.
+- **The dev server** (`server.mjs`) runs them for the explorer and
+  `tools/check-feeds.mjs`, and serves the results as JSON (the HTTP API
+  below).
+
+The payloads (`getFrontpage`, `liveblogOptions`, `getWallpaper`) read the news
+through `lib/reader.mjs`: `loadStream`, `getFront` and `getLiveblog`, live by
+default. `setReader({ loadStream, getFront, getLiveblog, now })` swaps in a
+reader of news stored earlier, such as the document `public/harvest.js` makes
+for the app (`public/host.js` does, with `?data=store`); `now()` is when that
+news was fetched, which the payloads give as `generatedAt`. `setReader(null)`
+goes back to live. The catalog and the outlets always
+load live.
+
+The network is the host's. `setTransport(fn)` replaces the default, the global
+fetch. A transport takes fetch's `(url, { headers, signal })` and resolves to
+`{ ok, status, url, headers, arrayBuffer() }`, where `url` is the final URL
+after redirects. It rejects when the site could not be reached. The page cannot
+fetch VRT itself (CORS), so its transport goes through its host. Both hosts
+answer the same paths:
+
+| Path | Returns |
+| --- | --- |
+| `/` | `public/` |
+| `/sources/…` | `sources/`, as ES modules |
+| `GET /net?url=<url>` | a GET to that URL, made by the host. Only https on `vrt.be` and its subdomains, redirects included. The site's status, content type and body come back, plus the URL it ended at in `x-final-url`. When the site did not answer: 504 with the reason in `x-net-error`. The request's `accept` is passed on and `x-user-agent` becomes the user agent. Any other URL is refused with a 4xx |
+| `GET /api/news` | the news stored last, as `public/harvest.js` makes it (the app's `news.json`; the dev server's `.dev/news.json`, from `wallpaper-dev fetch`). 503 with `{ error }` when there is none |
+| `GET /api/settings` | the `Settings` (see below) |
+
+The page drawn in the app has no `/net`: it reads `/api/news` only. The dev server is `http://localhost:4174/` and the app is `wallpaper://app/`
+(`app/Sources/WallpaperCore/Bridge.swift`).
+
 ## HTTP API
 
-Served by `server.mjs` (`npm run dev`, port 4174).
+Served by `server.mjs` (`npm run dev`, port 4174) only. The macOS app does not
+serve it.
 
 | Route | Returns |
 | --- | --- |
@@ -29,10 +72,7 @@ Served by `server.mjs` (`npm run dev`, port 4174).
 | `GET /api/outlets/:outlet/streams/:stream` | a `StreamPayload`; add `?raw=1` for each item's source |
 | `GET /api/outlets/:outlet/health` | a `HealthReport` for that outlet's listed streams |
 | `GET /api/health` | a `HealthReport` for every outlet |
-| `GET /api/vrt-nws/frontpage` | the front page for the `'front'` designs, with the `Settings` applied (see below; shape in `public/presets/README.md`) |
 | `GET /api/settings` | the `Settings` |
-| `PATCH /api/settings` | the new `Settings`; the body is a JSON object with any of `preset`, `provider`, `liveblogs`, `otherLiveblogs`, `sections`, `margin`; only from this Mac (`localhost`), 403 otherwise |
-| `GET /api/settings/options` | `SettingsOptions`: what the Customize page picks from |
 | `GET /api/settings/events` | server-sent events: `settings` with the `Settings` on connect and after every change |
 
 Errors come back as `{ error }` with the upstream's status where it makes sense:
@@ -40,20 +80,25 @@ Errors come back as `{ error }` with the upstream's status where it makes sense:
 something that is not a feed, 504 when it did not answer. A known route asked
 with another method gets 405.
 
-`PATCH /api/settings` saves all or nothing: 400 for invalid JSON, an unknown
-key or an invalid value, 415 when the body is not `application/json`, 413 for a
-body over 10 kB.
-
 `npm run check` runs the health report from the command line and exits non-zero
 when a stream fails (see `tools/check-feeds.mjs`).
 
 ## Wallpaper settings
 
-What the wallpaper shows, picked on the Customize page (`/customize/`).
-`settings.mjs` (repo root) keeps them in `settings.json` next to it, which is
-gitignored. A missing file means the defaults; a field that is no longer valid
-(a preset or section that was removed) falls back to its default. Saves run one
-at a time and replace the file in one step (`settings.json.tmp`, then a rename).
+What the wallpaper shows, picked in the app's Customize window or with
+`wallpaper-dev settings set` (AGENTS.md). The rules (the defaults, what each field may be,
+the options) are one module, `public/settings.js`, which every keeper runs: the
+app and `wallpaper-dev` in a web view (`app/Sources/WallpaperCore/SettingsService.swift`),
+the dev server in Node (`settings.mjs`, which only reads them). Each keeps a
+`settings.json`:
+
+- the app: `~/Library/Application Support/NewsWallpaper/settings.json`
+- the dev server and `wallpaper-dev`: `.dev/settings.json` in the worktree (gitignored)
+
+A missing file means the defaults; a field that is no longer valid (a preset or
+section that was removed) falls back to its default. Saves run one at a time and
+replace the file in one step (a temp file, then a rename). The page fills in the
+defaults.
 
 ### Settings
 
@@ -75,29 +120,34 @@ Defaults: `preset: 'newsprint'`, `provider: 'vrt-nws'`, `liveblogs: []`, `otherL
 `sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`,
 `margin: 104`.
 
-`PATCH /api/settings` takes any of the fields but `updatedAt`; each one sent
-replaces the saved value (arrays whole), and the server sets `updatedAt`. A
+A change (`SettingsService.update`) takes any of the fields but `updatedAt`;
+each one sent replaces the saved value (arrays whole), and the keeper sets
+`updatedAt`. It saves all or nothing: an unknown key or an invalid value is
+turned down. A
 liveblog id matches the stream `liveblog-<id>` of outlet `vrt-nws`; a section id
 is that outlet's stream of the same id.
 
 ### SettingsOptions
 
+What there is to pick from (`SettingsService.options`, `wallpaper-dev options`).
+Its liveblogs come from the stored news, never the network.
+
 ```js
 {
   presets: [{                    // public/presets/index.js, in order
     id: 'newsprint', name: 'Newsprint', description: '…',
-    data: 'front',               // a front-page design (/api/vrt-nws/frontpage); absent for
-                                 // the liveblog designs (/api/vrt-nws/wallpaper)
+    data: 'front',               // a front-page design (getFrontpage); absent for
+                                 // the liveblog designs (getWallpaper)
     sections: true,              // front-page designs that show `sections`; absent otherwise
     live: true,                  // front-page designs that list the running liveblogs (`live`)
     margin: true,                // designs that keep the `margin` clear; absent otherwise
   }],
-  providers: [{                  // the outlets a front page can come from (integrations/frontpage.mjs)
+  providers: [{                  // the outlets a front page can come from (sources/frontpage.mjs)
     id: 'vrt-nws', name: 'VRT NWS', owner: 'VRT', language: 'nl', homepage: 'https://…', description: '…',
     sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // its section streams
   }],
   sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // every section stream, catalog order
-  liveblogs: [{                  // every liveblog in VRT's feed, live first, then picked ones that left it
+  liveblogs: [{                  // every liveblog in the stored news, live first, then picked ones that left it
     id: '1792507723130',
     title: '…',
     section: 'Binnenland' | null,
@@ -126,7 +176,7 @@ new EventSource('/api/settings/events').addEventListener('settings', e => apply(
 
 ### The front page with the settings applied
 
-`GET /api/vrt-nws/frontpage` reads the settings on every request:
+`getFrontpage(settings)`, which the page calls on every refresh:
 
 - `top` starts with the picked liveblogs, in order, as stories with
   `featured: true` (kind `liveblog` with `live`, `postCount`, `startedAt`; the
@@ -336,6 +386,6 @@ section from a category scheme, the canonical URL.
 fetch: VRT uses it to fill liveblog summaries from the liveblog itself. Cache
 what it fetches (`cached()` in `lib/http.mjs`) so a refresh does not refetch.
 
-Try a new module with `npm run check -- --module integrations/outlets/<id>.mjs`
+Try a new module with `npm run check -- --module sources/outlets/<id>.mjs`
 (it is registered for that run only), then add it to `outlets/index.mjs` and
 open it in the explorer.

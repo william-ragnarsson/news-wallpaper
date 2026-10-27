@@ -1,11 +1,11 @@
 // The front page: VRT NWS's own front-page order, its running liveblogs and the
 // newest stories per section, as one payload for the front-page wallpapers.
-// The settings (settings.mjs) pick the liveblogs that lead it and the sections.
+// The settings (settings.mjs, or the app's settings file) pick the liveblogs that lead it and the sections.
 // Every story appears once in `top` + `sections` (deduplicated by URL, a
 // liveblog by its stream id: its URL follows its headline); `live` and
 // `latest` are views across the whole site and may repeat them.
 
-import * as catalog from './catalog.mjs';
+import * as reader from './lib/reader.mjs';
 import vrtNws from './outlets/vrt-nws.mjs';
 
 const OUTLET = vrtNws.id;
@@ -31,8 +31,8 @@ export async function getFrontpage({
 } = {}) {
   // Only the front page itself is required; a section or liveblog that fails is left out.
   const [front, ...rest] = await Promise.allSettled([
-    ...['voorpagina', 'all', 'live', ...sections].map(id => catalog.loadStream(OUTLET, id)),
-    ...liveblogs.map(id => catalog.loadStream(OUTLET, `liveblog-${id}`)),
+    ...['voorpagina', 'all', 'live', ...sections].map(id => reader.loadStream(OUTLET, id)),
+    ...liveblogs.map(id => reader.loadStream(OUTLET, `liveblog-${id}`)),
   ]);
   if (front.status === 'rejected') throw front.reason;
   const loaded = rest.map(r => r.status === 'fulfilled' ? r.value : null);
@@ -58,7 +58,7 @@ export async function getFrontpage({
 
   return {
     source: { id: OUTLET, name: front.value.outlet.name, language: 'nl', homepage: front.value.outlet.homepage },
-    generatedAt: new Date().toISOString(),
+    generatedAt: new Date(reader.now()).toISOString(),
     top: [...featured, ...fresh(front.value.items).map(story)],
     sections: sectionPayloads.filter(Boolean).map(s => ({
       id: s.stream.id,
@@ -71,11 +71,11 @@ export async function getFrontpage({
   };
 }
 
-// The liveblogs a reader can put on the front page: every one in VRT's feed,
+// The liveblogs Customize can put on the front page: every one in VRT's feed,
 // live ones first, plus the `include` ids (picked earlier) that left it.
 // If the feed fails, the picked ones are still listed.
 export async function liveblogOptions(include = []) {
-  const index = await catalog.loadStream(OUTLET, 'live').catch(() => null);
+  const index = await reader.loadStream(OUTLET, 'live').catch(() => null);
   const listed = (index?.items ?? []).map(i => ({
     id: i.streamId.replace(/^liveblog-/, ''),
     title: i.title,
@@ -86,7 +86,7 @@ export async function liveblogOptions(include = []) {
     url: i.url,
   }));
   const missing = include.filter(id => !listed.some(b => b.id === id));
-  const extra = await Promise.allSettled(missing.map(id => catalog.loadStream(OUTLET, `liveblog-${id}`)));
+  const extra = await Promise.allSettled(missing.map(id => reader.loadStream(OUTLET, `liveblog-${id}`)));
   return [
     ...listed,
     ...extra.map((r, i) => {

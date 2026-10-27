@@ -1,4 +1,4 @@
-// VRT NWS integration.
+// VRT NWS liveblogs and the 'wallpaper' payload of the liveblog designs.
 //
 // Two upstream sources, both public:
 //   - the Atom feed of the newsroom, which lists regular articles and liveblogs
@@ -9,6 +9,7 @@
 
 import { decodeEntities, htmlToParagraphs, htmlToText, sanitizeHtml } from './lib/html.mjs';
 import { cached, fetchText, HttpError } from './lib/http.mjs';
+import * as reader from './lib/reader.mjs';
 
 export { HttpError };
 
@@ -55,13 +56,13 @@ export async function getLiveblog(id, feedEntry) {
 // One payload with everything a wallpaper needs: the liveblog in focus, the
 // other liveblogs with their latest posts, and the regular headlines.
 export async function getWallpaper({ follow = 'auto', maxPosts = 40, maxHeadlines = 16 } = {}) {
-  const front = await getFront();
+  const front = await reader.getFront();
   const entries = [...front.liveblogs];
   if (follow !== 'auto' && !entries.some(e => e.liveblogId === follow)) {
     entries.unshift({ liveblogId: follow });
   }
 
-  const settled = await Promise.allSettled(entries.map(e => getLiveblog(e.liveblogId, e)));
+  const settled = await Promise.allSettled(entries.map(e => reader.getLiveblog(e.liveblogId, e)));
   const liveblogs = settled
     .filter(r => r.status === 'fulfilled')
     .map(r => r.value)
@@ -69,7 +70,8 @@ export async function getWallpaper({ follow = 'auto', maxPosts = 40, maxHeadline
 
   if (!liveblogs.length) throw new HttpError(502, 'No liveblogs could be loaded from VRT NWS');
 
-  const now = Date.now();
+  // When the news was loaded: now, or when it was stored.
+  const now = reader.now();
   // 'auto', or a followed liveblog that could not be loaded: the most active
   // one. `follow` in the payload still says what was asked for.
   const focus = liveblogs.find(b => b.id === follow)

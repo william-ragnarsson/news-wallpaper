@@ -1,6 +1,6 @@
 // Generic RSS 2.0 / RSS 1.0 (RDF) / Atom reader. parseFeed() turns any of the
 // three into one entry shape, and normalizeEntry() turns an entry into the
-// stream item model (integrations/README.md). Outlet-specific fixes (premium
+// stream item model (sources/README.md). Outlet-specific fixes (premium
 // markers, image templates, sections) run after this, in each outlet module.
 
 import { decodeEntities, firstImageInHtml, htmlToParagraphs, htmlToText } from './html.mjs';

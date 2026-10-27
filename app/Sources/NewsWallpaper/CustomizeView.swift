@@ -1,11 +1,12 @@
 import SwiftUI
+import WallpaperCore
 
 // The Customize window: a sidebar with how the wallpaper looks, where its news
-// comes from, and the app itself. Every change saves at once; the desktop
-// picture follows a few seconds later.
+// comes from, and the app itself. Every change saves at once and redraws from
+// the news fetched last; the desktop picture follows a few seconds later.
 struct CustomizeView: View {
   let model: Customization
-  let refresh: () -> Void  // redraws the desktop picture now
+  let refresh: () -> Void  // fetches the news now, then redraws the desktop picture
   // Not @State: its macro plugin does not come with the Command Line Tools.
   private let sidebar = Sidebar()
 
@@ -29,10 +30,10 @@ struct CustomizeView: View {
         .navigationSubtitle(status)
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
-            Button("Refresh now", systemImage: "arrow.clockwise", action: refresh)
+            Button("Update news", systemImage: "arrow.clockwise", action: refresh)
               .keyboardShortcut("r")
               .disabled(model.rendering)
-              .help("Redraw the desktop picture with these settings now")
+              .help("Fetch the news now and redraw the desktop picture")
           }
         }
     }
@@ -44,16 +45,21 @@ struct CustomizeView: View {
     if pane == .settings {
       SettingsPane(model: model)
     } else if let settings = model.settings, let options = model.options {
-      if pane == .appearance {
-        AppearancePane(model: model, settings: settings, options: options)
-      } else {
-        SourcesPane(model: model, settings: settings, options: options)
+      Group {
+        if pane == .appearance {
+          AppearancePane(model: model, settings: settings, options: options)
+        } else {
+          SourcesPane(model: model, settings: settings, options: options)
+        }
+      }
+      .safeAreaInset(edge: .top, spacing: 0) {
+        if let server = model.server { ServerNotice(server: server) }
       }
     } else if let error = model.loadError {
       ContentUnavailableView {
-        Label("Can’t reach the news server", systemImage: "exclamationmark.triangle")
+        Label("Can’t load the settings", systemImage: "exclamationmark.triangle")
       } description: {
-        Text("\(error)\nTried \(model.address). Is the server running? Start it with npm run dev.")
+        Text(error)
       } actions: {
         Button("Try Again") { Task { await model.load() } }
       }
@@ -65,8 +71,27 @@ struct CustomizeView: View {
   private var status: String {
     if model.saving { return "Saving…" }
     if let error = model.saveError { return "Not saved: \(error)" }
-    if model.rendering { return "Redrawing the desktop picture…" }
+    if model.rendering { return "Updating the desktop picture…" }
     return ""
+  }
+}
+
+// The page comes from a server (the `page` default), which keeps its own
+// settings: what is picked here waits until the app shows its own page again.
+private struct ServerNotice: View {
+  let server: URL
+
+  var body: some View {
+    Label {
+      Text("The wallpaper comes from \(server.host() ?? server.absoluteString), which keeps its own settings. Changes here apply once the app shows its own page again: `defaults delete io.github.william-ragnarsson.news-wallpaper page`.")
+        .textSelection(.enabled)
+    } icon: {
+      Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+    }
+    .font(.callout)
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(.orange.opacity(0.12))
   }
 }
 

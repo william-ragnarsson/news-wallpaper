@@ -1,6 +1,16 @@
 import SwiftUI
+import WallpaperCore
 
-// A menu bar icon and the Customize window: the wallpaper is the app.
+// A menu bar icon and the Customize window: the wallpaper is the app. How it
+// is made:
+//   Updater   when to fetch and when to redraw
+//   Fetcher   fetches the news with the sources (sources/) into the store (NewsFeed, NewsStore)
+//   Renderer  draws the page (public/) from the stored news offscreen and takes a picture of it (WallpaperRender)
+//   Bridge    serves the page, the sources and their network (WallpaperCore)
+//   DesktopOutput  sets the picture
+// Customize (CustomizeView and its panes) edits the settings through
+// SettingsService (WallpaperCore), in this process (Customization), and
+// previews them with a Renderer of its own.
 @main
 struct NewsWallpaperApp: App {
   @NSApplicationDelegateAdaptor private var delegate: AppDelegate
@@ -9,7 +19,7 @@ struct NewsWallpaperApp: App {
     MenuBarExtra("News Wallpaper", systemImage: "newspaper") {
       Button("Customize…") { delegate.customize() }
         .keyboardShortcut(",")
-      Button("Refresh now") { delegate.refresh() }
+      Button("Update news") { delegate.updater.refresh() }
       Divider()
       Button("Quit") { NSApp.terminate(nil) }
     }
@@ -18,37 +28,28 @@ struct NewsWallpaperApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-  private let renderer = Renderer()
-  private var refreshing = false {
-    didSet { customization.rendering = refreshing }
-  }
-  private var refreshAgain = false
-  private var refreshSoon: Task<Void, Never>?
+  let updater = Updater()
   private var window: NSWindow?
-  private lazy var customization = Customization(server: page) { [weak self] in self?.scheduleRefresh() }
-
-  // The page to render, read once so the desktop picture and the Customize
-  // window use the same server. Override while developing, then relaunch:
-  // `defaults write io.github.william-ragnarsson.news-wallpaper page http://localhost:4175/?chrome=0&hud=0`
-  private let page = UserDefaults.standard.string(forKey: "page").flatMap(URL.init(string:))
-    ?? URL(string: "http://localhost:4174/?chrome=0&hud=0")!
+  private lazy var customization = Customization(service: SettingsService(.app)) { [weak self] in self?.updater.refreshSoon() }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     // Info.plist's LSUIElement does this for the .app; this covers `swift run`.
     NSApp.setActivationPolicy(.accessory)
+    updater.redrawing = { [weak self] in self?.customization.redrawing($0) }
+    // New news: an open Customize lists it and draws its preview again.
+    updater.fetched = { [weak self] in
+      guard let self, window != nil else { return }
+      Task { await self.customization.load() }
+    }
     customization.screen = mainScreen
-    // A new resolution or display: draw the picture again at the new size.
+    // A new resolution or display: the preview takes the new size (Updater
+    // draws the picture again).
     NotificationCenter.default.addObserver(
       forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
     ) { [weak self] _ in
-      MainActor.assumeIsolated { self?.screenChanged() }
+      MainActor.assumeIsolated { if let self { self.customization.screen = self.mainScreen } }
     }
-    refresh()
-  }
-
-  private func screenChanged() {
-    customization.screen = mainScreen
-    scheduleRefresh()
+    updater.start()
   }
 
   // The screen with the menu bar, which the picture is drawn for.
@@ -71,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   private func makeWindow() -> NSWindow {
-    let view = CustomizeView(model: customization) { [weak self] in self?.refresh() }
+    let view = CustomizeView(model: customization) { [weak self] in self?.updater.refresh() }
     let controller = NSHostingController(rootView: view)
     // The panes set the window's title, subtitle and toolbar.
     controller.sceneBridgingOptions = [.title, .toolbars]
@@ -90,44 +91,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     Task { await customization.load() }
   }
 
-  // A closed window goes, with the preview's web page in it; the next
-  // Customize… makes a new one.
+  // A closed window goes, with the preview and the web view that drew it;
+  // the next Customize… makes a new one.
   func windowWillClose(_ notification: Notification) {
     window = nil
-  }
-
-  func refresh() {
-    // The screen with the menu bar.
-    guard let screen = NSScreen.screens.first else { return }
-    // Now instead of after the pause, when asked for.
-    refreshSoon?.cancel()
-    // A change during a render gets a render of its own after it.
-    guard !refreshing else {
-      refreshAgain = true
-      return
-    }
-    refreshing = true
-    Task {
-      do {
-        let png = try await renderer.render(page, for: screen)
-        try Desktop.set(png, on: screen)
-      } catch {
-        NSLog("Refresh failed: \(error)")
-      }
-      refreshing = false
-      if refreshAgain {
-        refreshAgain = false
-        refresh()
-      }
-    }
-  }
-
-  // After a saved change: a slider sends a few in a row, so wait for a pause.
-  private func scheduleRefresh() {
-    refreshSoon?.cancel()
-    refreshSoon = Task {
-      try? await Task.sleep(for: .seconds(1))
-      if !Task.isCancelled { refresh() }
-    }
+    customization.closed()
   }
 }

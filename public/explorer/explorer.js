@@ -2,14 +2,14 @@
 // normalized items exactly as the wallpaper will receive them. A data tool,
 // not a design: each item shows what the integration extracted, with the
 // normalized JSON and the raw upstream entry one click away. Streams picked
-// on /customize/ carry a quiet mark.
+// in the settings (.dev/settings.json) carry a quiet mark.
 
 const REFRESH_MS = 60_000;
 
 const LANGUAGES = { nl: 'Nederlands', fr: 'Français', de: 'Deutsch', en: 'English' };
 
-// The outlet the wallpaper shows. The Customize page picks which of its
-// liveblogs lead the front page and which sections follow.
+// The outlet the wallpaper shows. The settings pick which of its liveblogs
+// lead the front page and which sections follow.
 const WALLPAPER_OUTLET = 'vrt-nws';
 
 const params = new URLSearchParams(location.search);
@@ -29,7 +29,7 @@ const state = {
   openData: new Map(),   // item id → 'json' | 'raw'
   seen: new Map(),       // "outlet/stream" → Set of item ids already shown
   fresh: new Set(),
-  picks: null,           // picked on Customize, from /api/settings/events: { liveblogs, sections }
+  picks: null,           // picked in the settings, from /api/settings/events: { liveblogs, sections }
 };
 
 const els = {
@@ -127,7 +127,7 @@ async function loadHealthAll() {
   renderStream();
 }
 
-// What the owner picked on the Customize page. The server sends the settings
+// What the owner picked in the settings. The server sends the settings
 // on connect and after every change; without them, no marks. Open only while
 // the tab is in view: a browser keeps six connections to this server at most.
 let settingsEvents = null;
@@ -200,7 +200,7 @@ function syncUrl() {
 function renderOutlets() {
   const byLanguage = groupBy(state.outlets, o => o.language);
   els.outlets.replaceChildren(
-    h('p', { class: 'pages' }, h('a', { href: '/' }, 'Wallpaper'), h('a', { href: '/customize/' }, 'Customize')),
+    h('p', { class: 'pages' }, h('a', { href: '/' }, 'Wallpaper')),
     h('header', { class: 'pane-head' }, h('h1', null, 'Outlets'), h('span', { class: 'muted' }, `${state.outlets.length}`)),
     h('div', { class: 'pane-body' },
       Object.keys(LANGUAGES).filter(l => byLanguage.has(l)).concat([...byLanguage.keys()].filter(l => !LANGUAGES[l]))
@@ -263,7 +263,7 @@ function streamRow(s, check) {
   return h('button', {
     class: 'row stream',
     'aria-current': s.id === state.streamId && state.view === 'stream' ? 'true' : null,
-    title: [s.description, s.url, failed ? `Error: ${check.error}` : null, warn, role ? `Picked on Customize (${role})` : null]
+    title: [s.description, s.url, failed ? `Error: ${check.error}` : null, warn, role ? `Picked in the settings (${role})` : null]
       .filter(Boolean).join('\n'),
     onclick: () => selectStream(s.id),
   },
@@ -284,7 +284,7 @@ function streamRow(s, check) {
   );
 }
 
-// Where a stream was picked on Customize, or null. The picked liveblogs open
+// Where a stream was picked in the settings, or null. The picked liveblogs open
 // the front page (the first leads it); the picked sections show in order on the
 // designs that have sections.
 function wallpaperRole(outletId, streamId) {
@@ -300,7 +300,7 @@ function wallpaperRole(outletId, streamId) {
 function pickMark(role) {
   return h('i', {
     class: `dot pick${role === 'lead liveblog' ? ' lead' : ''}`,
-    title: `Picked on Customize (${role})`,
+    title: `Picked in the settings (${role})`,
   });
 }
 
@@ -339,8 +339,7 @@ function streamHeader(p) {
       p.stream.derived ? h('span', { class: 'badge' }, 'filtered from feed') : null,
     ),
     p.stream.description ? h('p', { class: 'stream-desc' }, p.stream.description) : null,
-    role ? h('p', { class: 'on-wallpaper' }, pickMark(role), `Picked on Customize · ${role} · `,
-      h('a', { href: '/customize/' }, 'Change')) : null,
+    role ? h('p', { class: 'on-wallpaper' }, pickMark(role), `Picked in the settings · ${role}`) : null,
     h('dl', { class: 'facts' },
       fact('Items', stats.count),
       fact('Newest', stats.newestAt ? `${stamp(stats.newestAt)} (${ago(stats.newestAt)})` : '—'),
