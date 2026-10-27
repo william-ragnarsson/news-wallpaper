@@ -31,7 +31,7 @@ Served by `server.mjs` (`npm run dev`, port 4174).
 | `GET /api/health` | a `HealthReport` for every outlet |
 | `GET /api/vrt-nws/frontpage` | the front page for the `'front'` designs, with the `Settings` applied (see below; shape in `public/presets/README.md`) |
 | `GET /api/settings` | the `Settings` |
-| `PATCH /api/settings` | the new `Settings`; the body is a JSON object with any of `preset`, `liveblogs`, `otherLiveblogs`, `sections`; only from this Mac (`localhost`), 403 otherwise |
+| `PATCH /api/settings` | the new `Settings`; the body is a JSON object with any of `preset`, `provider`, `liveblogs`, `otherLiveblogs`, `sections`, `margin`; only from this Mac (`localhost`), 403 otherwise |
 | `GET /api/settings/options` | `SettingsOptions`: what the Customize page picks from |
 | `GET /api/settings/events` | server-sent events: `settings` with the `Settings` on connect and after every change |
 
@@ -60,18 +60,22 @@ at a time and replace the file in one step (`settings.json.tmp`, then a rename).
 ```js
 {
   preset: 'newsprint',           // a preset id from public/presets/index.js
+  provider: 'vrt-nws',           // the outlet the front page comes from; only 'vrt-nws' so far
   liveblogs: ['1792507723130'],  // VRT liveblog ids (strings of digits) that lead the front page,
                                  // in order: the first is the lead story; at most 3, no repeats
   otherLiveblogs: true,          // false: the front page's `live` is empty
   sections: ['binnenland', …],   // section stream ids below the front page, in order; none to all
+  margin: 104,                   // points kept blank at the right edge for the desktop's files and
+                                 // folders (ctx.safe.right), 0 to 320; centered designs keep as much left
   updatedAt: '2026-10-26T16:29:29.263Z' | null,  // ISO time of the last save; null for the defaults
 }
 ```
 
-Defaults: `preset: 'newsprint'`, `liveblogs: []`, `otherLiveblogs: true`,
-`sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`.
+Defaults: `preset: 'newsprint'`, `provider: 'vrt-nws'`, `liveblogs: []`, `otherLiveblogs: true`,
+`sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`,
+`margin: 104`.
 
-`PATCH /api/settings` takes any of the first four fields; each one sent
+`PATCH /api/settings` takes any of the fields but `updatedAt`; each one sent
 replaces the saved value (arrays whole), and the server sets `updatedAt`. A
 liveblog id matches the stream `liveblog-<id>` of outlet `vrt-nws`; a section id
 is that outlet's stream of the same id.
@@ -86,6 +90,11 @@ is that outlet's stream of the same id.
                                  // the liveblog designs (/api/vrt-nws/wallpaper)
     sections: true,              // front-page designs that show `sections`; absent otherwise
     live: true,                  // front-page designs that list the running liveblogs (`live`)
+    margin: true,                // designs that keep the `margin` clear; absent otherwise
+  }],
+  providers: [{                  // the outlets a front page can come from (integrations/frontpage.mjs)
+    id: 'vrt-nws', name: 'VRT NWS', owner: 'VRT', language: 'nl', homepage: 'https://…', description: '…',
+    sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // its section streams
   }],
   sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // every section stream, catalog order
   liveblogs: [{                  // every liveblog in VRT's feed, live first, then picked ones that left it
@@ -99,6 +108,7 @@ is that outlet's stream of the same id.
     error: '…',                  // only when a picked liveblog could not be loaded
   }],
   maxLiveblogs: 3,
+  maxMargin: 320,
 }
 ```
 
