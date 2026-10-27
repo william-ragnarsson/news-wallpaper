@@ -8,9 +8,9 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as catalog from './integrations/catalog.mjs';
 import * as vrt from './integrations/vrt-nws.mjs';
-import { getFrontpage, liveblogOptions, SECTIONS } from './integrations/frontpage.mjs';
+import { getFrontpage, liveblogOptions, PROVIDERS, SECTIONS } from './integrations/frontpage.mjs';
 import { HttpError } from './integrations/lib/http.mjs';
-import { getSettings, MAX_LIVEBLOGS, subscribe, updateSettings } from './settings.mjs';
+import { getSettings, MAX_LIVEBLOGS, MAX_MARGIN, subscribe, updateSettings } from './settings.mjs';
 import { PRESETS } from './public/presets/index.js';
 
 const PORT = Number(process.env.PORT) || 4174;
@@ -56,9 +56,11 @@ const routes = [
   }, 'PATCH'],
   [/^\/api\/settings\/options$/, async () => ({
     presets: PRESETS,
+    providers: PROVIDERS,
     sections: SECTIONS,
     liveblogs: await liveblogOptions((await getSettings()).liveblogs),
     maxLiveblogs: MAX_LIVEBLOGS,
+    maxMargin: MAX_MARGIN,
   })],
 ];
 
