@@ -16,12 +16,11 @@ struct SettingsPane: View {
   var body: some View {
     Form {
       Section {
-        HStack(spacing: 14) {
-          Image(systemName: "newspaper.fill")
-            .font(.system(size: 28))
-            .foregroundStyle(.white)
-            .frame(width: 56, height: 56)
-            .background(.tint, in: RoundedRectangle(cornerRadius: 12))
+        HStack(spacing: 8) {
+          // The icon's tile is 824 of its 1024, so it shows about 56 wide.
+          Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .frame(width: 70, height: 70)
           VStack(alignment: .leading, spacing: 2) {
             Text("Wallpaper Headlines").font(.title2.weight(.semibold))
             Text("Version \(version)").foregroundStyle(.secondary).textSelection(.enabled)
