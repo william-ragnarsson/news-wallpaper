@@ -62,7 +62,13 @@ export async function loadStoredNews() {
 // from it.
 export function useStoredNews(doc) {
   sources.setReader(storedReader(doc));
+  storedProvider = providerOf(doc);
 }
+
+// Whose news is stored, once loadStoredNews has read it: the provider fetched
+// last, which a switch to another one has not replaced while its fetch is on
+// its way or failed.
+export let storedProvider = null;
 
 // The reader for a stored document ({fetchedAt, provider, streams, front,
 // liveblogs}, public/harvest.js has it). What it does not have fails, as a

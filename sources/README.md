@@ -152,7 +152,6 @@ Its liveblogs come from the stored news, never the network.
     defaultSections: ['binnenland', …],  // its own pick
     liveblogs: true,             // whether it has liveblogs to follow (VRT NWS only)
   }],
-  sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // every section stream, catalog order
   liveblogs: [{                  // every liveblog in the stored news, live first, then picked ones that left it
     id: '1792507723130',
     title: '…',

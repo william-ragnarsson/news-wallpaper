@@ -21,8 +21,8 @@ let usage = """
       the ones in the settings), and stores it in news.json,
       keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
       counts}, with counts.items the items in each stream. What fails is kept from the fetch before and listed in errors;
-      when the provider's front page fails, with none from before, nothing
-      is stored.
+      when the provider's front page fails, with none from before, or VRT's
+      feed of liveblogs fails, nothing is stored.
 
   news [path]
       Prints the stored news: {fetchedAt, ok, errors, streams, front,

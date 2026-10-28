@@ -45,12 +45,13 @@ export const FIELDS = {
 
 // The settings from what settings.json holds (anything, or nothing): a field
 // that is missing or no longer valid (a preset or section that was removed)
-// takes its default.
+// takes its default (the provider's own, for the sections).
 export function normalize(saved) {
   const settings = { ...DEFAULTS, updatedAt: typeof saved?.updatedAt === 'string' ? saved.updatedAt : null };
   for (const [key, valid] of Object.entries(FIELDS)) {
     if (saved?.[key] !== undefined && valid(saved[key], settings)) settings[key] = saved[key];
     else if (key === 'provider') Object.assign(settings, providerDefaults(settings.provider));
+    else if (key === 'sections') settings.sections = getProvider(settings.provider).defaultSections;
   }
   return settings;
 }

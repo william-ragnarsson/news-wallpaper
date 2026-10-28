@@ -1,3 +1,4 @@
+import NewsStore
 import SwiftUI
 import WallpaperCore
 
@@ -24,6 +25,12 @@ struct SourcesPane: View {
       fetchedSection
     }
     .formStyle(.grouped)
+  }
+
+  // The stored news when it is the picked provider's: after a switch it is the
+  // one before's until the new one's fetch is stored.
+  private var news: StoreMeta? {
+    model.news.flatMap { $0.provider == settings.provider ? $0 : nil }
   }
 
   // MARK: Provider
@@ -140,7 +147,7 @@ struct SourcesPane: View {
     Section {
       let rest = options.liveblogs.filter { !picked.contains($0.id) }
       if rest.isEmpty {
-        Text(model.news == nil ? "None yet: Update news fetches them." : "No other liveblogs in the news fetched last.").foregroundStyle(.secondary)
+        Text(news == nil ? "None yet: Update news fetches them." : "No other liveblogs in the news fetched last.").foregroundStyle(.secondary)
       }
       ForEach(rest) { blog in
         HStack {
@@ -171,13 +178,16 @@ struct SourcesPane: View {
   // before, when that had it).
   private var fetchedSection: some View {
     Section {
-      if let news = model.news {
+      if let news {
         LabeledContent("Fetched", value: Self.date(news.fetchedAt).map { $0.formatted(date: .abbreviated, time: .shortened) } ?? news.fetchedAt)
         LabeledContent("Feeds and liveblogs", value: "\(news.counts.streams)")
         if !news.errors.isEmpty {
           Text(news.errors.count == 1 ? "One did not load: it is kept from the fetch before, if that had it." : "\(news.errors.count) did not load: they are kept from the fetch before, if that had them.")
             .foregroundStyle(.secondary)
         }
+      } else if let stored = model.news {
+        let name = options.providers.first { $0.id == stored.provider }?.name ?? stored.provider
+        Text("Not fetched from this provider yet: the picture shows the news of \(name) until it is. Update news fetches it.").foregroundStyle(.secondary)
       } else {
         Text("No news fetched yet. Update news fetches it.").foregroundStyle(.secondary)
       }
@@ -190,7 +200,7 @@ struct SourcesPane: View {
 
   // How many items the news fetched last has from a feed.
   private func items(_ id: String) -> String? {
-    model.news?.counts.items[id].map { $0 == 1 ? "1 item" : "\($0) items" }
+    news?.counts.items[id].map { $0 == 1 ? "1 item" : "\($0) items" }
   }
 
   private static func date(_ text: String) -> Date? {

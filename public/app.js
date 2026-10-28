@@ -47,6 +47,7 @@ const state = {
   error: null,
   fetchedAt: null,
   seenPostIds: new Set(),
+  seenProvider: null,  // whose stories seenPostIds holds
   fresh: new Set(),
 };
 
@@ -79,11 +80,20 @@ const SOURCES = {
   },
   // The provider's front page in its own order, the sections and the running liveblogs.
   front: {
-    load: () => sources.getFrontpage(state.settings ?? {}),
+    load: () => sources.getFrontpage(frontSettings()),
     ids: d => frontStories(d).map(s => s.id),
     signature: d => frontStories(d).map(s => `${s.id}@${s.time}`).join('|'),
   },
 };
+
+// Until a switch to another provider has fetched its news, the stored news is
+// still the one before's, with its own sections: old news beats none.
+function frontSettings() {
+  const settings = state.settings ?? {};
+  const stored = host.fromStore && host.storedProvider;
+  if (!stored || stored === sources.getProvider(settings.provider).id) return settings;
+  return { ...settings, provider: stored, sections: undefined, liveblogs: [] };
+}
 
 function dataSource(presetId = state.preset) {
   return SOURCES[PRESETS.find(p => p.id === presetId)?.data ?? 'wallpaper'];
@@ -117,6 +127,11 @@ async function loadData(seq, { markFresh = true } = {}) {
     // The same stored news again (the fetch failed, or nothing was fetched)
     // brings nothing new: what was Nieuw stays so.
     const again = fetchedAt && state.fetchedAt?.toISOString() === fetchedAt;
+    // Another provider's stories are all new to the page, but not news.
+    if (body.source?.id !== state.seenProvider) {
+      state.seenPostIds.clear();
+      state.seenProvider = body.source?.id;
+    }
     if (markFresh && !again) state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
     ids.forEach(id => state.seenPostIds.add(id));
     state.data = body;

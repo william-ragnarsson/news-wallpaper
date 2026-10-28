@@ -43,7 +43,7 @@ export default {
       h('main', { class: 'hp-main' },
         leadPackage(top, ctx),
         latestRail(latest, ctx),
-        sectionRow([...sections, ...topicGroups(rest)], ctx),
+        sectionRow([...sections, ...topicGroups(rest, ctx)], ctx),
       ),
       footer(data, ctx),
     );
@@ -181,8 +181,8 @@ function marks(story, ctx, play = true) {
 
 // --- data helpers -------------------------------------------------------------
 
-// Stand-ins when sections are missing: later top stories grouped by VRT's tag.
-function topicGroups(stories) {
+// Stand-ins when sections are missing: later top stories grouped by their section.
+function topicGroups(stories, ctx) {
   const groups = new Map();
   for (const s of stories) {
     const name = s.section || ctx.t.moreNews;

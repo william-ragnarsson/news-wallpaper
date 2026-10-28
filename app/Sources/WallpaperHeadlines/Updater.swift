@@ -9,8 +9,9 @@ import WallpaperRender
 // (the menu, Customize), it fetches (NewsFeed) and then draws the stored news.
 // A change of screens or a saved change only draws again: the store has all
 // there is to pick from. Nothing is fetched while the Mac sleeps, its screens
-// sleep or it is locked. A failed fetch still draws what is stored, and a
-// failed redraw keeps the picture there is: old news beats none.
+// sleep or it is locked. A failed fetch still draws what is stored (the
+// provider's before, after a switch whose fetch failed), and a failed redraw
+// keeps the picture there is: old news beats none.
 @MainActor
 final class Updater {
   private let fetcher = Fetcher(.app)
@@ -83,11 +84,16 @@ final class Updater {
   }
 
   // Whether the settings name another provider than the stored news's: the
-  // store has only the one fetched. Settings that name none are VRT NWS's.
+  // store has only the one fetched.
   private func otherProvider() -> Bool {
-    let settings = try? JSONSerialization.jsonObject(with: Environment.app.settings.load()) as? [String: Any]
     guard let stored = try? Environment.app.news.meta().provider else { return true }
-    return (settings?["provider"] as? String ?? "vrt-nws") != stored
+    return settingsProvider() != stored
+  }
+
+  // The provider in the settings. Settings that name none are VRT NWS's.
+  private func settingsProvider() -> String {
+    let settings = try? JSONSerialization.jsonObject(with: Environment.app.settings.load()) as? [String: Any]
+    return settings?["provider"] as? String ?? "vrt-nws"
   }
 
   // Whether a liveblog picked in the settings is not in the stored news.
@@ -101,12 +107,19 @@ final class Updater {
 
   private func redraw(fetching: Bool) async {
     if fetching {
+      let provider = settingsProvider()
       do {
         let meta = try await fetcher.run()
         fetched()
         if !meta.ok { NSLog("Fetched, but kept from before: \(meta.errors.map(\.id).joined(separator: ", "))") }
       } catch {
         NSLog("Fetch failed: \(error)")
+      }
+      // A switch to another provider while it fetched (and back, which
+      // otherProvider did not see) fetches that one next.
+      if settingsProvider() != provider {
+        fetchFirst = true
+        again = true
       }
     }
     // The screen with the menu bar.
