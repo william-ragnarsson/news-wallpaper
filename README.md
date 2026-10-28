@@ -5,6 +5,18 @@ page every few minutes and sets it as the desktop picture. Everything runs on
 the Mac: there is no server to host. The pages only collect, format and show
 what the feeds provide: titles, sections, counts and times.
 
+## Install
+
+```sh
+brew install william-ragnarsson/tap/wallpaper-headlines
+wallpaper-headlines      # opens the app
+```
+
+It builds on your Mac, so it needs macOS 14 or later and the Command Line
+Tools (`xcode-select --install`). Update it from the app's Settings, or with
+`brew upgrade wallpaper-headlines`. The formula is in
+[william-ragnarsson/homebrew-tap](https://github.com/william-ragnarsson/homebrew-tap).
+
 ## How it fits together
 
 ```
