@@ -3,7 +3,8 @@ import SwiftUI
 import WallpaperCore
 
 // How the wallpaper looks (M4): a preview of the desktop, drawn by the
-// Renderer from the stored news, the design and how wide the page is.
+// Renderer from the stored news; the designs as cards with a small picture of
+// each; pictures and color; and how wide the page is.
 struct AppearancePane: View {
   let model: Customization
   let settings: WallpaperSettings
@@ -16,7 +17,7 @@ struct AppearancePane: View {
     let size = "\(Int(screen.width)) × \(Int(screen.height))"
     Form {
       Section {
-        designPicker
+        designCards
         if let design {
           Text(design.description).foregroundStyle(.secondary)
         }
@@ -35,6 +36,7 @@ struct AppearancePane: View {
         }
         .padding(.bottom, 12)
       }
+      looksSection(design)
       widthSection(design)
     }
     .formStyle(.grouped)
@@ -49,16 +51,73 @@ struct AppearancePane: View {
   }
 
   // The designs that follow one liveblog only for a provider that has them.
-  private var designPicker: some View {
+  private var designCards: some View {
     let liveblogs = options.providers.first { $0.id == settings.provider }?.liveblogs == true
-    return Picker("Design", selection: model.binding(settings, \.preset)) {
-      Section("Front page") {
-        ForEach(options.presets.filter { $0.data == "front" }) { Text($0.name).tag($0.id) }
+    let front = options.presets.filter { $0.data == "front" }
+    let others = liveblogs ? options.presets.filter { $0.data != "front" } : []
+    let keys = (front + others).map(thumbnailKey)
+    return VStack(alignment: .leading, spacing: 14) {
+      cardGrid(front)
+      if !others.isEmpty {
+        Text("One liveblog").font(.headline)
+        cardGrid(others)
       }
-      if liveblogs {
-        Section("One liveblog") {
-          ForEach(options.presets.filter { $0.data != "front" }) { Text($0.name).tag($0.id) }
+    }
+    .padding(.vertical, 4)
+    .task(id: ThumbnailsKey(keys: keys, page: model.page)) {
+      // A run of changes draws once, after the preview has started.
+      try? await Task.sleep(for: .milliseconds(700))
+      guard !Task.isCancelled else { return }
+      await model.drawThumbnails((front + others).map(\.id))
+    }
+  }
+
+  private func cardGrid(_ designs: [Options.Design]) -> some View {
+    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 14, alignment: .top)], spacing: 14) {
+      ForEach(designs) { design in
+        let key = thumbnailKey(design)
+        DesignCard(
+          name: design.name,
+          image: model.thumbnails.images[key],
+          // Nothing is drawn for a page from a server or before the first fetch.
+          drawing: model.server == nil && model.news != nil && !model.thumbnails.failed.contains(key),
+          screen: model.screen,
+          selected: design.id == settings.preset
+        ) {
+          model.change { $0.preset = design.id }
         }
+      }
+    }
+  }
+
+  private func thumbnailKey(_ design: Options.Design) -> Thumbnails.Key {
+    Thumbnails.Key(design.id, settings: settings, fetchedAt: model.news?.fetchedAt, screen: model.screen)
+  }
+
+  // How many photos, and in color or not, for the designs that follow these.
+  private func looksSection(_ design: Options.Design?) -> some View {
+    let follows = options.presets.filter { $0.pictures == true || $0.color == true }.map(\.name)
+    return Section {
+      Picker("Pictures", selection: model.binding(settings, \.pictures)) {
+        Text("None").tag("none")
+        Text("One").tag("one")
+        Text("Several").tag("several")
+      }
+      .pickerStyle(.segmented)
+      .disabled(design?.pictures != true)
+      Picker("Color", selection: model.binding(settings, \.color)) {
+        Text("Black and white").tag(false)
+        Text("Color").tag(true)
+      }
+      .pickerStyle(.segmented)
+      .disabled(design?.color != true)
+    } header: {
+      Text("Pictures")
+    } footer: {
+      if design?.pictures != true && design?.color != true {
+        Text("This design has its own pictures. \(follows.formatted(.list(type: .and))) follows these.")
+      } else {
+        Text("One photo keeps the page calm and text-led; several adds small ones beside the shorter stories.")
       }
     }
   }
@@ -116,6 +175,53 @@ private struct DesktopPreview: View {
     .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
     .frame(maxWidth: .infinity)
   }
+}
+
+// A design to pick: its small picture, or a stand-in while it is drawn (or
+// when it cannot be), and its name.
+private struct DesignCard: View {
+  let name: String
+  let image: NSImage?
+  let drawing: Bool
+  let screen: CGSize
+  let selected: Bool
+  let pick: () -> Void
+
+  var body: some View {
+    Button(action: pick) {
+      VStack(spacing: 6) {
+        ZStack {
+          Rectangle().fill(.quaternary)
+          if let image {
+            Image(nsImage: image).resizable().interpolation(.high)
+          } else if drawing {
+            ProgressView().controlSize(.small)
+          } else {
+            Image(systemName: "newspaper").font(.title2).foregroundStyle(.secondary)
+          }
+        }
+        .aspectRatio(screen, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+          RoundedRectangle(cornerRadius: 6)
+            .strokeBorder(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: selected ? 3 : 1)
+        )
+        Text(name)
+          .font(.callout.weight(selected ? .semibold : .regular))
+          .foregroundStyle(selected ? .primary : .secondary)
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityAddTraits(selected ? .isSelected : [])
+  }
+}
+
+// What the cards' pictures are drawn from: when one of these changes, the
+// ones not drawn yet are drawn.
+private struct ThumbnailsKey: Equatable {
+  let keys: [Thumbnails.Key]
+  let page: URL
 }
 
 // What the preview is drawn from: when one of these changes, it is drawn again.
