@@ -8,7 +8,7 @@
 // is the global fetch, which is what Node uses.
 
 // Payloads for the wallpaper designs.
-export { getFrontpage, liveblogOptions, PROVIDERS, getProvider, frontOf } from './frontpage.mjs';
+export { getFrontpage, PROVIDERS, getProvider, frontOf } from './frontpage.mjs';
 export { getWallpaper, getFront, getLiveblog } from './liveblog.mjs';
 // Where those payloads read the news from: live (the default) or stored.
 export { setReader } from './lib/reader.mjs';

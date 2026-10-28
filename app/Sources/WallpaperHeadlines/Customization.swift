@@ -177,22 +177,20 @@ final class Customization {
 private struct Patch: Encodable {
   var preset: String?
   var provider: String?
-  var liveblogs: [String]?
-  var otherLiveblogs: Bool?
+  var liveFirst: Bool?
   var sections: [String]?
   var margin: Int?
 
   init(_ s: WallpaperSettings, since old: WallpaperSettings?) {
     if s.preset != old?.preset { preset = s.preset }
     if s.provider != old?.provider { provider = s.provider }
-    if s.liveblogs != old?.liveblogs { liveblogs = s.liveblogs }
-    if s.otherLiveblogs != old?.otherLiveblogs { otherLiveblogs = s.otherLiveblogs }
+    if s.liveFirst != old?.liveFirst { liveFirst = s.liveFirst }
     if s.sections != old?.sections { sections = s.sections }
     if s.margin != old?.margin { margin = s.margin }
   }
 
   var isEmpty: Bool {
-    preset == nil && provider == nil && liveblogs == nil && otherLiveblogs == nil && sections == nil && margin == nil
+    preset == nil && provider == nil && liveFirst == nil && sections == nil && margin == nil
   }
 
   // These fields over the others, as SettingsService does with a patch.
@@ -200,8 +198,7 @@ private struct Patch: Encodable {
     var s = s
     s.preset = preset ?? s.preset
     s.provider = provider ?? s.provider
-    s.liveblogs = liveblogs ?? s.liveblogs
-    s.otherLiveblogs = otherLiveblogs ?? s.otherLiveblogs
+    s.liveFirst = liveFirst ?? s.liveFirst
     s.sections = sections ?? s.sections
     s.margin = margin ?? s.margin
     return s

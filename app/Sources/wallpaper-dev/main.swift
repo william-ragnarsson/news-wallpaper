@@ -17,8 +17,8 @@ let usage = """
 
   fetch
       Fetches all the news there is to pick from, from the provider in the
-      settings only (every section, and for VRT NWS the running liveblogs and
-      the ones in the settings), and stores it in news.json,
+      settings only (every section, and for VRT NWS the running liveblogs),
+      and stores it in news.json,
       keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
       counts}, with counts.items the items in each stream. What fails is kept from the fetch before and listed in errors;
       when the provider's front page fails, with none from before, nothing
@@ -35,6 +35,8 @@ let usage = """
          [--settings '{"margin": 80}'] [--page <url>]
       Draws the stored news (fetch first) as the app does, and writes the PNG,
       --size points at --scale pixels a point (default: the main screen's).
+      --follow picks the liveblog for the liveblog designs (default: the
+      newest running one).
       Prints {path, width, height, fetchedAt, page}: fetchedAt is when the
       news drawn was fetched. Nothing is fetched while drawing. --settings are
       changes to the saved settings for this picture only: checked as settings
@@ -46,15 +48,16 @@ let usage = """
 
   settings set <key>=<value>…
       Saves the changes and prints the settings. A value is JSON, or else a
-      string: preset=evening margin=80 provider=nyt sections='["sport"]'.
-      Another provider brings its own sections and no liveblogs.
+      string: preset=evening margin=80 provider=nyt sections='["sport"]'
+      liveFirst=false. Another provider brings its own sections. liveFirst
+      (default true) puts running live stories at the front of the top
+      stories; every story has live: true or false.
       An unknown key or invalid value saves nothing and fails.
 
   options
       Prints what there is to pick from: presets, providers (VRT NWS, The New
-      York Times, The Washington Post, Fox News) and their sections,
-      the liveblogs in the stored news and the picked ones (fetch first; before,
-      only the picked ones, by id), maxLiveblogs, maxMargin. Nothing is fetched.
+      York Times, The Washington Post, Fox News) and their sections, and
+      maxMargin. Nothing is fetched.
 
   Every command takes --data <folder> (default: .dev/ in this worktree), where
   settings.json and news.json are.

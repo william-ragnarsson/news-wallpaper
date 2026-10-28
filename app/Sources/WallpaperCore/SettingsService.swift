@@ -50,9 +50,8 @@ public final class SettingsService {
       ["patch": String(decoding: patch, as: UTF8.self)])
   }
 
-  // What there is to pick from. The liveblogs are those in `news`, the
-  // stored news (NewsStore's document), and the picked ones; with no news
-  // stored, the picked ones only, by id.
+  // What there is to pick from. Read with `news`, the stored news
+  // (NewsStore's document), as the reader for anything that comes from it.
   public func options(news: Data?) async throws -> Options {
     try await call(
       "(host.useStoredNews(news ? JSON.parse(news) : { streams: {}, liveblogs: {} }), await rules.options(saved))",

@@ -41,7 +41,7 @@ app/                host 2: the macOS app (wallpaper://app/)
   SettingsService.swift  the settings: runs public/settings.js, the only writer of settings.json
   NewsStore           the news fetched last: news.json, and news.prev.json before it
   NewsFeed            Fetcher: runs public/harvest.js, the only writer of news.json
-  Customize           the window that picks the design, liveblogs and sections (menu bar → Customize);
+  Customize           the window that picks the design, the news provider and sections (menu bar → Customize);
                       its preview is a render, and what it lists comes from the stored news
   DesktopOutput.swift sets the picture
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)

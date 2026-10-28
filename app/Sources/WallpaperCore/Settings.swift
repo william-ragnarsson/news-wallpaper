@@ -5,8 +5,7 @@ import Foundation
 public struct WallpaperSettings: Codable, Equatable, Sendable {
   public var preset: String
   public var provider: String
-  public var liveblogs: [String]
-  public var otherLiveblogs: Bool
+  public var liveFirst: Bool
   public var sections: [String]
   public var margin: Int
   public var updatedAt: String?
@@ -43,17 +42,7 @@ public struct Options: Codable, Sendable {
     public let group: String
   }
 
-  public struct Liveblog: Codable, Identifiable, Sendable {
-    public let id: String
-    public let title: String
-    public let section: String?
-    public let live: Bool?
-    public let postCount: Int?
-  }
-
   public let presets: [Design]
   public let providers: [Provider]
-  public let liveblogs: [Liveblog]
-  public let maxLiveblogs: Int
   public let maxMargin: Int
 }
