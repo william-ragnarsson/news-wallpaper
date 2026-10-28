@@ -111,6 +111,7 @@ export async function getHeadlines({ provider, perSection = 3 } = {}) {
   const load = id => id ? reader.loadStream(p.id, id).catch(() => null) : null;
   const front = await reader.loadStream(p.id, top);
   const [newest, ...sections] = await Promise.all([latest, ...p.sections.map(s => s.id)].map(load));
+  const story = item => toStory(item);
   return {
     provider: p.id,
     live: liveOf(front, newest).map(story),
