@@ -1,17 +1,20 @@
-// The front page: a provider's own front-page order, its running liveblogs and
-// the newest stories per section, as one payload for the front-page wallpapers.
+// The front page: a provider's own front-page order, the newest stories per
+// section and the running liveblogs, as one payload for the front-page wallpapers.
 // The settings (settings.mjs, or the app's settings file) pick the provider,
-// the liveblogs that lead it and the sections.
+// the sections and whether running live stories lead the page (`liveFirst`).
 // Every story appears once in `top` + `sections` (deduplicated by URL, a
 // liveblog by its stream id: its URL follows its headline); `live` and
 // `latest` are views across the whole site and may repeat them.
+// Every story says whether it is `live`: a running live blog or live page, as
+// each outlet module marks it (`item.live`).
 
 import * as reader from './lib/reader.mjs';
 import { OUTLETS } from './outlets/index.mjs';
 
 // The news providers a front page can come from: every outlet with a
 // `frontpage` (sources/README.md), each with its sections, for Customize.
-// `liveblogs`: whether it has liveblogs to follow (VRT NWS only).
+// `liveblogs`: whether it has liveblogs with posts to follow, for the liveblog
+// designs (VRT NWS only).
 export const PROVIDERS = OUTLETS.filter(o => o.frontpage).map(o => ({
   id: o.id,
   name: o.name,
@@ -43,30 +46,21 @@ function sectionsOf(outlet) {
 }
 
 export async function getFrontpage({
-  provider, sections, liveblogs = [], otherLiveblogs = true, perSection = 6, latest = 20,
+  provider, sections, liveFirst = true, perSection = 6, latest = 20,
 } = {}) {
   const p = getProvider(provider);
   const { top, latest: all, live: index } = frontOf(p.id);
   // Sections of another provider (settings from before a switch) are left out.
   sections = (sections ?? p.defaultSections).filter(id => p.sections.some(s => s.id === id));
-  if (!p.liveblogs) liveblogs = [];
-  // Only the front page itself is required; a section or liveblog that fails is left out.
+  // Only the front page itself is required; a section that fails is left out.
   const load = id => id ? reader.loadStream(p.id, id) : Promise.resolve(null);
-  const [front, ...rest] = await Promise.allSettled([
-    ...[top, all, index, ...sections].map(load),
-    ...liveblogs.map(id => load(`liveblog-${id}`)),
-  ]);
+  const [front, ...rest] = await Promise.allSettled([top, all, index, ...sections].map(load));
   if (front.status === 'rejected') throw front.reason;
   const loaded = rest.map(r => r.status === 'fulfilled' ? r.value : null);
   const [newest, live] = loaded;
-  const sectionPayloads = loaded.slice(2, 2 + sections.length);
-  const picks = loaded.slice(2 + sections.length).filter(Boolean);
-  // A picked liveblog's URL and section come from a list loaded in this same
-  // call (its own stream's header holds whatever the first caller passed in).
-  const listed = [live, newest, front.value, ...sectionPayloads].filter(Boolean).flatMap(p => p.items);
-  const featured = picks.map(p => liveblogStory(p, listed.find(i => i.streamId === p.stream.id)));
+  const sectionPayloads = loaded.slice(2);
   const key = i => i.streamId ?? i.url;
-  const seen = new Set(picks.map(p => p.stream.id));
+  const seen = new Set();
   const fresh = items => items.filter(i => !seen.has(key(i)) && seen.add(key(i)));
   // The first n not seen yet; only those count as seen, not the rest of the list.
   const take = (items, n) => {
@@ -77,79 +71,36 @@ export async function getFrontpage({
     }
     return out;
   };
+  // Running live stories lead, newest first: those on the front page, and those
+  // the outlet's front-page feed leaves out (NYT's live blogs) from its newest.
+  const leads = liveFirst
+    ? fresh(newestOf([front.value, newest].map(s => s && { items: s.items.filter(i => i.live) })))
+    : [];
 
   return {
     source: { id: p.id, name: p.name, language: p.language, homepage: p.homepage },
     generatedAt: new Date(reader.now()).toISOString(),
-    top: [...featured, ...fresh(front.value.items).map(story)],
+    top: [...leads, ...fresh(front.value.items)].map(story),
     sections: sectionPayloads.filter(Boolean).map(s => ({
       id: s.stream.id,
       name: s.stream.name,
       stories: take(s.items, perSection).map(story),
     })),
-    // Off: no list of running liveblogs; the picked ones lead `top` anyway.
-    live: otherLiveblogs ? (live?.items ?? []).filter(i => i.live).map(story) : [],
+    // The running liveblogs, for the designs that list them (VRT NWS only).
+    live: (live?.items ?? []).filter(i => i.live).map(story),
     // Without a stream of its own: the newest of everything loaded.
     latest: (newest?.items ?? newestOf([front.value, ...sectionPayloads])).slice(0, latest).map(story),
   };
 }
 
-// The liveblogs Customize can put on the front page: every one in VRT's feed,
-// live ones first, plus the `include` ids (picked earlier) that left it.
-// If the feed fails, the picked ones are still listed. None for a provider
-// without liveblogs.
-export async function liveblogOptions(include = [], provider) {
-  const p = getProvider(provider);
-  if (!p.liveblogs) return [];
-  const index = await reader.loadStream(p.id, frontOf(p.id).live).catch(() => null);
-  const listed = (index?.items ?? []).map(i => ({
-    id: i.streamId.replace(/^liveblog-/, ''),
-    title: i.title,
-    section: i.categories[0] ?? null,
-    live: i.live,
-    updatedAt: i.updatedAt,
-    postCount: i.postCount,
-    url: i.url,
-  }));
-  const missing = include.filter(id => !listed.some(b => b.id === id));
-  const extra = await Promise.allSettled(missing.map(id => reader.loadStream(p.id, `liveblog-${id}`)));
-  return [
-    ...listed,
-    ...extra.map((r, i) => {
-      const b = r.status === 'fulfilled' ? r.value.header : null;
-      return b
-        ? { id: b.id, title: b.title, section: b.section, live: b.status === 'live', updatedAt: b.updatedAt, postCount: b.postCount, url: b.url }
-        : { id: missing[i], title: `Liveblog ${missing[i]}`, section: null, live: null, updatedAt: null, postCount: null, url: null, error: r.reason?.message ?? null };
-    }),
-  ];
-}
-
-// A picked liveblog as a front-page story, from its own stream: the liveblog's
-// title and its latest post, like the liveblogs in VRT's feed. `item` is the
-// same liveblog in a list from this call, for its URL and section.
-function liveblogStory(p, item) {
-  const b = p.header;
-  const latest = p.items[0];
-  return {
-    ...story({
-      kind: 'liveblog',
-      url: item?.url ?? `liveblog-${b.id}`,
-      title: b.title,
-      summary: latest ? [latest.title?.trim(), latest.paragraphs?.[0]?.trim()].filter(Boolean).join(': ') : null,
-      categories: [item?.categories[0]].filter(Boolean),
-      image: b.image,
-      publishedAt: b.startedAt,
-      updatedAt: b.updatedAt,
-      live: b.status === 'live',
-      postCount: b.postCount,
-    }),
-    featured: true,
-  };
-}
-
 function newestOf(payloads) {
   const byUrl = new Map(payloads.filter(Boolean).flatMap(p => p.items).map(i => [i.url, i]));
-  return [...byUrl.values()].sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
+  return [...byUrl.values()].sort((a, b) => activityAt(b) - activityAt(a));
+}
+
+// A liveblog's time is its newest post's.
+function activityAt(i) {
+  return (i.kind === 'liveblog' ? i.updatedAt ?? i.publishedAt : i.publishedAt) ?? 0;
 }
 
 function story(item) {
@@ -163,7 +114,8 @@ function story(item) {
     section: clean(item.categories[0]),
     image: item.image ? { url: item.image.url, alt: clean(item.image.alt) ?? '', credit: clean(item.image.credit) } : null,
     time: isLiveblog ? item.updatedAt ?? item.publishedAt : item.publishedAt,
-    ...(isLiveblog && { live: item.live ?? null, postCount: item.postCount ?? null, startedAt: item.publishedAt }),
+    live: item.live === true,
+    ...(isLiveblog && { postCount: item.postCount ?? null, startedAt: item.publishedAt }),
     ...(item.kind === 'video' && { durationSec: item.durationSec ?? null }),
   };
 }

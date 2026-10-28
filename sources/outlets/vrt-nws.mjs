@@ -10,6 +10,12 @@
 // Liveblogs show up in all of them; their posts come from VRT's web backend
 // (sources/liveblog.mjs), and each live one becomes its own stream.
 // VRT has no paywall, so nothing is premium.
+// Live: a liveblog is live while VRT's backend gives it status "live"
+// (enrichLiveblogs); articles are never live.
+// What is weak:
+//   - Section lists have no leads: only items still in the Atom feed (the 50
+//     newest) get one, so most section stories show a title and picture only.
+//   - VRT leaves some liveblogs "live" for weeks after the story calmed down.
 
 import { getFront, getLiveblog } from '../liveblog.mjs';
 import { normalizeEntry, parseFeed } from '../lib/feed.mjs';
@@ -210,7 +216,8 @@ function teaserItem(t, leads) {
     id: url,
     kind: liveblogId ? 'liveblog' : t.type === 'mediaTeaser' ? 'video' : 'article',
     url,
-    title: t.title?.text?.trim() ?? '',
+    // Teaser titles keep the editors' stray double spaces.
+    title: t.title?.text?.replace(/\s+/g, ' ').trim() ?? '',
     summary: leads.get(url) ?? null,
     // A liveblog teaser's time is its newest post's; enrichLiveblogs() adds the start.
     publishedAt: liveblogId ? null : time,

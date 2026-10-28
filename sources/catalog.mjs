@@ -58,7 +58,10 @@ export async function listStreams(outletId) {
 export async function loadStream(outletId, streamId, { raw = false } = {}) {
   const outlet = getOutlet(outletId);
   const stream = await findStream(outlet, streamId);
-  const result = stream.load ? await stream.load({ raw }) : await loadFeed(outlet, stream, { raw });
+  // A stream's own loader may build on the outlet's other streams.
+  const result = stream.load
+    ? await stream.load({ raw, loadStream: id => loadStream(outletId, id, { raw }) })
+    : await loadFeed(outlet, stream, { raw });
   const items = dedupe(result.items);
   if (!stream.keepOrder) items.sort(newestFirst);
   return {

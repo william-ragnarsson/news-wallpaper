@@ -58,8 +58,8 @@ export async function loadStoredNews() {
 }
 
 // Points the sources at `doc`, a stored document, as loadStoredNews does with
-// the host's. The app's settings (SettingsService.swift) list the liveblogs
-// from it.
+// the host's. The app's settings (SettingsService.swift) read their options
+// through it.
 export function useStoredNews(doc) {
   sources.setReader(storedReader(doc));
   storedProvider = providerOf(doc);

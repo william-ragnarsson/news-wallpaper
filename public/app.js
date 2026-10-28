@@ -92,7 +92,7 @@ function frontSettings() {
   const settings = state.settings ?? {};
   const stored = host.fromStore && host.storedProvider;
   if (!stored || stored === sources.getProvider(settings.provider).id) return settings;
-  return { ...settings, provider: stored, sections: undefined, liveblogs: [] };
+  return { ...settings, provider: stored, sections: undefined };
 }
 
 function dataSource(presetId = state.preset) {

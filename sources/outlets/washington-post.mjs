@@ -6,6 +6,13 @@
 // leads with the Post's own stories from it. The section comes from the URL.
 // feeds.washingtonpost.com, the older address, no longer answers.
 // Terms: personal, non-commercial use, as for the site (washingtonpost.com/terms-of-service).
+// Live: the Post's live pages have "live-updates" (or live-results, live-coverage)
+// in the URL, and some titles start "Live updates:". None was in the feeds when
+// this was written (October 2026), so the rule is untested against a real item.
+// What is weak:
+//   - No pictures in any feed, and none can be derived from the items.
+//   - No feed in home-page order: the front page is the Post's own newest
+//     stories, so a soft feature can lead over the big story of the day.
 
 const RSS = 'https://www.washingtonpost.com/arcio/rss/';
 
@@ -14,8 +21,15 @@ const SECTIONS = {
   technology: 'Technology', health: 'Health', wellness: 'Wellness', sports: 'Sports', opinions: 'Opinions',
   style: 'Style', 'dc-md-va': 'Local', local: 'Local', 'climate-environment': 'Climate', investigations: 'Investigations',
   'national-security': 'National Security', food: 'Food', advice: 'Advice', weather: 'Weather', obituaries: 'Obituaries',
-  education: 'Education', immigration: 'Immigration', elections: 'Elections', 'home-garden': 'Home', travel: 'Travel',
+  education: 'Education', immigration: 'Immigration', elections: 'Elections', 'home-garden': 'Home', home: 'Home',
+  travel: 'Travel', science: 'Science', 'business/technology': 'Technology', 'arts-entertainment': 'Arts',
+  entertainment: 'Arts', books: 'Books', 'style/media': 'Media',
 };
+
+// Not stories: newsletters (Tracking Trump, the WP Intelligence briefs) and recipes.
+const NOT_STORY = /^https:\/\/www\.washingtonpost\.com\/(?:the-seven-trump|wp-intelligence|newsletters|recipes|podcasts)\//;
+const LIVE = /[/-]live-(?:updates|results|coverage)\b/;
+const LIVE_TITLE = /^live(?: updates)?:/i;
 
 const AGENCY = /\|\s*(AP|Reuters|Bloomberg|AFP)$|^(The )?Associated Press$|^Reuters$|^Bloomberg$/;
 
@@ -55,6 +69,7 @@ export default {
   ],
 
   normalize,
+  enrich: items => items.filter(i => !NOT_STORY.test(i.url)),
 };
 
 function section(id, name, group, topics, description) {
@@ -62,6 +77,11 @@ function section(id, name, group, topics, description) {
 }
 
 function normalize(item) {
-  const first = item.url.match(/^https:\/\/www\.washingtonpost\.com\/([\w-]+)\//)?.[1];
-  return { ...item, categories: [SECTIONS[first]].filter(Boolean) };
+  const path = item.url.match(/^https:\/\/www\.washingtonpost\.com\/([\w-]+)\/([\w-]+)\//);
+  const section = path && (SECTIONS[`${path[1]}/${path[2]}`] ?? SECTIONS[path[1]]);
+  return {
+    ...item,
+    live: LIVE.test(item.url) || LIVE_TITLE.test(item.title),
+    categories: [section].filter(Boolean),
+  };
 }

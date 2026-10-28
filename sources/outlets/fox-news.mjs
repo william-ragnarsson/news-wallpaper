@@ -1,10 +1,18 @@
 // Fox News (Fox Corporation, US, English). Its public RSS feeds
 // (moxie.foxnews.com/google-publisher): the newest stories site-wide and one
 // per section, 25 items each, newest first. There is no feed in home-page
-// order, so the front page leads with the newest stories. Items carry a lead,
+// order; the site-wide one is mostly sport (OutKick) and celebrity news, so the
+// front page leads with the newest of U.S., Politics and World. Items carry a lead,
 // a picture and the story's section path (a <category> with domain
 // foxnews.com/section-path); the full text they also carry is not kept.
 // The feeds are for personal, non-commercial use (foxnews.com/terms-of-use).
+// Live: Fox's live pages are at /live-news/, and their titles often start
+// "LIVE UPDATES:". None was in the feeds when this was written (October 2026),
+// so the rule is untested against a real item.
+// What is weak:
+//   - No home-page order: the front page is the newest hard news, not what
+//     Fox's editors put on top.
+//   - Pictures are 931px wide, the largest the feeds give.
 
 import { childrenNamed, textOf } from '../lib/xml.mjs';
 
@@ -17,6 +25,11 @@ const SECTIONS = {
   lifestyle: 'Lifestyle', 'food-drink': 'Food', science: 'Science', 'outkick-culture': 'Culture',
 };
 
+// Not stories: the "how to watch" TV and streaming guides sports runs for each game.
+const NOT_STORY = /^https:\/\/www\.foxnews\.com\/[\w-]+\/how-to-watch-/;
+const LIVE = /^https:\/\/www\.foxnews\.com\/live-news\//;
+const LIVE_TITLE = /^live(?: updates)?:/i;
+
 export default {
   id: 'fox-news',
   name: 'Fox News',
@@ -26,13 +39,16 @@ export default {
   description: 'US cable news network: the newest stories and a stream per section.',
   ttlMs: 120_000,
   frontpage: {
-    top: 'latest',
-    latest: null,
+    top: 'top',
+    latest: 'latest',
     live: null,
     sections: ['us', 'politics', 'world', 'opinion', 'sports', 'tech', 'health'],
   },
 
   streams: [
+    { id: 'top', name: 'Top news', group: 'Top stories', topics: ['general', 'front page'],
+      description: 'The 30 newest stories from U.S., Politics and World together.',
+      load: loadTopNews },
     { id: 'latest', name: 'Latest', group: 'Top stories', url: `${RSS}latest.xml`, topics: ['general'],
       description: 'The 25 newest stories across the site.' },
 
@@ -50,6 +66,7 @@ export default {
   ],
 
   normalize,
+  enrich: items => items.filter(i => !NOT_STORY.test(i.url)),
 };
 
 function section(id, name, group, topics, description) {
@@ -61,6 +78,7 @@ function normalize(item, entry) {
     .find(c => c.attrs.domain === 'foxnews.com/section-path');
   return {
     ...item,
+    live: LIVE.test(item.url) || LIVE_TITLE.test(item.title),
     categories: [sectionOf(path ? textOf(path).trim() : '')].filter(Boolean),
     paragraphs: null,
   };
@@ -70,4 +88,19 @@ function sectionOf(path) {
   const [site, name] = path.split('/');
   if (site === 'fs') return 'Sports';
   return SECTIONS[name] ?? null;
+}
+
+// The newest TOP_COUNT only, so the U.S., Politics and World sections below
+// the front page keep stories of their own.
+const TOP_COUNT = 30;
+
+async function loadTopNews({ loadStream }) {
+  const parts = await Promise.all(['us', 'politics', 'world'].map(id => loadStream(id)));
+  const items = [...new Map(parts.flatMap(p => p.items).map(i => [i.id, i])).values()]
+    .sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
+  return {
+    fetchedAt: Math.min(...parts.map(p => p.fetchedAt)),
+    upstream: { format: 'merged', status: 200, streams: ['us', 'politics', 'world'], entries: parts.reduce((n, p) => n + p.items.length, 0) },
+    items: items.slice(0, TOP_COUNT),
+  };
 }

@@ -4,6 +4,13 @@
 // tags and a picture; the section comes from the article's URL.
 // The feeds are for personal, non-commercial use (nytimes.com/rss). Stories
 // past the paywall are not marked as such in the feeds, so nothing is premium.
+// Live: a live blog's URL starts /live/; the blog is live while it is in the feeds.
+// What is weak:
+//   - The home feed leaves out running live blogs; they come in through Latest
+//     and the sections (frontpage.mjs's liveFirst puts them on top).
+//   - Pictures are 1800px squares: the landscape crops' file names differ per
+//     crop and can't be derived from the feed's square one.
+//   - Videos and a few articles have no picture.
 
 const RSS = 'https://rss.nytimes.com/services/xml/rss/nyt/';
 
@@ -14,7 +21,13 @@ const SECTIONS = {
   books: 'Books', movies: 'Movies', theater: 'Theater', style: 'Style', dining: 'Food', travel: 'Travel',
   realestate: 'Real Estate', sports: 'Sports', athletic: 'Sports', opinion: 'Opinion', magazine: 'Magazine',
   upshot: 'The Upshot', weather: 'Weather', briefing: 'Briefing', education: 'Education', obituaries: 'Obituaries',
+  't-magazine': 'T Magazine', 'your-money': 'Business', insider: 'Times Insider', fashion: 'Style',
 };
+
+// Not stories: games, newsletters and podcasts, and the single posts of a live
+// blog (/live/<date>/<section>/<blog>/<post>), which the sections list next to the blog.
+const NOT_STORY = /^https:\/\/www\.nytimes\.com\/(?:crosswords|puzzles|games|briefing|podcasts|newsletters)\/|\/\d{4}\/\d\d\/\d\d\/briefing\/|-podcast[-.]|\/live\/\d{4}\/\d\d\/\d\d\/[\w-]+\/[\w-]+\/[\w-]+/;
+const LIVE = /^https:\/\/www\.nytimes\.com\/live\//;
 
 export default {
   id: 'nyt',
@@ -51,6 +64,9 @@ export default {
   ],
 
   normalize,
+  // Videos stay where the home page puts them; elsewhere they mostly repeat a
+  // story or column next to them, often without a picture.
+  enrich: (items, stream) => items.filter(i => !NOT_STORY.test(i.url) && (i.kind !== 'video' || stream.id === 'home')),
 };
 
 function section(id, feed, name, group, topics, description) {
@@ -60,6 +76,8 @@ function section(id, feed, name, group, topics, description) {
 function normalize(item) {
   return {
     ...item,
+    kind: /^https:\/\/www\.nytimes\.com\/video\//.test(item.url) ? 'video' : item.kind,
+    live: LIVE.test(item.url),
     categories: [sectionOf(item.url)].filter(Boolean),
     // The Latest feed's pictures are 75px thumbnails; the same crop comes larger.
     image: item.image && {
@@ -71,7 +89,7 @@ function normalize(item) {
 }
 
 function sectionOf(url) {
-  const path = url.match(/^https:\/\/www\.nytimes\.com\/(?:\d{4}\/\d\d\/\d\d\/|live\/\d{4}\/\d\d\/\d\d\/|video\/)?([\w-]+)(?:\/([\w-]+)\/)?/);
+  const path = url.match(/^https:\/\/www\.nytimes\.com\/(?:\d{4}\/\d\d\/\d\d\/|(?:live|interactive)\/\d{4}\/\d\d\/\d\d\/|interactive\/\d{4}\/|video\/)?([\w-]+)(?:\/([\w-]+)\/)?/);
   if (!path) return null;
   return SECTIONS[`${path[1]}/${path[2]}`] ?? SECTIONS[path[1]] ?? null;
 }

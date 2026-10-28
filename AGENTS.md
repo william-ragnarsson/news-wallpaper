@@ -31,8 +31,7 @@ swift run --package-path app --build-system native wallpaper-dev options
   app and `render` always do, the dev server when you add it to the URL.
 - `settings` prints the settings; `settings set <key>=<value>…` checks and saves
   them, as the app's Customize does (the rules are `public/settings.js`).
-  `options` lists what there is to pick from; its liveblogs are those in the
-  stored news, so `fetch` first.
+  `options` lists what there is to pick from.
 - Its data (settings.json, news.json) lives in `.dev/` in your worktree (gitignored), or
   in `--data <folder>`. The dev server (`npm run dev`) in your worktree uses the
   same `.dev/settings.json`.

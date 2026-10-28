@@ -5,10 +5,9 @@
 // (settings.mjs). Nothing here reads or writes a file: the callers keep
 // settings.json.
 
-import { HttpError, PROVIDERS, getProvider, liveblogOptions } from '../sources/index.mjs';
+import { HttpError, PROVIDERS, getProvider } from '../sources/index.mjs';
 import { PRESETS } from './presets/index.js';
 
-export const MAX_LIVEBLOGS = 3;
 export const MAX_MARGIN = 320;
 
 export const DEFAULTS = Object.freeze({
@@ -16,10 +15,8 @@ export const DEFAULTS = Object.freeze({
   preset: PRESETS[0].id,
   // The news provider the front page comes from, the one the app fetches.
   provider: PROVIDERS[0].id,
-  // Liveblog ids that lead the front page, in order: the first is the lead story.
-  liveblogs: [],
-  // Whether the other running liveblogs still show (newsprint's "Nu live" box).
-  otherLiveblogs: true,
+  // Whether running live stories (liveblogs, live pages) lead the front page.
+  liveFirst: true,
   // Section streams below the front page, in order; the provider's own pick
   // when it changes.
   sections: PROVIDERS[0].defaultSections,
@@ -31,13 +28,11 @@ export const DEFAULTS = Object.freeze({
 
 // Each field: is a value valid in settings `s`? Some depend on the provider,
 // which comes first: its sections, and its liveblogs (VRT NWS's only) for
-// the liveblogs and the designs that show one.
+// the designs that show one.
 export const FIELDS = {
   provider: v => PROVIDERS.some(p => p.id === v),
   preset: (v, s) => PRESETS.some(p => p.id === v && (p.data === 'front' || getProvider(s.provider).liveblogs)),
-  liveblogs: (v, s) => Array.isArray(v) && v.length <= (getProvider(s.provider).liveblogs ? MAX_LIVEBLOGS : 0)
-    && v.every(id => typeof id === 'string' && /^\d+$/.test(id)) && new Set(v).size === v.length,
-  otherLiveblogs: v => typeof v === 'boolean',
+  liveFirst: v => typeof v === 'boolean',
   sections: (v, s) => Array.isArray(v) && v.every(id => getProvider(s.provider).sections.some(x => x.id === id))
     && new Set(v).size === v.length,
   margin: v => Number.isInteger(v) && v >= 0 && v <= MAX_MARGIN,
@@ -45,7 +40,8 @@ export const FIELDS = {
 
 // The settings from what settings.json holds (anything, or nothing): a field
 // that is missing or no longer valid (a preset or section that was removed)
-// takes its default (the provider's own, for the sections).
+// takes its default (the provider's own, for the sections), and one no
+// longer kept (liveblogs, otherLiveblogs) is dropped.
 export function normalize(saved) {
   const settings = { ...DEFAULTS, updatedAt: typeof saved?.updatedAt === 'string' ? saved.updatedAt : null };
   for (const [key, valid] of Object.entries(FIELDS)) {
@@ -58,7 +54,7 @@ export function normalize(saved) {
 
 // `patch` over `current`, stamped `now` (an ISO date). Throws for the whole
 // patch if any field in it is unknown or invalid. Another provider brings its
-// own sections and no liveblogs, and a front-page design if the one in use
+// own sections, and a front-page design if the one in use
 // shows a liveblog it has not got, unless the patch says otherwise.
 export function apply(current, patch, now) {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new HttpError(400, 'Expected a JSON object');
@@ -77,20 +73,15 @@ export function apply(current, patch, now) {
 }
 
 function providerDefaults(provider) {
-  return { provider, sections: getProvider(provider).defaultSections, liveblogs: [] };
+  return { provider, sections: getProvider(provider).defaultSections };
 }
 
-// What there is to pick from. The liveblogs are the provider's running ones,
-// plus those in `settings` that ended, so a picked one stays listed. They come
-// from the sources' reader: the stored news in the app (host.js
-// useStoredNews), the network by default.
-export async function options(settings) {
-  const s = normalize(settings);
+// What there is to pick from. Async, as the callers await it: picks that
+// depend on the news (the liveblogs once) would come from the stored news.
+export async function options() {
   return {
     presets: PRESETS,
     providers: PROVIDERS,
-    liveblogs: await liveblogOptions(s.liveblogs, s.provider),
-    maxLiveblogs: MAX_LIVEBLOGS,
     maxMargin: MAX_MARGIN,
   };
 }

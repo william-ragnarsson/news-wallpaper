@@ -6,8 +6,8 @@
 // streams    what catalog.loadStream gives: its front page (VRT: voorpagina,
 //            all, live), every section and a liveblog-<id> per liveblog below
 // front      what getFront gives: VRT's feed; null for another provider
-// liveblogs  what getLiveblog gives, for the liveblogs in the feed and the
-//            ones picked in the settings; none for another provider
+// liveblogs  what getLiveblog gives, for the liveblogs in the feed; none
+//            for another provider
 // So any change in Customize but the provider can be drawn from it without
 // fetching again (sources/lib/reader.mjs reads it back). The app's Fetcher
 // runs this in its script host, after host.js has set the network.
@@ -18,11 +18,11 @@ import { frontOf, getFront, getLiveblog, getProvider, loadStream } from '../sour
 // says none, and is VRT NWS's.
 export const providerOf = doc => doc?.provider ?? 'vrt-nws';
 
-// `provider` and `liveblogs`: the settings'. `previous`: the document stored
+// `provider`: the settings'. `previous`: the document stored
 // last; what fails now is kept from it (when it is the same provider's), and
 // listed in errors. Throws, and so stores nothing, when VRT's feed fails, or
 // the provider's front page with none from before.
-export async function harvest({ provider, liveblogs = [], previous = null } = {}) {
+export async function harvest({ provider, previous = null } = {}) {
   const p = getProvider(provider);
   const { top, latest, live } = frontOf(p.id);
   const kept = providerOf(previous) === p.id ? previous : null;
@@ -31,7 +31,7 @@ export async function harvest({ provider, liveblogs = [], previous = null } = {}
   // VRT's feed first: it says which liveblogs are running.
   const front = p.liveblogs ? await getFront() : null;
   const entries = new Map((front?.liveblogs ?? []).map(e => [e.liveblogId, e]));
-  const ids = p.liveblogs ? [...new Set([...entries.keys(), ...liveblogs])] : [];
+  const ids = [...entries.keys()];
   const streamIds = [top, latest, live, ...p.sections.map(s => s.id)].filter(Boolean)
     .concat(ids.map(id => `liveblog-${id}`));
 

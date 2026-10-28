@@ -42,8 +42,8 @@ public final class Fetcher {
         let saved = {}, previous = null;
         try { saved = JSON.parse(settings); } catch {}
         try { previous = JSON.parse(stored); } catch {}
-        const { provider, liveblogs } = normalize(saved);
-        const news = await harvest({ provider, liveblogs, previous });
+        const { provider } = normalize(saved);
+        const news = await harvest({ provider, previous });
         return { news: JSON.stringify(news) };
       } catch (error) {
         return { error: error.message ?? String(error) };
