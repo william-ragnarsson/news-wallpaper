@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds build/NewsWallpaper.app: swift build, then the bundle layout macOS
+# Builds build/WallpaperHeadlines.app: swift build, then the bundle layout macOS
 # expects with the page and the sources in Resources/web (Bridge.swift serves
 # them from there), signed ad hoc so it runs on this Mac. Needs the Command
 # Line Tools, not Xcode.
@@ -9,11 +9,11 @@ cd "$(dirname "$0")"
 # The default engine (swiftbuild) stops with "Unknown error parsing property
 # list" when only the Command Line Tools are installed; the native one works.
 # Only the app: wallpaper-dev is for working on it, not for the bundle.
-build="swift build -c release --build-system native --product NewsWallpaper"
+build="swift build -c release --build-system native --product WallpaperHeadlines"
 $build
-bin="$($build --show-bin-path)/NewsWallpaper"
+bin="$($build --show-bin-path)/WallpaperHeadlines"
 
-app=build/NewsWallpaper.app
+app=build/WallpaperHeadlines.app
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/"

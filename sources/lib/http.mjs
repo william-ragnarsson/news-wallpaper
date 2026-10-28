@@ -2,7 +2,7 @@
 // DOM APIs, so it runs the same in Node and in the wallpaper page. The network
 // itself is the host's: see setTransport().
 
-export const USER_AGENT = 'news-wallpaper/0.1 (personal prototype)';
+export const USER_AGENT = 'wallpaper-headlines/0.1 (personal prototype)';
 // For outlets whose CDN turns away anything that does not look like a browser.
 export const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';

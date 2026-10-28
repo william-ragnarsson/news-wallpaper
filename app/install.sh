@@ -9,21 +9,21 @@ cd "$(dirname "$0")"
 sh bundle.sh
 
 # Asks the running copy to quit, then waits for it to be gone.
-if pgrep -x NewsWallpaper >/dev/null; then
-  osascript -e 'quit app "NewsWallpaper"'
+if pgrep -x WallpaperHeadlines >/dev/null; then
+  osascript -e 'quit app "WallpaperHeadlines"'
   tries=0
-  while pgrep -x NewsWallpaper >/dev/null; do
+  while pgrep -x WallpaperHeadlines >/dev/null; do
     tries=$((tries + 1))
     if [ "$tries" -gt 50 ]; then
-      echo "NewsWallpaper did not quit; quit it from the menu bar and run this again." >&2
+      echo "WallpaperHeadlines did not quit; quit it from the menu bar and run this again." >&2
       exit 1
     fi
     sleep 0.1
   done
 fi
 
-app=/Applications/NewsWallpaper.app
+app=/Applications/WallpaperHeadlines.app
 rm -rf "$app"
-ditto build/NewsWallpaper.app "$app"
+ditto build/WallpaperHeadlines.app "$app"
 open "$app"
 echo "Installed and opened $app"

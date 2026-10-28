@@ -22,11 +22,11 @@ only_in() {
 }
 
 # Only the app sets the desktop picture.
-only_in 'setDesktopImage' NewsWallpaper
+only_in 'setDesktopImage' WallpaperHeadlines
 # Only the app reads its defaults and Application Support; everything else
 # gets its paths from Environment.
-only_in 'UserDefaults|applicationSupportDirectory' NewsWallpaper WallpaperCore
-only_in 'Environment\.app\b' NewsWallpaper
+only_in 'UserDefaults|applicationSupportDirectory' WallpaperHeadlines WallpaperCore
+only_in 'Environment\.app\b' WallpaperHeadlines
 # Only the fetcher writes the news: NewsStore's commit is @_spi(Writer).
 only_in '@_spi\(Writer\) import' NewsFeed
 only_in '@_spi\(Writer\)' NewsFeed NewsStore

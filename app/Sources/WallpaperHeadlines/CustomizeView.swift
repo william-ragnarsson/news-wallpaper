@@ -83,7 +83,7 @@ private struct ServerNotice: View {
 
   var body: some View {
     Label {
-      Text("The wallpaper comes from \(server.host() ?? server.absoluteString), which keeps its own settings. Changes here apply once the app shows its own page again: `defaults delete io.github.william-ragnarsson.news-wallpaper page`.")
+      Text("The wallpaper comes from \(server.host() ?? server.absoluteString), which keeps its own settings. Changes here apply once the app shows its own page again: `defaults delete io.github.william-ragnarsson.wallpaper-headlines page`.")
         .textSelection(.enabled)
     } icon: {
       Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)

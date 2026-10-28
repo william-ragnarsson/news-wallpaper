@@ -12,11 +12,11 @@ import WallpaperCore
 // SettingsService (WallpaperCore), in this process (Customization), and
 // previews them with a Renderer of its own.
 @main
-struct NewsWallpaperApp: App {
+struct WallpaperHeadlinesApp: App {
   @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
   var body: some Scene {
-    MenuBarExtra("News Wallpaper", systemImage: "newspaper") {
+    MenuBarExtra("Wallpaper Headlines", systemImage: "newspaper") {
       Button("Customize…") { delegate.customize() }
         .keyboardShortcut(",")
       Button("Update news") { delegate.updater.refresh() }
