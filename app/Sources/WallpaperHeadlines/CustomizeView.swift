@@ -8,7 +8,8 @@ struct CustomizeView: View {
   let model: Customization
   let refresh: () -> Void  // fetches the news now, then redraws the desktop picture
   // Not @State: its macro plugin does not come with the Command Line Tools.
-  private let sidebar = Sidebar()
+  // The app picks the pane for Settings… (AppDelegate.customize).
+  let sidebar = Sidebar()
 
   var body: some View {
     let pane = sidebar.pane
@@ -97,7 +98,7 @@ private struct ServerNotice: View {
 
 @MainActor
 @Observable
-private final class Sidebar {
+final class Sidebar {
   var pane = Pane.appearance
 }
 
