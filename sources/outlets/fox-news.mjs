@@ -93,14 +93,19 @@ function sectionOf(path) {
 // The newest TOP_COUNT only, so the U.S., Politics and World sections below
 // the front page keep stories of their own.
 const TOP_COUNT = 30;
+const TOP_STREAMS = ['us', 'politics', 'world'];
 
+// A feed that fails is left out; only all three failing fails the front page.
 async function loadTopNews({ loadStream }) {
-  const parts = await Promise.all(['us', 'politics', 'world'].map(id => loadStream(id)));
+  const settled = await Promise.allSettled(TOP_STREAMS.map(id => loadStream(id)));
+  const loaded = TOP_STREAMS.filter((_, i) => settled[i].status === 'fulfilled');
+  if (!loaded.length) throw settled[0].reason;
+  const parts = settled.filter(r => r.status === 'fulfilled').map(r => r.value);
   const items = [...new Map(parts.flatMap(p => p.items).map(i => [i.id, i])).values()]
     .sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
   return {
     fetchedAt: Math.min(...parts.map(p => p.fetchedAt)),
-    upstream: { format: 'merged', status: 200, streams: ['us', 'politics', 'world'], entries: parts.reduce((n, p) => n + p.items.length, 0) },
+    upstream: { format: 'merged', status: 200, streams: loaded, entries: parts.reduce((n, p) => n + p.items.length, 0) },
     items: items.slice(0, TOP_COUNT),
   };
 }

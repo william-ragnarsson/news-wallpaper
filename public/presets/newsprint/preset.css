@@ -397,6 +397,15 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* A brief's picture and its headline stay in one column. WebKit's columns
+   split them even with break-inside or break-after: avoid; an inline block
+   they keep whole. */
+.preset-newsprint .np-brief-head {
+  display: inline-block;
+  width: 100%;
+  vertical-align: top;
+}
+
 .preset-newsprint .np-brief-fig {
   margin-bottom: calc(0.8 * var(--u));
   break-inside: avoid;

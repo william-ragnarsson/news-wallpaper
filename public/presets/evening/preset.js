@@ -10,10 +10,11 @@
 //   ──────────────────────────────────────────────────────────────────
 //   LIVE  running liveblogs, one line
 //
-// Stories keep the front page's order: top[0] is the lead (the first liveblog
-// picked on Customize, else VRT's own lead), then the side column, then the
-// briefs. Column counts come from the screen (see columns()); type scales
-// with cqmin in preset.css. layout() only drops what does not fit.
+// Stories keep the front page's order: top[0] is the lead (the newest running
+// live story when live stories lead, else the provider's own lead), then the
+// side column, then the briefs. Column counts come from the screen (see
+// columns()); type scales with cqmin in preset.css. layout() only drops what
+// does not fit.
 
 const SIDE_ROWS = 3;
 
@@ -157,7 +158,7 @@ function photo(story, ctx, px, cls) {
 // One line of small labels: state, section, time (briefs: time only without a section).
 function kicker(story, ctx, { time = true } = {}) {
   const { h } = ctx;
-  const isLive = story.kind === 'liveblog' && story.live;
+  const isLive = story.live === true;
   return h('p', { class: 'ev-kicker' },
     isLive ? h('span', { class: 'ev-tag is-live' }, ctx.t.live) : null,
     ctx.fresh.has(story.id) ? h('span', { class: 'ev-tag is-new' }, ctx.t.new) : null,

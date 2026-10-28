@@ -25,7 +25,7 @@ const state = {
   openData: new Map(),   // item id → 'json' | 'raw'
   seen: new Map(),       // "outlet/stream" → Set of item ids already shown
   fresh: new Set(),
-  picks: null,           // picked in the settings, from /api/settings/events: { provider, liveblogs, sections }
+  picks: null,           // picked in the settings, from /api/settings/events: { provider, sections }
 };
 
 const els = {
@@ -141,7 +141,7 @@ function watchSettings() {
 // its items, and the selected stream and view stay as they are.
 function applySettings(settings) {
   const list = v => Array.isArray(v) ? v : [];
-  state.picks = { provider: settings?.provider ?? 'vrt-nws', liveblogs: list(settings?.liveblogs), sections: list(settings?.sections) };
+  state.picks = { provider: settings?.provider ?? 'vrt-nws', sections: list(settings?.sections) };
   renderStreams();
   const head = els.stream.querySelector('.stream-head');
   if (state.view === 'stream' && state.payload && head) head.replaceWith(streamHeader(state.payload));
@@ -280,22 +280,18 @@ function streamRow(s, check) {
   );
 }
 
-// Where a stream of the settings' provider was picked, or null. The picked liveblogs open
-// the front page (the first leads it); the picked sections show in order on the
-// designs that have sections.
+// Where a stream of the settings' provider was picked, or null: the picked
+// sections show in order on the designs that have sections.
 function wallpaperRole(outletId, streamId) {
   const picks = state.picks;
   if (!picks || outletId !== picks.provider) return null;
-  const liveblog = picks.liveblogs.indexOf(/^liveblog-(\d+)$/.exec(streamId ?? '')?.[1]);
-  if (liveblog === 0) return 'lead liveblog';
-  if (liveblog > 0) return `liveblog ${liveblog + 1} of ${picks.liveblogs.length}`;
   const section = picks.sections.indexOf(streamId);
   return section >= 0 ? `section ${section + 1} of ${picks.sections.length}` : null;
 }
 
 function pickMark(role) {
   return h('i', {
-    class: `dot pick${role === 'lead liveblog' ? ' lead' : ''}`,
+    class: 'dot pick',
     title: `Picked in the settings (${role})`,
   });
 }

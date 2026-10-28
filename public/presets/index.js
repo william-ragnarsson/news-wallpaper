@@ -5,7 +5,7 @@
 // that follows the pictures and color settings (`pictures`, `color`), for
 // Customize.
 export const PRESETS = [
-  { id: 'newsprint', data: 'front', sections: true, live: true, margin: true, pictures: true, color: true, name: 'Newsprint', description: 'A broadsheet front page on warm newsprint: one big story in text columns, one photo, the sections below.' },
+  { id: 'newsprint', data: 'front', sections: true, margin: true, pictures: true, color: true, name: 'Newsprint', description: 'A broadsheet front page on warm newsprint: one big story in text columns, the latest news down the side, the sections below.' },
   { id: 'evening', data: 'front', live: true, name: 'Evening Edition', description: 'The classic front page in dark ink: calm for a desktop.' },
   { id: 'homepage', data: 'front', sections: true, name: 'Homepage', description: 'A news site front: lead package, sections, latest.' },
   { id: 'headlines', data: 'front', live: true, name: 'Headlines', description: 'Type only: the front page as ranked headlines.' },

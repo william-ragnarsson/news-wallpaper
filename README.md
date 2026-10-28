@@ -60,10 +60,10 @@ Update news (the menu, Customize), the Fetcher runs the sources (`public/harvest
 news there is to pick from in `news.json`; then the page is drawn from that
 (`?data=store`: it reads `/api/news`, and has no `/net`). A change in Customize
 only draws again, unless it picks another provider (the store holds only the
-one picked) or a liveblog the store lacks (one whose own fetch failed): that is
-fetched first. The page's one call is `window.wallpaper.refresh()`: it
-renders and resolves to `{ ok, error, fetchedAt }` once fonts and images are
-in. When it is not ok, the app keeps the picture it has.
+one picked): that is fetched first. The page's one call is
+`window.wallpaper.refresh()`: it renders and resolves to `{ ok, error,
+fetchedAt }` once fonts and images are in. When it is not ok, the app keeps the
+picture it has.
 
 ## Run
 
@@ -87,7 +87,7 @@ To work on the page with the app showing it, point the app at the dev server:
 
 ## Pages
 
-- `/` the wallpaper, in Dutch. Press `?` for the dev controls.
+- `/` the wallpaper, in the provider's language (Dutch for VRT NWS, English for the others). Press `?` for the dev controls.
 - `/explorer/` the data explorer: outlets, their streams and the normalized items; `?view=health` checks every stream.
 
 The dev server's settings are `.dev/settings.json` (gitignored), the file

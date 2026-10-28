@@ -174,7 +174,7 @@ function marks(story, ctx, play = true) {
   const { h } = ctx;
   return [
     ctx.fresh.has(story.id) ? h('span', { class: 'hp-mark hp-new' }, ctx.t.new) : null,
-    story.kind === 'liveblog' && story.live ? h('span', { class: 'hp-mark hp-live' }, ctx.t.live) : null,
+    story.live ? h('span', { class: 'hp-mark hp-live' }, ctx.t.live) : null,
     play && story.kind === 'video' ? h('span', { class: 'hp-mark hp-play', 'aria-label': ctx.t.video }) : null,
   ].filter(Boolean);
 }

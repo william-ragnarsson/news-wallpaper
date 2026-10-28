@@ -111,13 +111,17 @@ defaults.
   sections: ['binnenland', …],   // section stream ids below the front page, in order; none to all
   margin: 104,                   // points kept blank at the right edge for the desktop's files and
                                  // folders (ctx.safe.right), 0 to 320; centered designs keep as much left
+  pictures: 'one',               // how many photos the front page shows: 'none', 'one' or 'several'
+                                 // (ctx.pictures)
+  color: false,                  // photos in color (true) or in black and white (false) (ctx.color)
   updatedAt: '2026-10-26T16:29:29.263Z' | null,  // ISO time of the last save; null for the defaults
 }
 ```
 
 Defaults: `preset: 'newsprint'`, `provider: 'vrt-nws'`, `liveFirst: true`,
 `sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`,
-`margin: 104`. The sections are the provider's own pick (its `frontpage.sections`).
+`margin: 104`, `pictures: 'one'`, `color: false`. The sections are the
+provider's own pick (its `frontpage.sections`).
 
 A change (`SettingsService.update`) takes any of the fields but `updatedAt`;
 each one sent replaces the saved value (arrays whole), and the keeper sets
@@ -142,8 +146,11 @@ Nothing in it is fetched.
     data: 'front',               // a front-page design (getFrontpage); absent for
                                  // the liveblog designs (getWallpaper)
     sections: true,              // front-page designs that show `sections`; absent otherwise
-    live: true,                  // front-page designs that list the running liveblogs (`live`)
+    live: true,                  // front-page designs that list the running liveblogs (`live`):
+                                 // Evening Edition and Headlines; absent otherwise
     margin: true,                // designs that keep the `margin` clear; absent otherwise
+    pictures: true,              // designs that follow `pictures`; absent otherwise
+    color: true,                 // designs that follow `color`; absent otherwise
   }],
   providers: [{                  // the outlets a front page can come from (sources/frontpage.mjs)
     id: 'vrt-nws', name: 'VRT NWS', owner: 'VRT', language: 'nl', homepage: 'https://…', description: '…',
@@ -194,9 +201,10 @@ new EventSource('/api/settings/events').addEventListener('settings', e => apply(
   section: 'Politiek' | null,
   image: { url, alt, credit } | null,
   time: 1792939473618 | null,    // a liveblog's latest post, else publishedAt
-  live: true | false,            // a running live blog or live page, as the outlet marks it:
-                                 // VRT liveblogs with status live; NYT /live/ URLs; WaPo and Fox
-                                 // live-updates URLs or "Live updates:" titles
+  live: true | false,            // a running live blog or live page, as the outlet marks it
+                                 // (VRT liveblogs with status live; NYT /live/ URLs; WaPo and Fox
+                                 // live-updates URLs or "Live updates:" titles), and only while
+                                 // its newest update is under 12 hours old
   postCount: 82 | null,          // kind 'liveblog' only
   startedAt: 1792507723130,      // kind 'liveblog' only
   durationSec: 95 | null,        // kind 'video' only

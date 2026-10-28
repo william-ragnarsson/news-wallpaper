@@ -10,8 +10,9 @@
 //   ─────────────────────────────────────────────────────────────────
 //   ● LIVE  the other running liveblogs, on one line
 //
-// The front page's order is kept: top[0] is the lead (the first liveblog picked
-// on Customize, else VRT's own lead), then the tiers read left to right.
+// The front page's order is kept: top[0] is the lead (the newest running live
+// story when live stories lead, else the provider's own lead), then the tiers
+// read left to right.
 // Type scales with the screen's short side, so a wider screen simply holds
 // more columns. layout() hides whole stories that do not fit, never half a line.
 
@@ -119,7 +120,7 @@ function story(s, ctx, withSummary) {
 function kicker(s, ctx) {
   const { h } = ctx;
   return h('p', { class: 'hl-kicker' },
-    s.kind === 'liveblog' && s.live ? h('span', { class: 'hl-live' }, ctx.t.live) : null,
+    s.live ? h('span', { class: 'hl-live' }, ctx.t.live) : null,
     s.kind === 'video' ? h('span', { class: 'hl-video' }, h('i', { class: 'hl-play' }), ctx.t.video) : null,
     ctx.fresh.has(s.id) ? h('span', { class: 'hl-new' }, ctx.t.new) : null,
     s.section ? h('span', { class: 'hl-section' }, s.section) : null,

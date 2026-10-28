@@ -136,7 +136,7 @@ struct SourcesPane: View {
     } header: {
       Text("News")
     } footer: {
-      Text("The app fetches the news every few minutes while the screen is on, and when you click Update news. A change here only redraws the picture from the news fetched last.")
+      Text("The app fetches the news every few minutes while the screen is on, and when you click Update news. A change here redraws the picture from the news fetched last; picking another provider fetches its news first.")
     }
   }
 

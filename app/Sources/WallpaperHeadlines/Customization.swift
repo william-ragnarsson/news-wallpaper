@@ -109,13 +109,18 @@ final class Customization {
     }
   }
 
+  // The small picture of `design` with the settings in the window, as the
+  // Appearance pane's cards show and drawThumbnails draws it.
+  func thumbnailKey(_ design: Options.Design, settings: WallpaperSettings) -> Thumbnails.Key {
+    Thumbnails.Key(design, settings: settings, fetchedAt: news?.fetchedAt, screen: screen, page: previewPage)
+  }
+
   // Draws the small pictures of `designs` that are not drawn yet, with the
   // settings in the window. Not for a page from a server, which reads its
   // own settings, so every design would look the same.
-  func drawThumbnails(_ designs: [String]) async {
+  func drawThumbnails(_ designs: [Options.Design]) async {
     guard let settings, server == nil else { return }
-    let keys = designs.map { Thumbnails.Key($0, settings: settings, fetchedAt: news?.fetchedAt, screen: screen) }
-    await thumbnails.draw(keys, page: previewPage, environment: environment)
+    await thumbnails.draw(designs.map { thumbnailKey($0, settings: settings) }, environment: environment)
   }
 
   // The page with the stand-in menu bar and Dock, which only cover the page,

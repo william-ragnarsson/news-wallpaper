@@ -74,11 +74,11 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     }
 
     // The news for this picture: read once, so the page and the snapshot's
-    // fetchedAt agree. Before the first fetch this throws StoreError.empty.
-    // A page from a server reads its own.
+    // fetchedAt agree, unless the request brings it. Before the first fetch
+    // this throws StoreError.empty. A page from a server reads its own.
     var stored: NewsSnapshot?
     if request.page.scheme == Bridge.scheme {
-      let news = try store.read()
+      let news = try request.news ?? store.read()
       bridge.news = { news.data }
       stored = news
     }
@@ -212,18 +212,22 @@ public final class Renderer: NSObject, WKNavigationDelegate {
 // What to draw: `page` at `size` points, `scale` pixels to the point, so the
 // PNG is size × scale pixels. `settings`, when given, are used for this
 // picture instead of the saved ones (and not saved); they need a page the
-// Bridge serves (wallpaper://), as a server keeps its own.
+// Bridge serves (wallpaper://), as a server keeps its own. `news`, when
+// given, is drawn instead of the store read again, for a caller that draws
+// several pictures of one read; a page from a server ignores it.
 public struct RenderRequest: Sendable {
   public var page: URL
   public var size: CGSize
   public var scale: CGFloat
   public var settings: WallpaperSettings?
+  public var news: NewsSnapshot?
 
-  public init(page: URL, size: CGSize, scale: CGFloat, settings: WallpaperSettings? = nil) {
+  public init(page: URL, size: CGSize, scale: CGFloat, settings: WallpaperSettings? = nil, news: NewsSnapshot? = nil) {
     self.page = page
     self.size = size
     self.scale = scale
     self.settings = settings
+    self.news = news
   }
 
   // The whole of `screen`, at its pixel density: a desktop picture.

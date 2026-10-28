@@ -32,7 +32,8 @@ export default {
   render(root, data, ctx) {
     const { h } = ctx;
     const pictures = ctx.pictures ?? 'one';
-    // top[] starts with the liveblogs picked on Customize, then the outlet's own order.
+    // top[] leads with the outlet's live stories when liveFirst is on, then the
+    // outlet's own order.
     const [lead, ...rest] = (data.top ?? []).filter(s => s?.title);
     // The photo is the lead's, else that of one of the next stories, which then
     // sits in the box under it. The Washington Post's feeds have none.
@@ -143,15 +144,18 @@ function leadPackage(lead, briefs, boxStory, photoStory, briefImages, geo, ctx) 
 }
 
 // An earlier story in the columns: headline, then its summary after a run-in
-// dateline (section and time).
+// dateline (section and time). A picture sits above the headline, the two in
+// one block so a column break never comes between them.
 function brief(s, ctx, withImage, dup = false) {
   const { h } = ctx;
   const dateline = h('b', { class: 'np-dl' }, `${[s.section, when(s, ctx)].filter(Boolean).join(' · ')} — `);
+  const title = h('h3', { class: 'np-brief-title' }, liveTag(s, ctx), newTag(s, ctx), typo(s.title));
   const el = h('article', { class: 'np-brief', dataset: { drop: 'brief', ...(dup && { dup: '' }) } },
-    withImage ? h('figure', { class: 'np-brief-fig' },
-      h('div', { class: 'np-imgwrap' }, h('img', { src: ctx.image(s.image, 420), alt: s.image.alt || '', decoding: 'async' })),
-      creditFor(s.image) ? h('figcaption', null, h('span', { class: 'np-credit' }, creditFor(s.image))) : null) : null,
-    h('h3', { class: 'np-brief-title' }, liveTag(s, ctx), newTag(s, ctx), typo(s.title)),
+    withImage ? h('div', { class: 'np-brief-head' },
+      h('figure', { class: 'np-brief-fig' },
+        h('div', { class: 'np-imgwrap' }, h('img', { src: ctx.image(s.image, 420), alt: s.image.alt || '', decoding: 'async' })),
+        creditFor(s.image) ? h('figcaption', null, h('span', { class: 'np-credit' }, creditFor(s.image))) : null),
+      title) : title,
     s.summary ? para(s.summary, 'np-first', dateline) : h('p', { class: 'np-first' }, dateline));
   if (dup) el.hidden = true;
   return el;
@@ -375,23 +379,41 @@ function gapOf(el) {
   return parseFloat(getComputedStyle(el).rowGap) || 0;
 }
 
-// Columns: drop whole briefs from the end, then re-admit the first dropped one
-// trimmed by words, so the last column ends on a full line.
+// Columns: drop whole briefs from the end, then re-admit the dropped ones in
+// turn (dropBriefs), so the last column ends on a full line.
 // A head left alone at the foot of a column, its first story in the next, goes,
-// and the columns are fitted again without it.
+// and so does a brief's picture that, with its headline, did not fit at the
+// foot of a column and left a hole there; the columns are fitted again without.
 function fitFlow(page) {
   const flow = page.querySelector('.np-flow');
   if (!flow) return;
-  dropBriefs(flow);
   const head = flow.querySelector('.np-flow-head');
-  const first = [...flow.querySelectorAll('.np-brief')].find(el => !el.hidden);
-  if (!head || head.hidden || !first) return;
-  if (Math.abs(head.getBoundingClientRect().left - first.getBoundingClientRect().left) < 2) return;
-  flow.querySelectorAll('[data-hidden]').forEach(el => { el.hidden = false; delete el.dataset.hidden; });
-  flow.querySelectorAll('[data-full]').forEach(el => { el.textContent = el.dataset.full; delete el.dataset.full; });
-  flow.querySelectorAll('[data-trimmed]').forEach(el => delete el.dataset.trimmed);
-  hide(head);
-  dropBriefs(flow);
+  const out = [];
+  for (;;) {
+    dropBriefs(flow);
+    const first = [...flow.querySelectorAll('.np-brief')].find(el => !el.hidden);
+    const lonely = head && !head.hidden && first
+      && Math.abs(head.getBoundingClientRect().left - first.getBoundingClientRect().left) >= 2;
+    const drop = lonely ? head : pictureAfterHole(flow);
+    if (!drop) return;
+    flow.querySelectorAll('[data-hidden]').forEach(el => { el.hidden = false; delete el.dataset.hidden; });
+    flow.querySelectorAll('[data-full]').forEach(el => { el.textContent = el.dataset.full; delete el.dataset.full; });
+    flow.querySelectorAll('[data-trimmed]').forEach(el => delete el.dataset.trimmed);
+    out.push(drop);
+    out.forEach(hide);
+  }
+}
+
+// A brief's picture that opens a column (under the brief's rule at most) after
+// one that ends lines early.
+function pictureAfterHole(flow) {
+  const { r, colAt, ends, line, bottom } = columnsOf(flow);
+  const end = ends();
+  return [...flow.querySelectorAll('.np-brief:not([hidden]) .np-brief-fig:not([hidden])')].find(fig => {
+    const q = fig.getClientRects()[0];
+    const c = q ? colAt(q.left) : 0;
+    return c > 0 && q.top < r.top + line * 2 && bottom - end[c - 1] > line * 3;
+  });
 }
 
 function dropBriefs(flow) {
@@ -401,11 +423,19 @@ function dropBriefs(flow) {
   if (over()) {
     let i = briefs.length - 1;
     while (i >= 0 && over()) hide(briefs[i--]);
-    const next = briefs[i + 1];
-    if (next && !over()) {
-      next.hidden = false;
-      delete next.dataset.hidden;
-      if (!trimTo(next, over, 8)) hide(next);
+    // Then each dropped one in turn comes back if it fits: whole, without its
+    // picture, or trimmed by words.
+    for (const b of briefs.slice(i + 1)) {
+      if (over()) break;
+      b.hidden = false;
+      delete b.dataset.hidden;
+      if (!over()) continue;
+      const fig = b.querySelector('.np-brief-fig:not([hidden])');
+      if (fig) hide(fig);
+      if (over() && !trimTo(b, over, 8)) {
+        if (fig) { fig.hidden = false; delete fig.dataset.hidden; }
+        hide(b);
+      }
     }
     // Even the lead's own text is too long: trim it.
     const lead = flow.querySelector('.np-leadtext');

@@ -64,11 +64,11 @@ struct AppearancePane: View {
       }
     }
     .padding(.vertical, 4)
-    .task(id: ThumbnailsKey(keys: keys, page: model.page)) {
+    .task(id: keys) {
       // A run of changes draws once, after the preview has started.
       try? await Task.sleep(for: .milliseconds(700))
       guard !Task.isCancelled else { return }
-      await model.drawThumbnails((front + others).map(\.id))
+      await model.drawThumbnails(front + others)
     }
   }
 
@@ -78,7 +78,7 @@ struct AppearancePane: View {
         let key = thumbnailKey(design)
         DesignCard(
           name: design.name,
-          image: model.thumbnails.images[key],
+          image: model.thumbnails.image(for: key),
           // Nothing is drawn for a page from a server or before the first fetch.
           drawing: model.server == nil && model.news != nil && !model.thumbnails.failed.contains(key),
           screen: model.screen,
@@ -91,7 +91,7 @@ struct AppearancePane: View {
   }
 
   private func thumbnailKey(_ design: Options.Design) -> Thumbnails.Key {
-    Thumbnails.Key(design.id, settings: settings, fetchedAt: model.news?.fetchedAt, screen: model.screen)
+    model.thumbnailKey(design, settings: settings)
   }
 
   // How many photos, and in color or not, for the designs that follow these.
@@ -215,13 +215,6 @@ private struct DesignCard: View {
     .buttonStyle(.plain)
     .accessibilityAddTraits(selected ? .isSelected : [])
   }
-}
-
-// What the cards' pictures are drawn from: when one of these changes, the
-// ones not drawn yet are drawn.
-private struct ThumbnailsKey: Equatable {
-  let keys: [Thumbnails.Key]
-  let page: URL
 }
 
 // What the preview is drawn from: when one of these changes, it is drawn again.

@@ -15,7 +15,9 @@
 // What is weak:
 //   - Section lists have no leads: only items still in the Atom feed (the 50
 //     newest) get one, so most section stories show a title and picture only.
-//   - VRT leaves some liveblogs "live" for weeks after the story calmed down.
+//   - VRT leaves some liveblogs "live" for weeks after the story calmed down;
+//     the front page counts one as live only while its newest post is under
+//     12 hours old (frontpage.mjs).
 
 import { getFront, getLiveblog } from '../liveblog.mjs';
 import { normalizeEntry, parseFeed } from '../lib/feed.mjs';

@@ -502,7 +502,7 @@ function toast(text, ms = 1600) {
 }
 
 function renderHud() {
-  // A front design takes its liveblogs and sections from the settings even when
+  // A front design takes its sections and liveFirst from the settings even when
   // pinned in the URL; the liveblog pin does nothing there.
   const front = dataSource() === SOURCES.front;
   const pinned = ['preset', 'follow'].filter(k => state.pinned[k] && !(k === 'follow' && front));
@@ -548,12 +548,13 @@ function renderHud() {
     return d?.follow === state.follow && d.focus ? `${state.follow} not loaded → ${d.focus.topic}` : state.follow;
   }
 
-  // Front-page designs: the server puts the liveblogs picked in the settings
-  // first (L does not apply to them).
+  // Front-page designs: with liveFirst on, the outlet's running live stories
+  // lead the page, else its own lead does (L does not apply to them).
   function leadRow() {
-    const picked = (state.data?.top ?? []).filter(s => s.featured);
-    return row(null, 'Lead liveblog', picked[0]?.title ?? "none: VRT's own lead",
-      state.settings ? `${picked.length} picked in the settings` : 'settings not loaded');
+    const liveFirst = state.settings?.liveFirst ?? true;
+    const lead = state.data?.top?.[0];
+    return row(null, 'Lead', lead?.live && liveFirst ? `${lead.title} (live first)` : `${state.data?.source?.name ?? '…'}'s own lead`,
+      state.settings ? `liveFirst ${liveFirst ? 'on' : 'off'}` : 'settings not loaded');
   }
 }
 
@@ -672,7 +673,18 @@ async function update() {
 async function settled(timeoutMs = 8000) {
   await document.fonts.ready;
   layout();
-  const images = [...els.wallpaper.querySelectorAll('img')].map(img => img.decode().catch(() => {}));
+  // A resized VRT image that misses is swapped for its original (the error
+  // listener in start); wait for that one too, keyed on the src it had.
+  const wait = img => {
+    const src = img.src;
+    return img.decode().catch(() => {
+      const fallback = imageFallbacks.get(src);
+      if (!fallback) return;
+      if (img.src !== fallback) img.src = fallback;
+      return img.decode().catch(() => {});
+    });
+  };
+  const images = [...els.wallpaper.querySelectorAll('img')].map(wait);
   await Promise.race([Promise.all(images), new Promise(resolve => setTimeout(resolve, timeoutMs))]);
 }
 

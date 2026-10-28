@@ -6,10 +6,14 @@
 // liveblog by its stream id: its URL follows its headline); `live` and
 // `latest` are views across the whole site and may repeat them.
 // Every story says whether it is `live`: a running live blog or live page, as
-// each outlet module marks it (`item.live`).
+// each outlet module marks it (`item.live`), and only while its newest update is
+// under LIVE_MAX_AGE_MS old: most outlets tag live by URL or title alone, and a
+// blog that ended can stay in the feeds, or (VRT) keep its "live" status, for days.
 
 import * as reader from './lib/reader.mjs';
 import { OUTLETS } from './outlets/index.mjs';
+
+const LIVE_MAX_AGE_MS = 12 * 3_600_000;
 
 // The news providers a front page can come from: every outlet with a
 // `frontpage` (sources/README.md), each with its sections, for Customize.
@@ -74,7 +78,7 @@ export async function getFrontpage({
   // Running live stories lead, newest first: those on the front page, and those
   // the outlet's front-page feed leaves out (NYT's live blogs) from its newest.
   const leads = liveFirst
-    ? fresh(newestOf([front.value, newest].map(s => s && { items: s.items.filter(i => i.live) })))
+    ? fresh(newestOf([front.value, newest].map(s => s && { items: s.items.filter(isLive) })))
     : [];
 
   return {
@@ -87,7 +91,7 @@ export async function getFrontpage({
       stories: take(s.items, perSection).map(story),
     })),
     // The running liveblogs, for the designs that list them (VRT NWS only).
-    live: (live?.items ?? []).filter(i => i.live).map(story),
+    live: (live?.items ?? []).filter(isLive).map(story),
     // Without a stream of its own: the newest of everything loaded.
     latest: (newest?.items ?? newestOf([front.value, ...sectionPayloads])).slice(0, latest).map(story),
   };
@@ -98,9 +102,14 @@ function newestOf(payloads) {
   return [...byUrl.values()].sort((a, b) => activityAt(b) - activityAt(a));
 }
 
-// A liveblog's time is its newest post's.
+// A liveblog's or live page's time is its newest post's.
 function activityAt(i) {
-  return (i.kind === 'liveblog' ? i.updatedAt ?? i.publishedAt : i.publishedAt) ?? 0;
+  return (i.kind === 'liveblog' || i.live ? i.updatedAt ?? i.publishedAt : i.publishedAt) ?? 0;
+}
+
+// Times are reader.now()'s: when the stored news was fetched, or now.
+function isLive(i) {
+  return i.live === true && reader.now() - activityAt(i) < LIVE_MAX_AGE_MS;
 }
 
 function story(item) {
@@ -114,7 +123,7 @@ function story(item) {
     section: clean(item.categories[0]),
     image: item.image ? { url: item.image.url, alt: clean(item.image.alt) ?? '', credit: clean(item.image.credit) } : null,
     time: isLiveblog ? item.updatedAt ?? item.publishedAt : item.publishedAt,
-    live: item.live === true,
+    live: isLive(item),
     ...(isLiveblog && { postCount: item.postCount ?? null, startedAt: item.publishedAt }),
     ...(item.kind === 'video' && { durationSec: item.durationSec ?? null }),
   };

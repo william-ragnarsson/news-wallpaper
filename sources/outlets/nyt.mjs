@@ -4,7 +4,9 @@
 // tags and a picture; the section comes from the article's URL.
 // The feeds are for personal, non-commercial use (nytimes.com/rss). Stories
 // past the paywall are not marked as such in the feeds, so nothing is premium.
-// Live: a live blog's URL starts /live/; the blog is live while it is in the feeds.
+// Live: a live blog's URL starts /live/; the blog is live while it is in the
+// feeds and its time (the feeds move it on each update) is under 12 hours old
+// (frontpage.mjs).
 // What is weak:
 //   - The home feed leaves out running live blogs; they come in through Latest
 //     and the sections (frontpage.mjs's liveFirst puts them on top).
@@ -24,9 +26,10 @@ const SECTIONS = {
   't-magazine': 'T Magazine', 'your-money': 'Business', insider: 'Times Insider', fashion: 'Style',
 };
 
-// Not stories: games, newsletters and podcasts, and the single posts of a live
+// Not stories: games, newsletters and podcasts, at the top of the site or under
+// a date (/2026/10/27/crosswords/…), and the single posts of a live
 // blog (/live/<date>/<section>/<blog>/<post>), which the sections list next to the blog.
-const NOT_STORY = /^https:\/\/www\.nytimes\.com\/(?:crosswords|puzzles|games|briefing|podcasts|newsletters)\/|\/\d{4}\/\d\d\/\d\d\/briefing\/|-podcast[-.]|\/live\/\d{4}\/\d\d\/\d\d\/[\w-]+\/[\w-]+\/[\w-]+/;
+const NOT_STORY = /^https:\/\/www\.nytimes\.com\/(?:crosswords|puzzles|games|briefing|podcasts|newsletters)\/|\/\d{4}\/\d\d\/\d\d\/(?:briefing|crosswords|puzzles|games|podcasts|newsletters)\/|-podcast[-.]|\/live\/\d{4}\/\d\d\/\d\d\/[\w-]+\/[\w-]+\/[\w-]+/;
 const LIVE = /^https:\/\/www\.nytimes\.com\/live\//;
 
 export default {

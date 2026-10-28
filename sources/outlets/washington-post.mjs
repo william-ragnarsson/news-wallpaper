@@ -26,8 +26,9 @@ const SECTIONS = {
   entertainment: 'Arts', books: 'Books', 'style/media': 'Media',
 };
 
-// Not stories: newsletters (Tracking Trump, the WP Intelligence briefs) and recipes.
-const NOT_STORY = /^https:\/\/www\.washingtonpost\.com\/(?:the-seven-trump|wp-intelligence|newsletters|recipes|podcasts)\//;
+// Not stories: newsletters (Tracking Trump, the WP Intelligence briefs), recipes,
+// and the sports TV and radio listings, one page the Post keeps updating.
+const NOT_STORY = /^https:\/\/www\.washingtonpost\.com\/(?:(?:the-seven-trump|wp-intelligence|newsletters|recipes|podcasts)\/|sports\/\d{4}\/\d\d\/\d\d\/sports-tv-radio-listings\b)/;
 const LIVE = /[/-]live-(?:updates|results|coverage)\b/;
 const LIVE_TITLE = /^live(?: updates)?:/i;
 
