@@ -44,7 +44,9 @@ final class AppUpdate {
     }
   }
 
-  static let keg = Keg(bundle: Bundle.main.bundlePath)
+  // Opened through opt (the formula's command does that) the path is a link:
+  // its Cellar folder is where it really is.
+  static let keg = Keg(bundle: Bundle.main.bundleURL.resolvingSymlinksInPath().path(percentEncoded: false))
   static let shared = AppUpdate()
 
   func run() {

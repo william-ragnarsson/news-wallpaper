@@ -9,7 +9,9 @@ cd "$(dirname "$0")"
 # The default engine (swiftbuild) stops with "Unknown error parsing property
 # list" when only the Command Line Tools are installed; the native one works.
 # Only the app: wallpaper-dev is for working on it, not for the bundle.
-build="swift build -c release --build-system native --product WallpaperHeadlines"
+# Arguments go to swift build: the Homebrew formula passes --disable-sandbox,
+# as Homebrew's own sandbox does not let SwiftPM start one inside it.
+build="swift build -c release --build-system native --product WallpaperHeadlines $*"
 $build
 bin="$($build --show-bin-path)/WallpaperHeadlines"
 

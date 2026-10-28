@@ -1,0 +1,4 @@
+# Kept out of the release tarballs Homebrew downloads: screenshots and notes
+# the app does not need.
+snapshots/ export-ignore
+research/ export-ignore
