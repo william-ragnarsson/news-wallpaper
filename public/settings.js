@@ -10,6 +10,7 @@ import { PRESETS } from './presets/index.js';
 
 export const MAX_MARGIN = 320;
 export const PICTURES = ['none', 'one', 'several'];
+export const MAX_DENSITY = 5;
 
 export const DEFAULTS = Object.freeze({
   // The design on the desktop.
@@ -28,6 +29,9 @@ export const DEFAULTS = Object.freeze({
   pictures: 'one',
   // Photos in color, or in black and white like newsprint.
   color: false,
+  // From 1, more headlines with little text, to MAX_DENSITY, fewer stories
+  // with more text each (presets/kit.js).
+  density: 3,
   updatedAt: null,
 });
 
@@ -43,6 +47,7 @@ export const FIELDS = {
   margin: v => Number.isInteger(v) && v >= 0 && v <= MAX_MARGIN,
   pictures: v => PICTURES.includes(v),
   color: v => typeof v === 'boolean',
+  density: v => Number.isInteger(v) && v >= 1 && v <= MAX_DENSITY,
 };
 
 // The settings from what settings.json holds (anything, or nothing): a field
@@ -90,5 +95,6 @@ export async function options() {
     presets: PRESETS,
     providers: PROVIDERS,
     maxMargin: MAX_MARGIN,
+    maxDensity: MAX_DENSITY,
   };
 }

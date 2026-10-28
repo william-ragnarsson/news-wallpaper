@@ -4,7 +4,7 @@ import WallpaperCore
 
 // How the wallpaper looks (M4): a preview of the desktop, drawn by the
 // Renderer from the stored news; the designs as cards with a small picture of
-// each; pictures and color; and how wide the page is.
+// each; pictures and color; how much text; and how wide the page is.
 struct AppearancePane: View {
   let model: Customization
   let settings: WallpaperSettings
@@ -37,6 +37,7 @@ struct AppearancePane: View {
         .padding(.bottom, 12)
       }
       looksSection(design)
+      densitySection(design)
       widthSection(design)
     }
     .formStyle(.grouped)
@@ -118,6 +119,32 @@ struct AppearancePane: View {
         Text("This design has its own pictures. \(follows.formatted(.list(type: .and))) follows these.")
       } else {
         Text("One photo keeps the page calm and text-led; several adds small ones beside the shorter stories.")
+      }
+    }
+  }
+
+  // More stories with little text, or fewer with more text each.
+  private func densitySection(_ design: Options.Design?) -> some View {
+    let follows = options.presets.filter { $0.density == true }.map(\.name)
+    let density = Binding(
+      get: { Double(settings.density) },
+      set: { value in model.change { $0.density = Int(value.rounded()) } })
+    return Section {
+      Slider(value: density, in: 1...Double(options.maxDensity), step: 1) {
+        Text("Density")
+      } minimumValueLabel: {
+        Text("More headlines")
+      } maximumValueLabel: {
+        Text("More text")
+      }
+      .disabled(design?.density != true)
+    } header: {
+      Text("Text")
+    } footer: {
+      if design?.density != true {
+        Text("This design has its own mix of headlines and text. \(follows.formatted(.list(type: .and))) follows this.")
+      } else {
+        Text("Toward more headlines the page lists more stories with a line or none of their text; toward more text it gives fewer stories more of their own words.")
       }
     }
   }

@@ -1,4 +1,5 @@
 // Evening Edition: the provider's front page set as a newspaper in dark ink.
+// A template on the kit (../kit.js, presets/README.md "Templates").
 //
 //   date ·············· HET NIEUWS ·············· bijgewerkt · bron
 //   ══════════════════════════════════════════════════════════════════
@@ -6,17 +7,31 @@
 //                                      │ secondary story   [thumb]
 //   lead headline, summary             │ secondary story   [thumb]
 //   ──────────────────────────────────────────────────────────────────
-//   brief │ brief │ brief │ brief │ brief         (headlines only)
+//   brief │ brief │ brief │ brief │ brief
 //   ──────────────────────────────────────────────────────────────────
 //   LIVE  running liveblogs, one line
 //
 // Stories keep the front page's order: top[0] is the lead (the newest running
 // live story when live stories lead, else the provider's own lead), then the
 // side column, then the briefs. Column counts come from the screen (see
-// columns()); type scales with cqmin in preset.css. layout() only drops what
-// does not fit.
+// columns()); type scales with cqmin in preset.css. layout() cuts the text to
+// what fits and drops what does not.
 
-const SIDE_ROWS = 3;
+import * as kit from '../kit.js';
+
+// What each region shows; [a, b] is a at density 1 (more headlines) and b at
+// 5 (fewer stories, more text each). `side` is per stack of the side column,
+// `briefs` and `live` per column: columns() gives the count.
+const REGIONS = {
+  lead: { from: ['top', 'latest'], stories: 1, words: [20, Infinity], points: [0, 3], pictures: 1 },
+  side: { from: ['top', 'latest'], stories: [7, 3], spares: 2, words: [0, 80], pictures: [1, 3] },
+  briefs: { from: ['top', 'latest'], stories: 1, words: [0, 36] },
+  live: { from: 'live', stories: 1, words: 0 },
+};
+
+// The lead's photo keeps at least this share of the lead's height; its text
+// is cut to the rest.
+const PHOTO_SHARE = [0.62, 0.42];
 
 export default {
   id: 'evening',
@@ -25,17 +40,17 @@ export default {
 
   render(root, data, ctx) {
     const { h } = ctx;
-    const cols = columns(ctx.screen);
-    const top = (data.top?.length ? data.top : data.latest ?? []).filter(s => s?.title);
-    const [lead, ...rest] = top;
-    const side = rest.slice(0, cols.side * SIDE_ROWS);
-    const briefs = rest.slice(side.length, side.length + cols.briefs);
-    // A liveblog can reach us under two URLs (VRT renames the slug), so match
-    // its number (storyKey) and the title too.
-    const shown = new Set([lead, ...side, ...briefs].filter(Boolean).flatMap(s => [storyKey(s), s.title]));
-    const live = (data.live ?? []).filter(s => s?.title && !shown.has(storyKey(s)) && !shown.has(s.title)).slice(0, cols.live);
+    kit.page(root, ctx);
+    const cols = columns(ctx.screen, ctx.safe);
+    const per = (spec, n) => ({ ...spec, stories: kit.at(ctx, spec.stories) * n, spares: (spec.spares ?? 0) * n });
+    const { lead: [lead] = [], side, briefs, live } = kit.plan(data, ctx, {
+      lead: REGIONS.lead,
+      side: per(REGIONS.side, cols.side),
+      briefs: per(REGIONS.briefs, cols.briefs),
+      live: per(REGIONS.live, cols.live),
+    });
 
-    root.append(h('div', { class: `ev-page${cols.side > 1 ? ' is-wide' : ''}`, '--brief-cols': cols.briefs },
+    root.append(h('div', { class: `ev-page kit-page${cols.side > 1 ? ' is-wide' : ''}`, '--brief-cols': cols.briefs },
       masthead(data, ctx),
       h('main', { class: 'ev-main' },
         lead ? leadStory(lead, ctx, cols) : null,
@@ -46,19 +61,32 @@ export default {
     ));
   },
 
-  layout(root) {
-    // Fallback-font metrics would trim too much; the host lays out again once fonts land.
-    if (document.fonts?.status === 'loading') return;
+  layout(root, ctx) {
+    const page = root.querySelector('.ev-page');
+    if (!page) return;
+    kit.reset(page);
 
-    // The lead photo needs real room: give up the summary before the picture.
-    const lead = root.querySelector('.ev-lead');
-    const photo = lead?.querySelector('.ev-photo');
-    if (photo && photo.clientHeight < lead.clientHeight * 0.45) lead.querySelector('.ev-lead-summary')?.remove();
+    // The lead photo keeps its share of the lead: its text gives way first.
+    const lead = page.querySelector('.ev-lead');
+    const frame = lead?.querySelector('.ev-photo .kit-frame');
+    if (frame) kit.trimToFit(lead.querySelector('.ev-lead-text'), () => frame.clientHeight < lead.clientHeight * kit.at(ctx, PHOTO_SHARE), 8);
+    else if (lead) {
+      kit.trimToFit(lead, () => kit.overflows(lead), 8);
+      // Without a photo the headline grows into the room, up to 1.6 times.
+      const title = lead.querySelector('.ev-lead-title');
+      const text = lead.querySelector('.ev-lead-text');
+      const px = parseFloat(getComputedStyle(title).fontSize);
+      kit.fitSize(title, px, px * 1.6, () => !kit.overflows(title) && text.offsetHeight <= lead.clientHeight * 0.75);
+    }
 
-    // Side stories share their column in equal rows: drop summaries, then whole stories.
-    for (const stack of root.querySelectorAll('.ev-stack')) {
-      for (const story of stack.children) if (overflows(story)) story.querySelector('.ev-summary')?.remove();
-      while (stack.children.length > 1 && [...stack.children].some(overflows)) stack.lastElementChild.remove();
+    // A stack of side stories loses stories from the end until it fits, the
+    // first one left out coming back cut to the words that fit, or with room
+    // to spare takes in a spare; what room is left goes between the stories.
+    for (const stack of page.querySelectorAll('.ev-stack')) {
+      const stories = [...stack.children];
+      kit.dropToFit(stories, () => kit.overflows(stack), { trim: 8 });
+      kit.fill(stories, () => kit.overflows(stack), { trim: 8 });
+      kit.spread(stack, stories);
     }
   },
 };
@@ -66,16 +94,18 @@ export default {
 // --- grid ------------------------------------------------------------------
 
 // Ultrawide screens get a second side column. Type scales with the short side,
-// so briefs get a column per ~34% of it (a measure of about 35 characters).
-function columns({ width, height }) {
-  const wide = width / height >= 2;
-  const briefs = Math.min(6, Math.max(4, Math.floor(width / (Math.min(width, height) * 0.34))));
+// so briefs get a column per ~34% of it (a measure of about 35 characters),
+// in the width the margin for the desktop files (safe.right) leaves.
+function columns({ width, height }, safe) {
+  const inner = width - 2 * safe.right;
+  const wide = inner / height >= 2;
+  const briefs = Math.min(6, Math.max(3, Math.floor(inner / (Math.min(width, height) * 0.34))));
   return {
     side: wide ? 2 : 1,
     briefs,
     live: briefs - 1,
-    leadPx: Math.round(width * (wide ? 0.42 : 0.52)),
-    thumbPx: Math.round(width * (wide ? 0.1 : 0.17)),
+    leadPx: Math.round(inner * (wide ? 0.42 : 0.52)),
+    thumbPx: Math.round(inner * (wide ? 0.1 : 0.17)),
   };
 }
 
@@ -94,66 +124,70 @@ function masthead(data, ctx) {
   );
 }
 
-function leadStory(story, ctx, cols) {
+function leadStory(item, ctx, cols) {
   const { h } = ctx;
-  return h('article', { class: `ev-lead${story.image?.url ? '' : ' no-photo'}` },
-    story.image?.url ? photo(story, ctx, cols.leadPx, 'ev-photo') : null,
+  const { story } = item;
+  return h('article', { class: `ev-lead${item.picture ? '' : ' no-photo'}` },
+    item.picture ? kit.photo(ctx, item.picture, cols.leadPx, { cls: 'ev-photo' }) : null,
     h('div', { class: 'ev-lead-text' },
       kicker(story, ctx),
-      h('h2', { class: 'ev-lead-title' }, smart(story.title)),
-      story.summary ? h('p', { class: 'ev-lead-summary' }, smart(story.summary)) : null,
+      h('h2', { class: 'ev-lead-title' }, kit.typo(story.title)),
+      item.summary ? kit.prose(ctx, item.summary, 'ev-lead-summary') : null,
+      item.points.map(p => kit.prose(ctx, p, 'ev-point')),
     ),
   );
 }
 
-function sideColumn(stories, ctx, cols) {
+function sideColumn(items, ctx, cols) {
   const { h } = ctx;
-  const stacks = [];
-  for (let i = 0; i < stories.length; i += SIDE_ROWS) stacks.push(stories.slice(i, i + SIDE_ROWS));
+  // Each stack takes its share of the stories, then of the spares.
+  const share = (list, k) => {
+    const n = Math.ceil(list.length / cols.side);
+    return list.slice(k * n, (k + 1) * n);
+  };
+  const own = items.filter(s => !s.spare);
+  const spares = items.filter(s => s.spare);
+  const stacks = Array.from({ length: cols.side }, (_, k) => [...share(own, k), ...share(spares, k)]);
   return h('div', { class: 'ev-side' },
-    stacks.map(group => h('div', { class: 'ev-stack' }, group.map(s => secondary(s, ctx, cols)))),
+    stacks.filter(group => group.length).map(group => h('div', { class: 'ev-stack' }, group.map(s => secondary(s, ctx, cols)))),
   );
 }
 
-function secondary(story, ctx, cols) {
+function secondary(item, ctx, cols) {
   const { h } = ctx;
-  return h('article', { class: `ev-second${story.image?.url ? '' : ' no-photo'}` },
+  const { story } = item;
+  return kit.spare(h('article', { class: `ev-second${item.picture ? '' : ' no-photo'}` },
     h('div', { class: 'ev-second-text' },
       kicker(story, ctx),
-      h('h3', { class: 'ev-second-title' }, smart(story.title)),
-      story.summary ? h('p', { class: 'ev-summary' }, smart(story.summary)) : null,
+      h('h3', { class: 'ev-second-title' }, kit.typo(story.title)),
+      item.summary ? kit.prose(ctx, item.summary, 'ev-summary') : null,
     ),
-    story.image?.url ? photo(story, ctx, cols.thumbPx, 'ev-thumb') : null,
-  );
+    item.picture ? kit.photo(ctx, item.picture, cols.thumbPx, { cls: 'ev-thumb' }) : null,
+  ), item);
 }
 
-function brief(story, ctx) {
+function brief(item, ctx) {
   const { h } = ctx;
+  const { story } = item;
   return h('article', { class: 'ev-brief' },
     kicker(story, ctx, { time: !story.section }),
-    h('h3', { class: 'ev-brief-title' }, smart(story.title)),
+    h('h3', { class: 'ev-brief-title' }, kit.typo(story.title)),
+    item.summary ? kit.prose(ctx, item.summary, 'ev-brief-summary') : null,
   );
 }
 
-function liveLine(stories, ctx) {
+function liveLine(items, ctx) {
   const { h } = ctx;
   return h('footer', { class: 'ev-live' },
     h('span', { class: 'ev-tag is-live' }, ctx.t.live),
-    stories.map(s => h('p', { class: 'ev-live-item' },
+    items.map(({ story: s }) => h('p', { class: 'ev-live-item' },
       s.section ? h('span', { class: 'ev-section' }, s.section) : null,
-      smart(s.title),
+      kit.typo(s.title),
     )),
   );
 }
 
 // --- pieces ----------------------------------------------------------------
-
-function photo(story, ctx, px, cls) {
-  const { h } = ctx;
-  return h('figure', { class: cls },
-    h('img', { src: ctx.image(story.image, px), alt: story.image.alt || '', decoding: 'sync' }),
-  );
-}
 
 // One line of small labels: state, section, time (briefs: time only without a section).
 function kicker(story, ctx, { time = true } = {}) {
@@ -164,32 +198,11 @@ function kicker(story, ctx, { time = true } = {}) {
     ctx.fresh.has(story.id) ? h('span', { class: 'ev-tag is-new' }, ctx.t.new) : null,
     story.kind === 'video' ? h('span', { class: 'ev-tag is-video' }, `▶ ${duration(story.durationSec)}`) : null,
     story.section ? h('span', { class: 'ev-section' }, story.section) : null,
-    time && story.time && !isLive ? h('span', { class: 'ev-time' }, stamp(story.time, ctx)) : null,
+    time && story.time && !isLive ? h('span', { class: 'ev-time' }, kit.when(story, ctx)) : null,
   );
-}
-
-// The ~number at the end of a story's URL, which stays when the slug changes.
-function storyKey(s) {
-  return s.id?.match(/~(\d+)\/?$/)?.[1] ?? s.id;
-}
-
-// Today: newsroom time (21u12). Older: VRT-style relative date.
-function stamp(ts, ctx) {
-  return ctx.date(ts, 'short') === ctx.date(ctx.now, 'short') ? ctx.time(ts) : ctx.ago(ts, ctx.now.getTime());
 }
 
 function duration(sec) {
   if (!sec) return 'Video';
   return `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
-}
-
-// Typographer's quotes: "x" -> “x”, 'x' -> ‘x’, it's -> it’s.
-function smart(text) {
-  return String(text)
-    .replace(/(^|[\s([—–-])"/g, '$1“').replace(/"/g, '”')
-    .replace(/(^|[\s([—–-])'/g, '$1‘').replace(/'/g, '’');
-}
-
-function overflows(el) {
-  return el.scrollHeight > el.clientHeight + 1;
 }

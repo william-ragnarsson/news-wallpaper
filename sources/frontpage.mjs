@@ -9,6 +9,7 @@
 // each outlet module marks it (`item.live`), and only while its newest update is
 // under LIVE_MAX_AGE_MS old: most outlets tag live by URL or title alone, and a
 // blog that ended can stay in the feeds, or (VRT) keep its "live" status, for days.
+// A running VRT NWS liveblog also carries its summary points (`points`).
 
 import * as reader from './lib/reader.mjs';
 import { OUTLETS } from './outlets/index.mjs';
@@ -64,6 +65,10 @@ export async function getFrontpage({
   const [newest, live] = loaded;
   const sectionPayloads = loaded.slice(2);
   const key = i => i.streamId ?? i.url;
+  // A VRT NWS liveblog's summary points ("Kort samengevat"), by stream id: the
+  // running liveblogs have them, the front page's teasers not.
+  const points = new Map((live?.items ?? []).filter(i => i.paragraphs?.length).map(i => [key(i), i.paragraphs]));
+  const story = item => toStory(item, points.get(key(item)));
   const seen = new Set();
   const fresh = items => items.filter(i => !seen.has(key(i)) && seen.add(key(i)));
   // The first n not seen yet; only those count as seen, not the rest of the list.
@@ -112,7 +117,7 @@ function isLive(i) {
   return i.live === true && reader.now() - activityAt(i) < LIVE_MAX_AGE_MS;
 }
 
-function story(item) {
+function toStory(item, points) {
   const isLiveblog = item.kind === 'liveblog';
   return {
     id: item.url,
@@ -124,6 +129,7 @@ function story(item) {
     image: item.image ? { url: item.image.url, alt: clean(item.image.alt) ?? '', credit: clean(item.image.credit) } : null,
     time: isLiveblog ? item.updatedAt ?? item.publishedAt : item.publishedAt,
     live: isLive(item),
+    ...(points && { points: points.map(clean).filter(Boolean) }),
     ...(isLiveblog && { postCount: item.postCount ?? null, startedAt: item.publishedAt }),
     ...(item.kind === 'video' && { durationSec: item.durationSec ?? null }),
   };

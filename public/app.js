@@ -261,9 +261,11 @@ function makeContext() {
     safe: { top: menubarInset(width), right: filesColumn(), bottom: dockArea().height, dockWidth: dockArea().width },
     fresh: state.fresh,
     follow: state.follow,
-    // How many photos, and whether in color: the settings, or their defaults.
+    // How many photos, whether in color, and how much text: the settings, or
+    // their defaults.
     pictures: state.settings?.pictures ?? 'one',
     color: state.settings?.color ?? false,
+    density: state.settings?.density ?? 3,
     image,
     time,
     clock,

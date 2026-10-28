@@ -55,6 +55,7 @@ simulated screen (not the browser window).
 | `ctx.image(img, cssWidth)` | URL of the image for `cssWidth` CSS px: a VRT image resized to fit, any other as it is. Accepts an image object or a URL |
 | `ctx.pictures` | how many photos the settings ask for: `'none'`, `'one'` (the default) or `'several'`. A design that follows it says `pictures: true` in `index.js` |
 | `ctx.color` | `true` for photos in color, `false` (the default) for black and white. A design that follows it says `color: true` in `index.js` |
+| `ctx.density` | 1 to 5 (3 by default): from more headlines with little text (1) to fewer stories with more text each (5). A design that follows it says `density: true` in `index.js`; a template reads it through `kit.at()` (Templates) |
 | `ctx.lang` | the page's language as a BCP 47 tag, the provider's: `nl-BE` (VRT NWS) or `en-US` (the US outlets). For the `lang` attribute |
 | `ctx.t` | the page's own words in that language: `nameplate` (`Het Nieuws` / `The News`), `updated`, `source`, `live`, `liveNow`, `posts`, `new`, `video`, `latest`, `justIn`, `moreNews`, `allStories`, `frontPage`, `noNews`, `yesterday`, `colophon(name)`. Never write a word of the page's own in a preset |
 | `ctx.time(ts)` | newsroom time: `20u38` in Dutch, `8:38 PM` in English |
@@ -114,12 +115,133 @@ Story = {
   time,                     // publishedAt; for a liveblog its latest post
   live: true | false,       // on every story: a running liveblog or live page (its newest
                             // update under 12 hours old)
+  points: ['…'],            // a running VRT NWS liveblog's summary points, else absent
   // kind 'liveblog' only (its summary is its latest post):
   postCount: 339 | null, startedAt,
   // kind 'video' only:
   durationSec: 34,
 }
 ```
+
+## Templates (M6)
+
+A front-page design is best written as a template on the kit
+(`presets/kit.js`, `presets/kit.css`): it says which regions it has and what
+each one shows, and the kit fills them by the settings and fits them to the
+screen, so every template follows Pictures, Color, Density and the width for
+the desktop files alike, never overflows and leaves no holes. Newsprint,
+Evening Edition, Homepage and Headlines are templates. The others predate it
+and do not follow Pictures, Color or Density.
+
+How it connects: Customize › Appearance (M4) saves the settings; the page
+(`app.js`, drawn by WallpaperRender, M3) passes them in `ctx`; the template
+declares its regions and the kit (M6) turns the two into stories and fits
+them. Appearance knows a template only by its flags in `index.js` (`TEMPLATE`:
+`margin`, `pictures`, `color`, `density`), which light up those settings; it
+never sees the kit. A design imports only the kit, never another design, and
+the kit imports nothing (`tools/check-boundaries.sh`).
+
+```
+presets/<id>/preset.js    import * as kit from '../kit.js';
+presets/<id>/preset.css   @import url('../kit.css');   (first)
+presets/index.js          { id, data: 'front', ...TEMPLATE, … }
+```
+
+### 1. Regions: `kit.plan(data, ctx, REGIONS)`
+
+```js
+// [a, b] is a at density 1 (more headlines) and b at 5 (more text each).
+const REGIONS = {
+  lead:     { from: 'top', stories: 1, words: [40, 120], points: [0, 4], pictures: 1 },
+  briefs:   { from: 'top', stories: [16, 6], spares: 2, words: [0, 60], pictures: [0, 3] },
+  latest:   { from: ['latest', 'top'], newest: true, stories: [14, 8] },
+  sections: { from: 'sections', stories: [2, 1], groups: 7 },
+};
+const { lead: [lead] = [], briefs, latest, sections } = kit.plan(data, ctx, REGIONS);
+```
+
+Regions take stories in the order they are declared, and a story is on the
+page once: a region skips what one before it took.
+
+| key | what |
+|---|---|
+| `from` | `'top'`, `'latest'`, `'live'` or `'sections'`, or a list of them taken in turn. `'sections'` gives `[{ id, name, items }]`, in the order picked on Customize, a section with nothing left left out |
+| `stories` | how many at most (per section for `'sections'`) |
+| `groups` | `'sections'` only: how many sections at most |
+| `spares` | how many more it takes as spares: they start hidden and come in when there is room (`fill`) |
+| `words` | the summary cut to this many words; `0` for none; left out, all of it |
+| `points` | how many of a liveblog's summary points |
+| `pictures` | how many of its stories may carry their own picture: a number, or `[with 'one', with 'several']`. With `'one'` the page has one picture in all, at the first region that allows one; with `'none'`, none |
+| `filter` | `(story) => boolean`, the stories it may take |
+| `newest` | `true` to have what it took newest first |
+
+Any number can be `[a, b]`, which `kit.at(ctx, [a, b])` turns into the value
+at the density setting (between a at 1 and b at 5, rounded when both are
+whole; `Infinity` is a below 3 and b from 3). A template's own sizes and
+shares follow density the same way: `kit.at(ctx, LEAD_SHARE)`.
+
+Each region comes back as items: `{ story, summary, points, picture, spare }`,
+the summary and points to show, the story's picture (an image object for
+`kit.photo`) or `null`, and whether it is a spare. Build a spare with
+`kit.spare(el, item)` so it starts hidden.
+
+### 2. Settings on the page: `kit.page(root, ctx)`
+
+Call it first in `render()`. It puts the settings on the root for the CSS:
+the classes `kit`, `pictures-none|one|several`, `density-1…5`, `is-color`,
+and `--density` (0 at 1, 1 at 5). From `kit.css`:
+
+- `[hidden]` hides with `display: none !important`, whatever display a design
+  gives the element: fitting hides with the attribute.
+- An element with class `kit-page` keeps the width for the desktop files:
+  padding left and right of `var(--mx) + var(--safe-right)`, so the page stays
+  centered. The design sets `--mx`, its own outer margin, and only the top and
+  bottom padding of its `kit-page`.
+- `kit.photo(ctx, picture, cssWidth, { cls, caption, credit })` builds
+  `figure.kit-photo > div.kit-frame > img.kit-img`: the design sizes the frame
+  (`aspect-ratio`, a height), the image covers it. Black and white uses
+  `--photo-filter`, color (`is-color`) `--photo-filter-color`; set them on the
+  design's root to tint the photos. Filters only: WebKit leaves an image with
+  `mix-blend-mode` out of a 2× snapshot.
+
+Also for `render()`: `kit.prose(ctx, text, cls)` (a paragraph whose text the
+fitting can cut: build every summary and point with it), `kit.typo(title)`
+(curly quotes, dashes, ellipses), `kit.when(story, ctx)`, `kit.storyKey(story)`.
+
+### 3. Fitting, in `layout()`
+
+`layout()` starts with `kit.reset(root)`: it shows again what fitting hid,
+hides the spares again, and takes back cut texts and sizes, so it can run
+again (fonts loading, a resize) from what `render()` built. Then, region by
+region, until nothing overflows (`kit.overflows(el)`) and nothing leaves a
+hole:
+
+| helper | what |
+|---|---|
+| `dropToFit(items, over, { trim })` | hides items from the end while `over()`; with `trim` (words), the first one hidden comes back cut to what fits |
+| `fill(items, over, { trim })` | once all of a region's own items fit, its spares come in while they fit |
+| `trimToFit(box, over, minWords)` | cuts the last text (`kit.prose`) in `box` by words while `over()`; a text left with fewer than `minWords` goes, and the one before it is cut |
+| `trimEvenly(paras, over, minWords)` | cuts a row of texts to the same number of words, so the row stays even |
+| `picturesToFit(box, room)` | hides a picture whose block leaves less than `room` px of the box's height (columns would slice it) |
+| `fullRows(grid, items)` | rounds a grid down to full rows |
+| `fitSize(el, lo, hi, ok)` | the largest font size between `lo` and `hi` px for which `ok()` holds |
+| `spread(box, items)`, `grow(el, prop, by)` | gives the room left between items, or to one property |
+| `columnsOf(box)`, `spreadColumns(box, unitsFor)` | balances text columns |
+| `hide`, `show`, `setStyle(el, prop, value)` | what fitting does by hand; `reset()` undoes it |
+
+The order is the template's own: what gives way first. In Headlines, for
+example, tier two's summaries are cut first, then the lead's summary, then
+tier two's pictures, then the lead's photo; the lead's headline then grows
+(`fitSize`) into what room is left, and the index takes the rest in full rows.
+
+### Checking a template
+
+Render it at every setting with `wallpaper-dev render` (AGENTS.md), for
+example `--preset headlines --settings '{"density": 1}'`, then 5,
+`'{"pictures": "none"}'`, `'{"pictures": "several", "color": true}'`,
+`'{"margin": 0}'` and `'{"margin": 240}'`, at 1680x1050 and 1512x982, for
+each outlet (`settings set provider=…`, then `fetch`). Look for overflow,
+holes, a page that does not change with the setting, and empty picture boxes.
 
 ## Liveblog data (`data: 'wallpaper'`)
 

@@ -10,6 +10,7 @@ public struct WallpaperSettings: Codable, Hashable, Sendable {
   public var margin: Int
   public var pictures: String  // none, one or several
   public var color: Bool
+  public var density: Int  // 1, more headlines, to maxDensity, more text each
   public var updatedAt: String?
 }
 
@@ -25,6 +26,7 @@ public struct Options: Codable, Sendable {
     public let margin: Bool?
     public let pictures: Bool?  // follows the pictures setting
     public let color: Bool?  // follows the color setting
+    public let density: Bool?  // follows the density setting
   }
 
   // A news outlet the front page can come from, with its section feeds, and
@@ -49,4 +51,5 @@ public struct Options: Codable, Sendable {
   public let presets: [Design]
   public let providers: [Provider]
   public let maxMargin: Int
+  public let maxDensity: Int
 }
