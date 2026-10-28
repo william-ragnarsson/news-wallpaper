@@ -49,4 +49,5 @@ public struct Options: Codable, Sendable {
   public let presets: [Design]
   public let providers: [Provider]
   public let maxMargin: Int
+  public let headlines: Headlines?  // from the stored news (Headlines.swift)
 }
