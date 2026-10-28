@@ -136,7 +136,7 @@ struct Reply: Sendable {
 // not answer, a 504 with the reason in x-net-error. The user agent comes from
 // x-user-agent, which the page can set.
 final class Net: NSObject, URLSessionTaskDelegate, Sendable {
-  static let userAgent = "news-wallpaper/0.1 (personal prototype)"
+  static let userAgent = "wallpaper-headlines/0.1 (personal prototype)"
 
   // No cookies, no disk cache: the sources cache what they need.
   private let session = URLSession(configuration: .ephemeral)

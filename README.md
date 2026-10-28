@@ -1,9 +1,21 @@
-# news-wallpaper
+# wallpaper-headlines
 
 Live VRT NWS news as a macOS desktop wallpaper. A menu bar app draws a news
 page every few minutes and sets it as the desktop picture. Everything runs on
 the Mac: there is no server to host. The pages only collect, format and show
 what the feeds provide: titles, sections, counts and times.
+
+## Install
+
+```sh
+brew install william-ragnarsson/tap/wallpaper-headlines
+wallpaper-headlines      # opens the app
+```
+
+It builds on your Mac, so it needs macOS 14 or later and the Command Line
+Tools (`xcode-select --install`). Update it from the app's Settings, or with
+`brew upgrade wallpaper-headlines`. The formula is in
+[william-ragnarsson/homebrew-tap](https://github.com/william-ragnarsson/homebrew-tap).
 
 ## How it fits together
 
@@ -62,12 +74,12 @@ PORT=4175 npm run dev    # another port
 The app needs the Command Line Tools (not Xcode):
 
 ```sh
-app/bundle.sh            # builds app/build/NewsWallpaper.app
-npm run install-app      # builds it, replaces /Applications/NewsWallpaper.app and opens it
+app/bundle.sh            # builds app/build/WallpaperHeadlines.app
+npm run install-app      # builds it, replaces /Applications/WallpaperHeadlines.app and opens it
 ```
 
 To work on the page with the app showing it, point the app at the dev server:
-`defaults write io.github.william-ragnarsson.news-wallpaper page 'http://localhost:4174/?chrome=0&hud=0'`
+`defaults write io.github.william-ragnarsson.wallpaper-headlines page 'http://localhost:4174/?chrome=0&hud=0'`
 (`defaults delete … page` to go back).
 
 ## Pages

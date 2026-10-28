@@ -92,7 +92,7 @@ createServer(async (req, res) => {
     send(res, err.status ?? 500, { error: err.message });
   }
 }).listen(PORT, () => {
-  console.log(`News wallpaper running at http://localhost:${PORT}`);
+  console.log(`Wallpaper Headlines running at http://localhost:${PORT}`);
 });
 
 async function serveStatic(pathname, res) {

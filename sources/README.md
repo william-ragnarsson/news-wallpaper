@@ -92,7 +92,7 @@ app and `wallpaper-dev` in a web view (`app/Sources/WallpaperCore/SettingsServic
 the dev server in Node (`settings.mjs`, which only reads them). Each keeps a
 `settings.json`:
 
-- the app: `~/Library/Application Support/NewsWallpaper/settings.json`
+- the app: `~/Library/Application Support/WallpaperHeadlines/settings.json`
 - the dev server and `wallpaper-dev`: `.dev/settings.json` in the worktree (gitignored)
 
 A missing file means the defaults; a field that is no longer valid (a preset or

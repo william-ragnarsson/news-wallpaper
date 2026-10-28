@@ -6,10 +6,12 @@ import SwiftUI
 struct SettingsPane: View {
   let model: Customization
 
-  private let repository = URL(string: "https://github.com/william-ragnarsson/news-wallpaper")!
+  private let repository = URL(string: "https://github.com/william-ragnarsson/wallpaper-headlines")!
   // Homebrew installs into its Cellar; any other copy was built from the repository.
-  private let homebrew = Bundle.main.bundlePath.contains("/Cellar/")
-  private var upgrade: String { homebrew ? "brew upgrade news-wallpaper" : "git pull && sh app/bundle.sh" }
+  private let homebrew = AppUpdate.keg != nil
+  private let upgrade = "git pull && sh app/bundle.sh"
+  // One for the app, so an update keeps going when the pane changes.
+  private let update = AppUpdate.shared
 
   var body: some View {
     Form {
@@ -21,7 +23,7 @@ struct SettingsPane: View {
             .frame(width: 56, height: 56)
             .background(.tint, in: RoundedRectangle(cornerRadius: 12))
           VStack(alignment: .leading, spacing: 2) {
-            Text("News Wallpaper").font(.title2.weight(.semibold))
+            Text("Wallpaper Headlines").font(.title2.weight(.semibold))
             Text("Version \(version)").foregroundStyle(.secondary).textSelection(.enabled)
           }
         }
@@ -31,16 +33,31 @@ struct SettingsPane: View {
       Section {
         LabeledContent("Installed", value: version)
         LabeledContent("From", value: homebrew ? "Homebrew" : "The repository, built on this Mac")
-        LabeledContent("Update with") {
-          HStack {
-            Text(upgrade).monospaced().textSelection(.enabled)
-            Button("Copy", systemImage: "doc.on.doc") {
-              NSPasteboard.general.clearContents()
-              NSPasteboard.general.setString(upgrade, forType: .string)
+        if homebrew {
+          LabeledContent("Update") {
+            HStack {
+              switch update.state {
+              case .idle: EmptyView()
+              case .running: ProgressView().controlSize(.small)
+              case .upToDate: Text("Up to date").foregroundStyle(.secondary)
+              case .failed(let message): Text(message).foregroundStyle(.red).textSelection(.enabled)
+              }
+              Button(update.state == .running ? "Updating…" : "Update", action: update.run)
+                .disabled(update.state == .running)
             }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-            .help("Copy the command")
+          }
+        } else {
+          LabeledContent("Update with") {
+            HStack {
+              Text(upgrade).monospaced().textSelection(.enabled)
+              Button("Copy", systemImage: "doc.on.doc") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(upgrade, forType: .string)
+              }
+              .labelStyle(.iconOnly)
+              .buttonStyle(.borderless)
+              .help("Copy the command")
+            }
           }
         }
         if homebrew {
@@ -56,8 +73,8 @@ struct SettingsPane: View {
         Text("Updates")
       } footer: {
         Text(homebrew
-          ? "New versions come out through Homebrew. Run the command in Terminal, then quit and reopen the app."
-          : "Run the command in Terminal in the repository’s folder, then quit and reopen the app. Once News Wallpaper is on Homebrew, brew upgrade news-wallpaper will do this.")
+          ? "New versions come out through Homebrew. Update runs brew upgrade wallpaper-headlines, which builds the new version on this Mac in a minute or two, then reopens the app."
+          : "Run the command in Terminal in the repository’s folder, then quit and reopen the app. Once Wallpaper Headlines is on Homebrew, brew upgrade wallpaper-headlines will do this.")
       }
 
       Section("Data") {
@@ -82,7 +99,7 @@ struct SettingsPane: View {
       }
 
       Section {
-        LabeledContent("News Wallpaper", value: "MIT License, © 2026 William Ragnarsson")
+        LabeledContent("Wallpaper Headlines", value: "MIT License, © 2026 William Ragnarsson")
         DisclosureGroup("License text") {
           if let license = Self.license {
             Text(license)
@@ -102,7 +119,7 @@ struct SettingsPane: View {
       } header: {
         Text("License")
       } footer: {
-        Text("The MIT License covers News Wallpaper’s own code. Headlines, text and photos belong to their publishers and show as they published them.")
+        Text("The MIT License covers Wallpaper Headlines’s own code. Headlines, text and photos belong to their publishers and show as they published them.")
       }
     }
     .formStyle(.grouped)

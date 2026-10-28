@@ -23,11 +23,11 @@ public struct Environment: Sendable {
   // The installed app: Application Support, the page and sources bundle.sh
   // copies into Resources/web. The page can point at the dev server while
   // working on it:
-  // `defaults write io.github.william-ragnarsson.news-wallpaper page 'http://localhost:4174/?chrome=0&hud=0'`
+  // `defaults write io.github.william-ragnarsson.wallpaper-headlines page 'http://localhost:4174/?chrome=0&hud=0'`
   public static var app: Environment {
     Environment(
       mode: .app,
-      data: URL.applicationSupportDirectory.appending(path: "NewsWallpaper", directoryHint: .isDirectory),
+      data: URL.applicationSupportDirectory.appending(path: "WallpaperHeadlines", directoryHint: .isDirectory),
       web: Bundle.main.url(forResource: "web", withExtension: nil) ?? repo,
       page: UserDefaults.standard.string(forKey: "page").flatMap(URL.init(string:)) ?? Bridge.page)
   }

@@ -7,16 +7,16 @@
 //   NewsStore        the news fetched last, news.json (M1)
 //   NewsFeed         fetches the news and stores it, the store's one writer (M2)
 //   WallpaperRender  draws the stored news for a RenderRequest and returns a PNG; FileOutput (M3)
-//   NewsWallpaper    the app: menu bar, Updater, DesktopOutput, Customize (M4, M5)
+//   WallpaperHeadlines    the app: menu bar, Updater, DesktopOutput, Customize (M4, M5)
 //   wallpaper-dev    the command line for agents
 
 import PackageDescription
 
 let package = Package(
-  name: "NewsWallpaper",
+  name: "WallpaperHeadlines",
   platforms: [.macOS(.v14)],
   products: [
-    .executable(name: "NewsWallpaper", targets: ["NewsWallpaper"]),
+    .executable(name: "WallpaperHeadlines", targets: ["WallpaperHeadlines"]),
     .executable(name: "wallpaper-dev", targets: ["wallpaper-dev"]),
   ],
   targets: [
@@ -25,7 +25,7 @@ let package = Package(
     .target(name: "NewsFeed", dependencies: ["WallpaperCore", "NewsStore"], path: "Sources/NewsFeed"),
     .target(name: "WallpaperRender", dependencies: ["WallpaperCore", "NewsStore"], path: "Sources/WallpaperRender"),
     .executableTarget(
-      name: "NewsWallpaper", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender"], path: "Sources/NewsWallpaper"),
+      name: "WallpaperHeadlines", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender"], path: "Sources/WallpaperHeadlines"),
     .executableTarget(
       name: "wallpaper-dev", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender"], path: "Sources/wallpaper-dev"),
   ]

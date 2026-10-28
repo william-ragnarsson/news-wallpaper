@@ -1,4 +1,4 @@
-# Working on news-wallpaper as an agent
+# Working on wallpaper-headlines as an agent
 
 Several sessions work on this repo at once, on one Mac. Only one copy of the app
 can be installed and only one picture can be on the desktop. So: **never
@@ -41,10 +41,10 @@ swift run --package-path app --build-system native wallpaper-dev options
 
 - `npm run install-app`, `app/install.sh`, or `app/bundle.sh` followed by `open`: they
   replace the installed app. Those are for the user.
-- `swift run NewsWallpaper`: it sets the real desktop picture.
-- `defaults write io.github.william-ragnarsson.news-wallpaper …`.
-- Writing to `~/Library/Application Support/NewsWallpaper`.
-- Killing processes by name (`pkill node`, `pkill NewsWallpaper`). The user's dev
+- `swift run WallpaperHeadlines`: it sets the real desktop picture.
+- `defaults write io.github.william-ragnarsson.wallpaper-headlines …`.
+- Writing to `~/Library/Application Support/WallpaperHeadlines`.
+- Killing processes by name (`pkill node`, `pkill WallpaperHeadlines`). The user's dev
   server on port 4174 and the installed app are theirs.
 
 `.dev/` is the only runtime folder you write to.
@@ -59,7 +59,7 @@ swift run --package-path app --build-system native wallpaper-dev options
 | `app/Sources/NewsStore` | M1: the news fetched last, `news.json`; `read()`, `meta()`, and `commit` for the fetcher only |
 | `app/Sources/NewsFeed` | M2: `Fetcher`, which runs `public/harvest.js` and commits what it gives |
 | `app/Sources/WallpaperRender` | `Renderer`: draws the page for a `RenderRequest`, returns a PNG; `PNGOutput`, `FileOutput` |
-| `app/Sources/NewsWallpaper` | the app: menu bar, `Updater`, `DesktopOutput`, the Customize window |
+| `app/Sources/WallpaperHeadlines` | the app: menu bar, `Updater`, `DesktopOutput`, the Customize window |
 | `app/Sources/wallpaper-dev` | the command line above |
 | `server.mjs` | the dev server for the explorer (`npm run dev`, port 4174) |
 

@@ -33,7 +33,7 @@ final class Updater {
   var fetched: () -> Void = {}
 
   // Seconds between fetches, at least 60:
-  // `defaults write io.github.william-ragnarsson.news-wallpaper interval 120`
+  // `defaults write io.github.william-ragnarsson.wallpaper-headlines interval 120`
   private var interval: TimeInterval {
     let seconds = UserDefaults.standard.double(forKey: "interval")
     return seconds > 0 ? max(60, seconds) : 300
