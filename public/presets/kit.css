@@ -1,0 +1,32 @@
+/* M6, the template kit's share of the styles (kit.js). A template's preset.css
+   imports it first: @import url('../kit.css');
+   The root has class kit once kit.page() ran. */
+
+/* Fitting hides with the hidden attribute (kit.hide): stronger than any
+   display a design gives the element. */
+.kit [hidden] { display: none !important; }
+
+/* Width: the page keeps the desktop files' column (--safe-right) free at the
+   right, and as much at the left so it stays centered. A design sets --mx, its
+   own outer margin, and only the top and bottom padding of its kit-page. */
+.kit .kit-page.kit-page {
+  padding-left: calc(var(--mx, 0px) + var(--safe-right, 0px));
+  padding-right: calc(var(--mx, 0px) + var(--safe-right, 0px));
+}
+
+/* Pictures: a frame that crops the photo to the size the design gives it. */
+.kit .kit-photo { margin: 0; min-width: 0; }
+.kit .kit-frame { position: relative; overflow: hidden; }
+.kit .kit-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+
+/* Color: black and white, or color, each as the design tints it
+   (--photo-filter, --photo-filter-color). Filter only: WebKit leaves an image
+   with mix-blend-mode out of a 2x snapshot. */
+.kit .kit-img { filter: var(--photo-filter, grayscale(1) contrast(1.05)); }
+.kit.is-color .kit-img { filter: var(--photo-filter-color, none); }

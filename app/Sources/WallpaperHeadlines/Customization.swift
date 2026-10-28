@@ -203,6 +203,7 @@ private struct Patch: Encodable {
   var margin: Int?
   var pictures: String?
   var color: Bool?
+  var density: Int?
 
   init(_ s: WallpaperSettings, since old: WallpaperSettings?) {
     if s.preset != old?.preset { preset = s.preset }
@@ -212,11 +213,12 @@ private struct Patch: Encodable {
     if s.margin != old?.margin { margin = s.margin }
     if s.pictures != old?.pictures { pictures = s.pictures }
     if s.color != old?.color { color = s.color }
+    if s.density != old?.density { density = s.density }
   }
 
   var isEmpty: Bool {
     preset == nil && provider == nil && liveFirst == nil && sections == nil && margin == nil
-      && pictures == nil && color == nil
+      && pictures == nil && color == nil && density == nil
   }
 
   // These fields over the others, as SettingsService does with a patch.
@@ -229,6 +231,7 @@ private struct Patch: Encodable {
     s.margin = margin ?? s.margin
     s.pictures = pictures ?? s.pictures
     s.color = color ?? s.color
+    s.density = density ?? s.density
     return s
   }
 }

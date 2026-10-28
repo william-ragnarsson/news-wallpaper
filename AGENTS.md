@@ -54,6 +54,7 @@ swift run --package-path app --build-system native wallpaper-dev options
 |---|---|
 | `sources/` | the news: feeds, liveblogs, the front page (plain JS) |
 | `public/` | the wallpaper page (`app.js`, `host.js`) and its designs (`presets/`) |
+| `public/presets/kit.js`, `kit.css` | M6: the template kit. A design declares its regions; the kit fills them by the settings (pictures, color, density, width) and fits them to the screen. The contract is in `public/presets/README.md` |
 | `app/Sources/WallpaperCore` | `Environment` (every path), `Bridge` (the page's host), `SettingsService` (the settings, by `public/settings.js`) |
 | `app/Sources/NewsStore` | M1: the news fetched last, `news.json`; `read()`, `meta()`, and `commit` for the fetcher only |
 | `app/Sources/NewsFeed` | M2: `Fetcher`, which runs `public/harvest.js` and commits what it gives |

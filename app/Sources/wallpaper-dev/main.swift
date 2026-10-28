@@ -57,7 +57,7 @@ let usage = """
   options
       Prints what there is to pick from: presets, providers (VRT NWS, The New
       York Times, The Washington Post, Fox News) and their sections, and
-      maxMargin. Nothing is fetched.
+      maxMargin and maxDensity. Nothing is fetched.
 
   Every command takes --data <folder> (default: .dev/ in this worktree), where
   settings.json and news.json are.

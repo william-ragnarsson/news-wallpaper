@@ -42,6 +42,7 @@ final class Thumbnails {
       if design.margin != true { drawn.margin = 0 }
       if design.pictures != true { drawn.pictures = "one" }
       if design.color != true { drawn.color = false }
+      if design.density != true { drawn.density = 3 }
       if design.sections != true { drawn.sections = [] }
       // liveFirst orders the top stories, which every front-page design shows.
       if design.data != "front" { drawn.liveFirst = true }

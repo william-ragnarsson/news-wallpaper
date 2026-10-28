@@ -205,6 +205,7 @@ new EventSource('/api/settings/events').addEventListener('settings', e => apply(
                                  // (VRT liveblogs with status live; NYT /live/ URLs; WaPo and Fox
                                  // live-updates URLs or "Live updates:" titles), and only while
                                  // its newest update is under 12 hours old
+  points: ['…'],                 // a running VRT NWS liveblog's summary points, else absent
   postCount: 82 | null,          // kind 'liveblog' only
   startedAt: 1792507723130,      // kind 'liveblog' only
   durationSec: 95 | null,        // kind 'video' only
