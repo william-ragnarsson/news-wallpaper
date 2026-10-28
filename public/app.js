@@ -577,8 +577,9 @@ async function refresh(announce = false) {
 
 // What the app calls before each picture: catch up with the settings, fetch,
 // render, and wait until the fonts and images are in, so the picture is
-// complete. Resolves to { ok, error, fetchedAt }; on an error the page still
-// shows the last news it had.
+// complete. Resolves to { ok, error, fetchedAt, preset }: preset is the one
+// drawn, which is the one before when the one asked for did not load. On an
+// error the page still shows the last news it had.
 async function update() {
   await ready;
   const settings = await host.loadSettings();
@@ -591,7 +592,7 @@ async function update() {
   tickClock();
   render();
   await settled();
-  return { ok: !state.error, error: state.error, fetchedAt: state.fetchedAt?.toISOString() ?? null };
+  return { ok: !state.error, error: state.error, fetchedAt: state.fetchedAt?.toISOString() ?? null, preset: presetId };
 }
 
 // Waits for the web fonts (then lays out again) and for every image on the

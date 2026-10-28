@@ -20,6 +20,11 @@ presets/<id>/preset.js    ES module, default-exports the preset object
 presets/<id>/preset.css   all styles, scoped under .preset-<id>
 ```
 
+That is all a new design needs. Customize shows each one in `index.js` as a
+card with its `name`, its `description` and a small picture of it, which the
+app draws from the stored news as it draws the desktop picture: there is no
+screenshot to make or keep up to date.
+
 ## The preset object
 
 ```js

@@ -34,8 +34,9 @@ let usage = """
          [--settings '{"margin": 80}'] [--page <url>]
       Draws the stored news (fetch first) as the app does, and writes the PNG,
       --size points at --scale pixels a point (default: the main screen's).
-      Prints {path, width, height, fetchedAt, page}: fetchedAt is when the
-      news drawn was fetched. Nothing is fetched while drawing. --settings are
+      Prints {path, width, height, fetchedAt, preset, page}: fetchedAt is when
+      the news drawn was fetched, preset the design drawn (the one before when
+      the one asked for did not load). Nothing is fetched while drawing. --settings are
       changes to the saved settings for this picture only: checked as settings
       set checks them, not saved, and printed as settings. --preset and
       --follow pin the page over them.
@@ -143,6 +144,7 @@ func render(_ arguments: Arguments, _ environment: Environment) async throws -> 
   let file = try FileOutput(URL(filePath: out)).put(snapshot)
   var result: [String: Any] = ["path": file.path(percentEncoded: false), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
   result["fetchedAt"] = snapshot.fetchedAt
+  result["preset"] = snapshot.preset
   if let settings { result["settings"] = try object(settings) }
   return result
 }

@@ -23,8 +23,10 @@ public final class Renderer: NSObject, WKNavigationDelegate {
   // The one thing a render waits for at a time, a load or a refresh.
   private var waiting: (id: Int, continuation: CheckedContinuation<Void, Error>)?
   private var lastID = 0
-  // What the page's last refresh said about the news it drew.
+  // What the page's last refresh said about the news it drew, and the design
+  // it drew it in.
   private var fetchedAt: String?
+  private var preset: String?
   // Renders run one at a time, in the order asked: this ends after the last.
   private var queue: Task<Void, Never>?
   private var stamps = 0
@@ -102,11 +104,15 @@ public final class Renderer: NSObject, WKNavigationDelegate {
 
     do {
       fetchedAt = nil
+      preset = nil
       try await wait(seconds: 60) { id in
         webView.callAsyncJavaScript(Self.refresh, in: nil, in: .page) { [weak self] result in
           guard let self else { return }
           let answer = try? result.get() as? [String: Any]
-          if id == waiting?.id { fetchedAt = answer?["fetchedAt"] as? String }
+          if id == waiting?.id {
+            fetchedAt = answer?["fetchedAt"] as? String
+            preset = answer?["preset"] as? String
+          }
           end(id, result.flatMap(Self.outcome))
         }
       }
@@ -129,7 +135,7 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     }
     guard let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) else { throw RenderError.noImage }
     NSLog("Rendered \(cgImage.width)×\(cgImage.height) px for \(Int(request.size.width))×\(Int(request.size.height)) pt")
-    return Snapshot(png: png, width: cgImage.width, height: cgImage.height, fetchedAt: fetchedAt ?? stored?.meta.fetchedAt)
+    return Snapshot(png: png, width: cgImage.width, height: cgImage.height, fetchedAt: fetchedAt ?? stored?.meta.fetchedAt, preset: preset)
   }
 
   // `page` with data=store.
@@ -161,7 +167,7 @@ public final class Renderer: NSObject, WKNavigationDelegate {
     return await window.wallpaper.refresh();
     """
 
-  // What the page's refresh resolved to: {ok, error, fetchedAt}. Not ok means
+  // What the page's refresh resolved to: {ok, error, fetchedAt, preset}. Not ok means
   // the news could not be loaded, and the picture on the desktop stays.
   private static func outcome(_ value: Any) -> Result<Void, Error> {
     let result = value as? [String: Any]
@@ -233,13 +239,15 @@ public struct RenderRequest: Sendable {
   }
 }
 
-// A picture of the page: the PNG, its size in pixels, and when the news on it
-// was fetched (an ISO date, from the page).
+// A picture of the page: the PNG, its size in pixels, when the news on it was
+// fetched (an ISO date, from the page) and the design it is in. That is the
+// one before when the design asked for did not load.
 public struct Snapshot: Sendable {
   public let png: Data
   public let width: Int
   public let height: Int
   public let fetchedAt: String?
+  public let preset: String?
 }
 
 public enum RenderError: Error, LocalizedError, CustomStringConvertible {

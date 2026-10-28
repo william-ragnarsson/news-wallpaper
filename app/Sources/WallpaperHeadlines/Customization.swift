@@ -23,6 +23,10 @@ final class Customization {
   private(set) var rendering = false  // the app is fetching or redrawing the desktop picture
   private(set) var preview: NSImage?
   private(set) var previewError: String?
+  // A small picture of each design, by id, for its card: the page as the
+  // preview draws it, with that design picked. Kept when the window closes,
+  // so it opens with them.
+  private(set) var thumbnails: [String: NSImage] = [:]
   // The screen with the menu bar, which the desktop picture is drawn for.
   var screen = CGSize(width: 1512, height: 982)
 
@@ -32,9 +36,12 @@ final class Customization {
   private var edits = 0  // changes made so far, to tell whether one came during a load
   private var confirmed: WallpaperSettings?  // what was last saved
   private var failures = 0  // saves that failed, to tell whether one failed during a load
-  // The preview's own, so it never waits behind the desktop picture; made
-  // when the preview is first drawn and let go when the window closes.
+  // The preview's and the cards' own, so they never wait behind the desktop
+  // picture; made when the preview is first drawn and let go when the window
+  // closes. One web view for both: the preview waits for one card at most.
   @ObservationIgnored private var renderer: Renderer?
+  // What each card's picture was drawn from.
+  @ObservationIgnored private var thumbnailsDrawn: [String: ThumbnailKey] = [:]
 
   init(service: SettingsService, saved: @escaping () -> Void) {
     self.service = service
@@ -87,12 +94,8 @@ final class Customization {
     guard let settings else { return }
     let renderer = self.renderer ?? Renderer(environment)
     self.renderer = renderer
-    // With the stand-in menu bar and Dock, which only cover the page, and
-    // without the page's own status line.
-    var parts = URLComponents(url: page, resolvingAgainstBaseURL: true)!
-    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud"].contains($0.name) } + [URLQueryItem(name: "hud", value: "0")]
     // A page from a server reads its own settings.
-    let request = RenderRequest(page: parts.url!, size: screen, scale: 1, settings: server == nil ? settings : nil)
+    let request = RenderRequest(page: previewPage, size: screen, scale: 1, settings: server == nil ? settings : nil)
     do {
       let snapshot = try await renderer.render(request)
       // A newer one is on its way, or the window closed.
@@ -111,7 +114,62 @@ final class Customization {
     }
   }
 
-  // The window closed: its preview goes, with the renderer's web view.
+  // Draws the pictures on the design cards that are missing or out of date,
+  // `width` pixels across, one design at a time, with the preview's web view;
+  // stops when the task is cancelled by a newer change, and the next call
+  // goes on from there. A design's picture does not depend on which design is
+  // picked, nor on the margin when it has none, so changing those draws none.
+  // Not for a page from a server: it reads its own settings, so every card
+  // would show the same design.
+  func drawThumbnails(of designs: [Options.Design], width: CGFloat) async {
+    guard let current = settings, server == nil else { return }
+    let keys = Dictionary(designs.map { ($0.id, thumbnailKey(current, $0, width)) }) { first, _ in first }
+    let stale = designs.filter { thumbnailsDrawn[$0.id] != keys[$0.id] }
+    // Not a web view for a window that closed meanwhile.
+    guard !stale.isEmpty, !Task.isCancelled else { return }
+    let renderer = self.renderer ?? Renderer(environment)
+    self.renderer = renderer
+    for design in stale {
+      guard !Task.isCancelled, self.renderer === renderer else { return }
+      var settings = current
+      settings.preset = design.id
+      let request = RenderRequest(page: previewPage, size: screen, scale: width / screen.width, settings: settings)
+      var picture: NSImage?
+      do {
+        let snapshot = try await renderer.render(request)
+        // A design that did not load leaves the page in the one before.
+        if snapshot.preset == design.id { picture = NSImage(data: snapshot.png) }
+      } catch StoreError.empty {
+        return
+      } catch {}
+      guard self.renderer === renderer else { return }
+      // Not the picture before, which was for other settings. One that did
+      // not draw is tried again next time; one drawn after a newer change is
+      // kept under the key it was drawn for, until the next call draws it.
+      thumbnails[design.id] = picture
+      thumbnailsDrawn[design.id] = picture == nil ? nil : keys[design.id]
+    }
+  }
+
+  // What `design`'s card is drawn from.
+  private func thumbnailKey(_ settings: WallpaperSettings, _ design: Options.Design, _ width: CGFloat) -> ThumbnailKey {
+    var drawn = settings
+    drawn.preset = ""
+    drawn.updatedAt = nil
+    if design.margin != true { drawn.margin = 0 }
+    return ThumbnailKey(settings: drawn, screen: screen, page: page, fetchedAt: news?.fetchedAt, width: width)
+  }
+
+  // The page as the preview draws it: with the stand-in menu bar and Dock,
+  // which only cover the page, and without the page's own status line.
+  private var previewPage: URL {
+    var parts = URLComponents(url: page, resolvingAgainstBaseURL: true)!
+    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud"].contains($0.name) } + [URLQueryItem(name: "hud", value: "0")]
+    return parts.url!
+  }
+
+  // The window closed: its preview goes, with the renderer's web view. The
+  // cards' pictures stay; the next open draws only those out of date.
   func closed() {
     renderer = nil
     preview = nil
@@ -170,6 +228,16 @@ final class Customization {
     saved()
     if unsaved { await save() }
   }
+}
+
+// What a card's picture is drawn from, besides its design: when one of these
+// changes, it is drawn again. The settings without the design picked.
+private struct ThumbnailKey: Equatable {
+  let settings: WallpaperSettings
+  let screen: CGSize
+  let page: URL
+  let fetchedAt: String?
+  let width: CGFloat
 }
 
 // What a save sends: only the fields changed here since the last save, so a

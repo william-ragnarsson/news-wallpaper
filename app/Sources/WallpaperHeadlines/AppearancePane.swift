@@ -3,11 +3,13 @@ import SwiftUI
 import WallpaperCore
 
 // How the wallpaper looks (M4): a preview of the desktop, drawn by the
-// Renderer from the stored news, the design and how wide the page is.
+// Renderer from the stored news; how wide the page is; and the design, picked
+// from cards that each show the desktop in that design, drawn as the preview is.
 struct AppearancePane: View {
   let model: Customization
   let settings: WallpaperSettings
   let options: Options
+  @SwiftUI.Environment(\.displayScale) private var displayScale
 
   var body: some View {
     let screen = model.screen
@@ -15,29 +17,31 @@ struct AppearancePane: View {
     // A String, so the numbers show without a thousands separator.
     let size = "\(Int(screen.width)) × \(Int(screen.height))"
     Form {
-      Section {
-        designPicker
-        if let design {
-          Text(design.description).foregroundStyle(.secondary)
-        }
-      } header: {
+      widthSection(design) {
         VStack(alignment: .leading, spacing: 8) {
           DesktopPreview(model: model, screen: screen)
-            .task(id: previewKey) {
-              // A slider sends a few changes in a row: draw after a pause.
-              try? await Task.sleep(for: .milliseconds(500))
-              guard !Task.isCancelled else { return }
-              await model.drawPreview()
-            }
           Text("Your desktop at \(size), with a stand-in menu bar and Dock, drawn from the news fetched last as the desktop picture is. The desktop picture follows a few seconds after a change.")
             .font(.callout)
             .foregroundStyle(.secondary)
         }
         .padding(.bottom, 12)
       }
-      widthSection(design)
+      Section("Front page") {
+        designCards { $0.data == "front" }
+      }
+      Section("One liveblog") {
+        designCards { $0.data != "front" }
+      }
     }
     .formStyle(.grouped)
+    .task(id: previewKey) {
+      // A slider sends a few changes in a row: draw after a pause.
+      try? await Task.sleep(for: .milliseconds(500))
+      guard !Task.isCancelled else { return }
+      await model.drawPreview()
+      // Then the cards, after the picture asked for.
+      await model.drawThumbnails(of: options.presets, width: DesignCard.maxWidth * displayScale)
+    }
   }
 
   // The settings as the window has them, saved or not; when they were saved
@@ -48,19 +52,23 @@ struct AppearancePane: View {
     return PreviewKey(settings: drawn, screen: model.screen, page: model.page, fetchedAt: model.news?.fetchedAt)
   }
 
-  private var designPicker: some View {
-    Picker("Design", selection: model.binding(settings, \.preset)) {
-      Section("Front page") {
-        ForEach(options.presets.filter { $0.data == "front" }) { Text($0.name).tag($0.id) }
-      }
-      Section("One liveblog") {
-        ForEach(options.presets.filter { $0.data != "front" }) { Text($0.name).tag($0.id) }
+  // The designs that `include` takes, as cards to pick from. Every design in
+  // public/presets/index.js gets one, with a picture drawn from the stored
+  // news: a new design needs nothing more.
+  private func designCards(_ include: (Options.Design) -> Bool) -> some View {
+    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: DesignCard.maxWidth), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
+      ForEach(options.presets.filter(include)) { design in
+        DesignCard(design: design, picture: model.thumbnails[design.id], screen: model.screen, picked: design.id == settings.preset) {
+          model.change { $0.preset = design.id }
+        }
       }
     }
+    .padding(.vertical, 4)
   }
 
   // The slider shows the page's width; the setting is the margin it leaves.
-  private func widthSection(_ design: Options.Design?) -> some View {
+  // Under `preview`, so the page's width is set where it shows.
+  private func widthSection(_ design: Options.Design?, preview: () -> some View) -> some View {
     let max = options.maxMargin
     let keeps = options.presets.filter { $0.margin == true }.map(\.name)
     let width = Binding(
@@ -76,7 +84,10 @@ struct AppearancePane: View {
       }
       .disabled(design?.margin != true)
     } header: {
-      Text("Page width")
+      VStack(alignment: .leading, spacing: 0) {
+        preview()
+        Text("Page width")
+      }
     } footer: {
       if design?.margin != true {
         Text("This design always fills the screen. \(keeps.formatted(.list(type: .and))) can leave room for your desktop files.")
@@ -111,6 +122,51 @@ private struct DesktopPreview: View {
     .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
     .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
     .frame(maxWidth: .infinity)
+  }
+}
+
+// A design to pick: a picture of it in the screen's proportions, its name and
+// what it is. The picked one has a ring in the accent color.
+private struct DesignCard: View {
+  // Points across at most; its picture is drawn this wide in pixels.
+  static let maxWidth: CGFloat = 200
+
+  let design: Options.Design
+  let picture: NSImage?  // nil until drawn
+  let screen: CGSize
+  let picked: Bool
+  let pick: () -> Void
+
+  var body: some View {
+    Button(action: pick) {
+      VStack(alignment: .leading, spacing: 6) {
+        ZStack {
+          Rectangle().fill(.quaternary)
+          if let picture {
+            Image(nsImage: picture).resizable().interpolation(.high)
+          } else {
+            Image(systemName: "newspaper").font(.title2).foregroundStyle(.tertiary)
+          }
+        }
+        .aspectRatio(screen, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay {
+          RoundedRectangle(cornerRadius: 6)
+            .strokeBorder(picked ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: picked ? 3 : 1)
+        }
+        Text(design.name).fontWeight(.semibold)
+        Text(design.description)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(2, reservesSpace: true)
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .help(design.description)
+    .accessibilityLabel(design.name)
+    .accessibilityHint(design.description)
+    .accessibilityAddTraits(picked ? .isSelected : [])
   }
 }
 
