@@ -80,11 +80,7 @@ export async function getFrontpage({
     }
     return out;
   };
-  // Running live stories lead, newest first: those on the front page, and those
-  // the outlet's front-page feed leaves out (NYT's live blogs) from its newest.
-  const leads = liveFirst
-    ? fresh(newestOf([front.value, newest].map(s => s && { items: s.items.filter(isLive) })))
-    : [];
+  const leads = liveFirst ? fresh(liveOf(front.value, newest)) : [];
 
   return {
     source: { id: p.id, name: p.name, language: p.language, homepage: p.homepage },
@@ -100,6 +96,32 @@ export async function getFrontpage({
     // Without a stream of its own: the newest of everything loaded.
     latest: (newest?.items ?? newestOf([front.value, ...sectionPayloads])).slice(0, latest).map(story),
   };
+}
+
+// What Customize's Sources pane lists from the news: `live`, the running live
+// stories in the order liveFirst leads the front page with them, and
+// `sections`, the first `perSection` stories of each of the provider's
+// sections ({id: [Story]}) in its feed's order (the front page's row leaves
+// out those already above it).
+// Throws when the news has not got the provider's front page (stored news of
+// another provider).
+export async function getHeadlines({ provider, perSection = 3 } = {}) {
+  const p = getProvider(provider);
+  const { top, latest } = frontOf(p.id);
+  const load = id => id ? reader.loadStream(p.id, id).catch(() => null) : null;
+  const front = await reader.loadStream(p.id, top);
+  const [newest, ...sections] = await Promise.all([latest, ...p.sections.map(s => s.id)].map(load));
+  return {
+    provider: p.id,
+    live: liveOf(front, newest).map(story),
+    sections: Object.fromEntries(p.sections.map((s, i) => [s.id, (sections[i]?.items ?? []).slice(0, perSection).map(story)])),
+  };
+}
+
+// The running live stories, newest first: those on the front page, and those
+// the outlet's front-page feed leaves out (NYT's live blogs) from its newest.
+function liveOf(front, newest) {
+  return newestOf([front, newest].map(s => s && { items: s.items.filter(isLive) }));
 }
 
 function newestOf(payloads) {

@@ -191,6 +191,14 @@ new EventSource('/api/settings/events').addEventListener('settings', e => apply(
   of what was loaded).
 - `preset` does not change the payload: the wallpaper page reads it.
 
+`getHeadlines({ provider, perSection = 3 })` gives what Customize's Sources
+pane lists, from the same reader: `{ provider, live, sections }`, with `live`
+the running live stories in the order `liveFirst` leads `top` with them, and
+`sections` each of the provider's sections' first `perSection` stories, by
+section id (`{ us: [Story] }`). It throws when the news has not got the
+provider's front page. `options()` in public/settings.js passes it on as
+`headlines`.
+
 ```js
 // Story
 {

@@ -130,16 +130,4 @@ extension Customization {
   func binding<Value>(_ settings: WallpaperSettings, _ key: WritableKeyPath<WallpaperSettings, Value>) -> Binding<Value> {
     Binding(get: { settings[keyPath: key] }, set: { value in self.change { $0[keyPath: key] = value } })
   }
-
-  // Adds an id at the end of a list, or takes it out.
-  func toggle(_ key: WritableKeyPath<WallpaperSettings, [String]>, _ id: String, on: Bool) {
-    change {
-      $0[keyPath: key].removeAll { $0 == id }
-      if on { $0[keyPath: key].append(id) }
-    }
-  }
-
-  func move(_ key: WritableKeyPath<WallpaperSettings, [String]>, _ index: Int, by offset: Int) {
-    change { $0[keyPath: key].swapAt(index, index + offset) }
-  }
 }

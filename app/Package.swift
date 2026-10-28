@@ -7,6 +7,7 @@
 //   NewsStore        the news fetched last, news.json (M1)
 //   NewsFeed         fetches the news and stores it, the store's one writer (M2)
 //   WallpaperRender  draws the stored news for a RenderRequest and returns a PNG; FileOutput (M3)
+//   CustomizeUI      Customize's views that need nothing of the app (the Sources pane), so wallpaper-dev can draw them
 //   WallpaperHeadlines    the app: menu bar, Updater, DesktopOutput, Customize (M4, M5)
 //   wallpaper-dev    the command line for agents
 
@@ -24,9 +25,11 @@ let package = Package(
     .target(name: "NewsStore", dependencies: ["WallpaperCore"], path: "Sources/NewsStore"),
     .target(name: "NewsFeed", dependencies: ["WallpaperCore", "NewsStore"], path: "Sources/NewsFeed"),
     .target(name: "WallpaperRender", dependencies: ["WallpaperCore", "NewsStore"], path: "Sources/WallpaperRender"),
+    .target(name: "CustomizeUI", dependencies: ["WallpaperCore", "NewsStore"], path: "Sources/CustomizeUI"),
     .executableTarget(
-      name: "WallpaperHeadlines", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender"], path: "Sources/WallpaperHeadlines"),
+      name: "WallpaperHeadlines", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender", "CustomizeUI"],
+      path: "Sources/WallpaperHeadlines"),
     .executableTarget(
-      name: "wallpaper-dev", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender"], path: "Sources/wallpaper-dev"),
+      name: "wallpaper-dev", dependencies: ["WallpaperCore", "NewsStore", "NewsFeed", "WallpaperRender", "CustomizeUI"], path: "Sources/wallpaper-dev"),
   ]
 )

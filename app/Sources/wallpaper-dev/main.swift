@@ -56,8 +56,16 @@ let usage = """
 
   options
       Prints what there is to pick from: presets, providers (VRT NWS, The New
-      York Times, The Washington Post, Fox News) and their sections, and
-      maxMargin and maxDensity. Nothing is fetched.
+      York Times, The Washington Post, Fox News) and their sections,
+      maxMargin, maxDensity, and headlines: from the stored news, for the
+      provider in the settings, the running live stories in the order
+      liveFirst leads with them and each section's first few stories (null
+      when the stored news is another provider's). Nothing is fetched.
+
+  pane sources --out <file.png> [--size 560x2400] [--appearance light|dark]
+      Draws Customize's Sources pane with the settings and stored news, as
+      the app shows it, and writes the PNG. Prints {path, width, height,
+      provider, fetchedAt}. Nothing is fetched, saved or shown on screen.
 
   Every command takes --data <folder> (default: .dev/ in this worktree), where
   settings.json and news.json are.
@@ -100,6 +108,7 @@ func run(_ arguments: Arguments) async throws -> [String: Any] {
   case "render": return try await render(arguments, environment)
   case "settings": return try await settings(arguments, environment)
   case "options": return try object(await SettingsService(environment).options(news: try? environment.news.read().data))
+  case "pane": return try await pane(arguments, environment)
   case "help", nil: return ["usage": usage]
   case let command?: throw Failure("Unknown command: \(command). Try help.")
   }

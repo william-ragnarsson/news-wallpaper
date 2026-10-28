@@ -5,7 +5,7 @@
 // (settings.mjs). Nothing here reads or writes a file: the callers keep
 // settings.json.
 
-import { HttpError, PROVIDERS, getProvider } from '../sources/index.mjs';
+import { HttpError, PROVIDERS, getHeadlines, getProvider } from '../sources/index.mjs';
 import { PRESETS } from './presets/index.js';
 
 export const MAX_MARGIN = 320;
@@ -88,13 +88,16 @@ function providerDefaults(provider) {
   return { provider, sections: getProvider(provider).defaultSections };
 }
 
-// What there is to pick from. Async, as the callers await it: picks that
-// depend on the news (the liveblogs once) would come from the stored news.
-export async function options() {
+// What there is to pick from. Async, as the callers await it: `headlines`
+// comes from the stored news the callers point the sources at
+// (SettingsService.swift), and is null when that is not the provider's in
+// `saved`.
+export async function options(saved) {
   return {
     presets: PRESETS,
     providers: PROVIDERS,
     maxMargin: MAX_MARGIN,
     maxDensity: MAX_DENSITY,
+    headlines: await getHeadlines({ provider: normalize(saved).provider }).catch(() => null),
   };
 }
