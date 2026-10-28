@@ -1,6 +1,6 @@
-// Headlines: VRT NWS's front page set as ranked headlines, type only.
+// Headlines: the provider's front page set as ranked headlines, type only.
 //
-//   date ············ NAMEPLATE ············ Bijgewerkt 21u44 · Bron
+//   date ············ nameplate ············ Bijgewerkt 21u44 · Bron
 //   ───────────────────────────────────────────────────────────────── fine rule
 //   kicker
 //   The lead, very large, over 2-3 columns         its summary
@@ -15,7 +15,6 @@
 // Type scales with the screen's short side, so a wider screen simply holds
 // more columns. layout() hides whole stories that do not fit, never half a line.
 
-const NAMEPLATE = 'Het Nieuws';
 const INDEX_ROWS = 4; // most rows the index renders before layout() trims it
 
 export default {
@@ -38,14 +37,14 @@ export default {
 
     root.append(h('div', {
       class: 'hl-page',
-      lang: 'nl',
+      lang: ctx.lang,
       '--cols': String(cols),
       '--index-cols': String(indexCols),
       '--lead-span': String(leadSpan),
       '--summary-col': cols <= 2 ? '1 / -1' : `${leadSpan + 1} / span 1`,
     },
       masthead(data, ctx),
-      lead ? leadStory(lead, ctx) : h('p', { class: 'hl-empty' }, 'Geen nieuws beschikbaar.'),
+      lead ? leadStory(lead, ctx) : h('p', { class: 'hl-empty' }, ctx.t.noNews),
       second.length ? h('section', { class: 'hl-second' }, second.map(s => story(s, ctx, true))) : null,
       h('section', { class: 'hl-index' }, index.map(s => story(s, ctx, false))),
       live.length ? liveLine(live, ctx) : null,
@@ -88,10 +87,10 @@ function masthead(data, ctx) {
   const updated = Date.parse(data.generatedAt);
   return h('header', { class: 'hl-masthead' },
     h('p', { class: 'hl-date' }, ctx.date(ctx.now, 'long')),
-    h('h1', { class: 'hl-nameplate' }, NAMEPLATE),
+    h('h1', { class: 'hl-nameplate' }, ctx.t.nameplate),
     h('p', { class: 'hl-credit' },
-      Number.isFinite(updated) ? h('span', null, 'Bijgewerkt ', h('span', { class: 'hl-time' }, ctx.time(updated))) : null,
-      h('span', null, 'Bron: VRT NWS'),
+      Number.isFinite(updated) ? h('span', null, `${ctx.t.updated} `, h('span', { class: 'hl-time' }, ctx.time(updated))) : null,
+      h('span', null, `${ctx.t.source}: ${data.source?.name ?? 'VRT NWS'}`),
     ),
   );
 }
@@ -120,9 +119,9 @@ function story(s, ctx, withSummary) {
 function kicker(s, ctx) {
   const { h } = ctx;
   return h('p', { class: 'hl-kicker' },
-    s.kind === 'liveblog' && s.live ? h('span', { class: 'hl-live' }, 'Live') : null,
-    s.kind === 'video' ? h('span', { class: 'hl-video' }, h('i', { class: 'hl-play' }), 'Video') : null,
-    ctx.fresh.has(s.id) ? h('span', { class: 'hl-new' }, 'Nieuw') : null,
+    s.kind === 'liveblog' && s.live ? h('span', { class: 'hl-live' }, ctx.t.live) : null,
+    s.kind === 'video' ? h('span', { class: 'hl-video' }, h('i', { class: 'hl-play' }), ctx.t.video) : null,
+    ctx.fresh.has(s.id) ? h('span', { class: 'hl-new' }, ctx.t.new) : null,
     s.section ? h('span', { class: 'hl-section' }, s.section) : null,
     s.time ? h('span', { class: 'hl-time' }, stamp(s.time, ctx)) : null,
   );
@@ -136,7 +135,7 @@ function headline(h, tag, cls, text) {
 function liveLine(stories, ctx) {
   const { h } = ctx;
   return h('footer', { class: 'hl-foot' },
-    h('span', { class: 'hl-live' }, 'Live'),
+    h('span', { class: 'hl-live' }, ctx.t.live),
     h('p', { class: 'hl-foot-items' },
       stories.map(s => h('span', { class: 'hl-foot-item', dataset: { key: storyKey(s) } },
         s.section ? h('b', null, s.section) : null,
@@ -200,7 +199,7 @@ function stamp(ts, ctx) {
   const day = new Date(ctx.now);
   if (d.toDateString() === day.toDateString()) return ctx.time(ts);
   day.setDate(day.getDate() - 1);
-  if (d.toDateString() === day.toDateString()) return `gisteren ${ctx.time(ts)}`;
+  if (d.toDateString() === day.toDateString()) return `${ctx.t.yesterday} ${ctx.time(ts)}`;
   return ctx.date(ts, 'short');
 }
 

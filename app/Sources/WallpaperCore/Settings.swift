@@ -24,7 +24,8 @@ public struct Options: Codable, Sendable {
     public let margin: Bool?
   }
 
-  // A news outlet the front page can come from, with its section feeds.
+  // A news outlet the front page can come from, with its section feeds, and
+  // whether it has liveblogs to follow (VRT NWS only).
   public struct Provider: Codable, Identifiable, Sendable {
     public let id: String
     public let name: String
@@ -33,6 +34,7 @@ public struct Options: Codable, Sendable {
     public let homepage: URL
     public let description: String?
     public let sections: [Section]
+    public let liveblogs: Bool?
   }
 
   public struct Section: Codable, Identifiable, Sendable {

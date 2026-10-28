@@ -71,14 +71,23 @@ final class Updater {
   }
 
   // After a saved change, which only needs a redraw: a slider sends a few in a
-  // row, so wait for a pause. A liveblog picked that is not stored (one whose
-  // own fetch failed, or one put in settings.json by hand) is fetched first.
+  // row, so wait for a pause. Another provider than the stored news's, or a
+  // liveblog picked that is not stored (one whose own fetch failed, or one put
+  // in settings.json by hand), is fetched first.
   func refreshSoon() {
     soon?.cancel()
     soon = Task {
       try? await Task.sleep(for: .seconds(1))
-      if !Task.isCancelled { refresh(fetching: missingLiveblog()) }
+      if !Task.isCancelled { refresh(fetching: otherProvider() || missingLiveblog()) }
     }
+  }
+
+  // Whether the settings name another provider than the stored news's: the
+  // store has only the one fetched. Settings that name none are VRT NWS's.
+  private func otherProvider() -> Bool {
+    let settings = try? JSONSerialization.jsonObject(with: Environment.app.settings.load()) as? [String: Any]
+    guard let stored = try? Environment.app.news.meta().provider else { return true }
+    return (settings?["provider"] as? String ?? "vrt-nws") != stored
   }
 
   // Whether a liveblog picked in the settings is not in the stored news.

@@ -5,7 +5,7 @@
 // (settings.mjs). Nothing here reads or writes a file: the callers keep
 // settings.json.
 
-import { DEFAULT_SECTIONS, HttpError, PROVIDERS, SECTIONS, liveblogOptions } from '../sources/index.mjs';
+import { HttpError, PROVIDERS, getProvider, liveblogOptions } from '../sources/index.mjs';
 import { PRESETS } from './presets/index.js';
 
 export const MAX_LIVEBLOGS = 3;
@@ -14,28 +14,32 @@ export const MAX_MARGIN = 320;
 export const DEFAULTS = Object.freeze({
   // The design on the desktop.
   preset: PRESETS[0].id,
-  // The news provider the front page comes from.
+  // The news provider the front page comes from, the one the app fetches.
   provider: PROVIDERS[0].id,
   // Liveblog ids that lead the front page, in order: the first is the lead story.
   liveblogs: [],
   // Whether the other running liveblogs still show (newsprint's "Nu live" box).
   otherLiveblogs: true,
-  // Section streams below the front page, in order.
-  sections: DEFAULT_SECTIONS,
+  // Section streams below the front page, in order; the provider's own pick
+  // when it changes.
+  sections: PROVIDERS[0].defaultSections,
   // Points of blank paper kept at the right edge for the files and folders on
   // the desktop (designs that center the page keep as much on the left).
   margin: 104,
   updatedAt: null,
 });
 
-// Each field: is a value valid?
+// Each field: is a value valid in settings `s`? Some depend on the provider,
+// which comes first: its sections, and its liveblogs (VRT NWS's only) for
+// the liveblogs and the designs that show one.
 export const FIELDS = {
-  preset: v => PRESETS.some(p => p.id === v),
   provider: v => PROVIDERS.some(p => p.id === v),
-  liveblogs: v => Array.isArray(v) && v.length <= MAX_LIVEBLOGS
+  preset: (v, s) => PRESETS.some(p => p.id === v && (p.data === 'front' || getProvider(s.provider).liveblogs)),
+  liveblogs: (v, s) => Array.isArray(v) && v.length <= (getProvider(s.provider).liveblogs ? MAX_LIVEBLOGS : 0)
     && v.every(id => typeof id === 'string' && /^\d+$/.test(id)) && new Set(v).size === v.length,
   otherLiveblogs: v => typeof v === 'boolean',
-  sections: v => Array.isArray(v) && v.every(id => SECTIONS.some(s => s.id === id)) && new Set(v).size === v.length,
+  sections: (v, s) => Array.isArray(v) && v.every(id => getProvider(s.provider).sections.some(x => x.id === id))
+    && new Set(v).size === v.length,
   margin: v => Number.isInteger(v) && v >= 0 && v <= MAX_MARGIN,
 };
 
@@ -45,32 +49,46 @@ export const FIELDS = {
 export function normalize(saved) {
   const settings = { ...DEFAULTS, updatedAt: typeof saved?.updatedAt === 'string' ? saved.updatedAt : null };
   for (const [key, valid] of Object.entries(FIELDS)) {
-    if (saved?.[key] !== undefined && valid(saved[key])) settings[key] = saved[key];
+    if (saved?.[key] !== undefined && valid(saved[key], settings)) settings[key] = saved[key];
+    else if (key === 'provider') Object.assign(settings, providerDefaults(settings.provider));
   }
   return settings;
 }
 
 // `patch` over `current`, stamped `now` (an ISO date). Throws for the whole
-// patch if any field in it is unknown or invalid.
+// patch if any field in it is unknown or invalid. Another provider brings its
+// own sections and no liveblogs, and a front-page design if the one in use
+// shows a liveblog it has not got, unless the patch says otherwise.
 export function apply(current, patch, now) {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new HttpError(400, 'Expected a JSON object');
+  const before = normalize(current);
+  const next = { ...before };
+  if (patch.provider !== undefined && patch.provider !== before.provider && FIELDS.provider(patch.provider)) {
+    Object.assign(next, providerDefaults(patch.provider));
+    if (!FIELDS.preset(next.preset, next)) next.preset = DEFAULTS.preset;
+  }
+  Object.assign(next, patch);
   for (const [key, value] of Object.entries(patch)) {
     if (!Object.hasOwn(FIELDS, key)) throw new HttpError(400, `Unknown setting: ${key}`);
-    if (!FIELDS[key](value)) throw new HttpError(400, `Invalid value for ${key}`);
+    if (!FIELDS[key](value, next)) throw new HttpError(400, `Invalid value for ${key}`);
   }
-  return { ...normalize(current), ...patch, updatedAt: now };
+  return { ...next, updatedAt: now };
 }
 
-// What there is to pick from. The liveblogs are the running ones, plus those
-// in `settings` that ended, so a picked one stays listed. They come from the
-// sources' reader: the stored news in the app (host.js useStoredNews), the
-// network by default.
+function providerDefaults(provider) {
+  return { provider, sections: getProvider(provider).defaultSections, liveblogs: [] };
+}
+
+// What there is to pick from. The liveblogs are the provider's running ones,
+// plus those in `settings` that ended, so a picked one stays listed. They come
+// from the sources' reader: the stored news in the app (host.js
+// useStoredNews), the network by default.
 export async function options(settings) {
+  const s = normalize(settings);
   return {
     presets: PRESETS,
     providers: PROVIDERS,
-    sections: SECTIONS,
-    liveblogs: await liveblogOptions(normalize(settings).liveblogs),
+    liveblogs: await liveblogOptions(s.liveblogs, s.provider),
     maxLiveblogs: MAX_LIVEBLOGS,
     maxMargin: MAX_MARGIN,
   };

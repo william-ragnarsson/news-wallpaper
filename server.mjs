@@ -27,9 +27,9 @@ const STATIC = [
   ['/sources/', fileURLToPath(new URL('./sources/', import.meta.url))],
   ['/', fileURLToPath(new URL('./public/', import.meta.url))],
 ];
-// What /net may reach: https on VRT's domains, which is all the sources read.
-// Bridge.swift allows the same in the app.
-const NET_HOSTS = /(^|\.)vrt\.be$/;
+// What /net may reach: https on the outlets' domains, which is all the sources
+// read. Bridge.swift allows the same in the app.
+const NET_HOSTS = /(^|\.)(vrt\.be|nytimes\.com|washingtonpost\.com|foxnews\.com)$/;
 const NET_TIMEOUT_MS = 15_000;
 // The news wallpaper-dev fetched last in this worktree (app/Sources/NewsStore).
 const NEWS_FILE = fileURLToPath(new URL('./.dev/news.json', import.meta.url));

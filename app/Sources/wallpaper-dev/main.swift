@@ -16,19 +16,20 @@ let usage = """
   wallpaper-dev <command> [options]
 
   fetch
-      Fetches all the news there is to pick from (every section, the running
-      liveblogs and the ones in the settings) and stores it in news.json,
+      Fetches all the news there is to pick from, from the provider in the
+      settings only (every section, and for VRT NWS the running liveblogs and
+      the ones in the settings), and stores it in news.json,
       keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
       counts}, with counts.items the items in each stream. What fails is kept from the fetch before and listed in errors;
-      when VRT's feed fails (or its front page, with none from before),
-      nothing is stored.
+      when the provider's front page fails, with none from before, nothing
+      is stored.
 
   news [path]
       Prints the stored news: {fetchedAt, ok, errors, streams, front,
       liveblogs}, or {path, value} for one part of it. A path is jq's, keys and
       indexes only, with | length or | keys at the end:
-      .streams.voorpagina.items[0].title  '.streams["liveblog-123"].header'
-      '.streams.voorpagina.items | length'  '.streams | keys'
+      '.streams | keys'  '.streams.voorpagina.items[0].title'
+      '.streams["liveblog-123"].header'  '.streams.home.items | length'
 
   render --out <file.png> [--size 1512x982] [--scale 2] [--preset <id>] [--follow <liveblog id>]
          [--settings '{"margin": 80}'] [--page <url>]
@@ -45,11 +46,13 @@ let usage = """
 
   settings set <key>=<value>…
       Saves the changes and prints the settings. A value is JSON, or else a
-      string: preset=evening margin=80 otherLiveblogs=false sections='["sport"]'.
+      string: preset=evening margin=80 provider=nyt sections='["sport"]'.
+      Another provider brings its own sections and no liveblogs.
       An unknown key or invalid value saves nothing and fails.
 
   options
-      Prints what there is to pick from: presets, providers and their sections,
+      Prints what there is to pick from: presets, providers (VRT NWS, The New
+      York Times, The Washington Post, Fox News) and their sections,
       the liveblogs in the stored news and the picked ones (fetch first; before,
       only the picked ones, by id), maxLiveblogs, maxMargin. Nothing is fetched.
 

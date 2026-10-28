@@ -1,4 +1,4 @@
-// Newsprint: VRT NWS's front page set as a classic broadsheet on warm newsprint.
+// Newsprint: the provider's front page set as a classic broadsheet on warm newsprint.
 //
 // Page anatomy (top to bottom):
 //   masthead  left ear (the date), the nameplate, right ear (update time and
@@ -15,7 +15,6 @@
 // summary the lines its column has room for. Headlines are never cut short,
 // and a summary gets two lines or none (a secondary's at most four).
 
-const NAMEPLATE = 'Het Nieuws';
 
 export default {
   id: 'newsprint',
@@ -28,11 +27,15 @@ export default {
     // top[] starts with the liveblogs picked on Customize, then VRT's own order.
     const [lead, ...rest] = data.top ?? [];
     const seconds = rest.slice(0, geo.seconds);
+    // A story without a photo (The Washington Post's feeds have none) leaves
+    // its photo's columns to the next top stories, set as text.
+    let spare = rest.slice(geo.seconds);
+    const next = n => spare.splice(0, n);
     // "Nu live" lists the running liveblogs that are not on the page already.
     const onFront = new Set([lead, ...seconds].filter(Boolean).map(storyKey));
     const live = (data.live ?? []).filter(s => !onFront.has(storyKey(s)));
 
-    root.setAttribute('lang', 'nl');
+    root.setAttribute('lang', ctx.lang);
     root.append(h('div', {
       class: 'np-page',
       '--cols': geo.cols, '--lead': geo.lead, '--photo': geo.photo, '--side': geo.side,
@@ -40,8 +43,10 @@ export default {
     },
       masthead(data, ctx),
       h('main', { class: 'np-body' },
-        lead && leadStory(lead, live, geo, ctx),
-        seconds.map(s => h('div', { class: 'np-second', 'data-fit': '' }, story(s, ctx, geo.colW)))),
+        lead && leadStory(lead, live, geo, ctx, next),
+        seconds.map(s => h('div', { class: 'np-second', 'data-fit': '' },
+          story(s, ctx, geo.colW),
+          !s.image?.url && next(2).map(x => story(x, ctx))))),
       sectionIndex(data, geo, ctx)));
   },
 
@@ -53,7 +58,7 @@ export default {
     const lead = root.querySelector('.np-lead > .np-hed');
     if (lead) sizeToFit(lead, 3, 0.7, 1.15);
     // Secondaries side by side share one size: the smallest any of them needs.
-    const seconds = [...root.querySelectorAll('.np-second .np-hed')];
+    const seconds = [...root.querySelectorAll('.np-second > .np-story:first-child > .np-hed')];
     seconds.forEach(el => sizeToFit(el, 4, 0.75, 1));
     const size = Math.min(...seconds.map(el => parseFloat(el.style.fontSize)));
     seconds.forEach(el => { el.style.fontSize = `${size}px`; });
@@ -93,24 +98,28 @@ function geometry({ width, height }, safe) {
 
 function masthead(data, ctx) {
   const { h } = ctx;
+  // "dinsdag 27 oktober 2026", "Tuesday, October 27, 2026"
   const [weekday, ...day] = ctx.date(ctx.now, 'long').split(' ');
   const updated = Date.parse(data.generatedAt);
   return h('header', { class: 'np-masthead' },
     h('div', { class: 'np-ear' },
-      h('b', null, weekday),
+      h('b', null, weekday.replace(/,$/, '')),
       h('span', null, day.join(' '))),
-    h('h1', { class: 'np-nameplate' }, NAMEPLATE),
+    h('h1', { class: 'np-nameplate' }, ctx.t.nameplate),
     h('div', { class: 'np-ear np-ear-right' },
-      h('b', null, Number.isNaN(updated) ? 'Laatste nieuws'
-        : ['Bijgewerkt ', h('span', { class: 'np-time' }, ctx.time(updated))]),
-      h('span', null, 'Bron: VRT NWS')),
+      h('b', null, Number.isNaN(updated) ? ctx.t.latest
+        : [`${ctx.t.updated} `, h('span', { class: 'np-time' }, ctx.time(updated))]),
+      h('span', null, `${ctx.t.source}: ${data.source?.name ?? 'VRT NWS'}`)),
     h('div', { class: 'np-rule' }));
 }
 
 // --- stories ----------------------------------------------------------------
 
-function leadStory(s, live, geo, ctx) {
+function leadStory(s, live, geo, ctx, next) {
   const { h } = ctx;
+  const art = s.image?.url
+    ? photo(s.image, geo.photo * (geo.colW + geo.gap), ctx)
+    : Array.from({ length: geo.photo }, () => h('div', { class: 'np-col', 'data-fit': '' }, next(3).map(x => story(x, ctx))));
   return h('article', { class: 'np-lead' },
     kicker(s, ctx),
     h('h2', { class: 'np-hed' }, s.title),
@@ -118,7 +127,7 @@ function leadStory(s, live, geo, ctx) {
       h('div', { class: 'np-side', 'data-fit': '' },
         s.summary && h('p', { class: 'np-standfirst np-fill' }, s.summary),
         live.length > 0 && livePanel(live, ctx)),
-      photo(s.image, geo.photo * (geo.colW + geo.gap), ctx)));
+      art));
 }
 
 function story(s, ctx, photoWidth = 0) {
@@ -140,22 +149,22 @@ function photo(image, cssWidth, ctx) {
 function kicker(s, ctx, label = s.section) {
   const { h } = ctx;
   return h('p', { class: 'np-kicker' },
-    s.kind === 'liveblog' && s.live && h('span', { class: 'np-tag-live' }, 'Live'),
-    s.kind === 'video' && h('span', { class: 'np-tag-video', title: 'Video' }),
+    s.kind === 'liveblog' && s.live && h('span', { class: 'np-tag-live' }, ctx.t.live),
+    s.kind === 'video' && h('span', { class: 'np-tag-video', title: ctx.t.video }),
     label && h('span', null, label),
-    ctx.fresh?.has(s.id) && h('span', { class: 'np-tag-new' }, 'Nieuw'),
+    ctx.fresh?.has(s.id) && h('span', { class: 'np-tag-new' }, ctx.t.new),
     ' ');
 }
 
 function livePanel(live, ctx) {
   const { h } = ctx;
   return h('section', { class: 'np-live' },
-    h('h4', { class: 'np-live-head' }, 'Nu live'),
+    h('h4', { class: 'np-live-head' }, ctx.t.liveNow),
     h('ul', null, live.map(s => h('li', { class: 'np-drop' },
       h('p', { class: 'np-live-title' }, s.title),
       h('p', { class: 'np-live-meta' },
-        h('span', { class: 'np-tag-live' }, 'Live'),
-        s.postCount ? ` · ${s.postCount} berichten` : '')))));
+        h('span', { class: 'np-tag-live' }, ctx.t.live),
+        s.postCount ? ` · ${s.postCount} ${ctx.t.posts}` : '')))));
 }
 
 // --- section index ----------------------------------------------------------
@@ -181,8 +190,8 @@ function sectionIndex(data, geo, ctx) {
   }
   if (entries.length < geo.cols) {
     entries.push(h('div', { class: 'np-entry np-colophon' },
-      h('p', { class: 'np-colophon-name' }, NAMEPLATE),
-      h('p', null, 'Een bureaubladkrant met het nieuws van VRT NWS')));
+      h('p', { class: 'np-colophon-name' }, ctx.t.nameplate),
+      h('p', null, ctx.t.colophon(data.source?.name ?? 'VRT NWS'))));
   }
   return h('footer', { class: 'np-index' }, entries);
 }

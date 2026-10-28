@@ -1,4 +1,4 @@
-// Evening Edition: VRT NWS's front page set as a newspaper in dark ink.
+// Evening Edition: the provider's front page set as a newspaper in dark ink.
 //
 //   date ·············· HET NIEUWS ·············· bijgewerkt · bron
 //   ══════════════════════════════════════════════════════════════════
@@ -15,7 +15,6 @@
 // briefs. Column counts come from the screen (see columns()); type scales
 // with cqmin in preset.css. layout() only drops what does not fit.
 
-const NAMEPLATE = 'Het Nieuws';
 const SIDE_ROWS = 3;
 
 export default {
@@ -86,10 +85,10 @@ function masthead(data, ctx) {
   const updated = Date.parse(data.generatedAt);
   return h('header', { class: 'ev-mast' },
     h('p', { class: 'ev-ear' }, ctx.date(ctx.now, 'long')),
-    h('h1', { class: 'ev-nameplate' }, NAMEPLATE),
+    h('h1', { class: 'ev-nameplate' }, ctx.t.nameplate),
     h('p', { class: 'ev-ear is-right' },
-      Number.isFinite(updated) ? h('span', null, 'Bijgewerkt ', h('span', { class: 'ev-time' }, ctx.time(updated))) : null,
-      h('span', null, 'Bron: VRT NWS'),
+      Number.isFinite(updated) ? h('span', null, `${ctx.t.updated} `, h('span', { class: 'ev-time' }, ctx.time(updated))) : null,
+      h('span', null, `${ctx.t.source}: ${data.source?.name ?? 'VRT NWS'}`),
     ),
   );
 }
@@ -138,7 +137,7 @@ function brief(story, ctx) {
 function liveLine(stories, ctx) {
   const { h } = ctx;
   return h('footer', { class: 'ev-live' },
-    h('span', { class: 'ev-tag is-live' }, 'Live'),
+    h('span', { class: 'ev-tag is-live' }, ctx.t.live),
     stories.map(s => h('p', { class: 'ev-live-item' },
       s.section ? h('span', { class: 'ev-section' }, s.section) : null,
       smart(s.title),
@@ -160,8 +159,8 @@ function kicker(story, ctx, { time = true } = {}) {
   const { h } = ctx;
   const isLive = story.kind === 'liveblog' && story.live;
   return h('p', { class: 'ev-kicker' },
-    isLive ? h('span', { class: 'ev-tag is-live' }, 'Live') : null,
-    ctx.fresh.has(story.id) ? h('span', { class: 'ev-tag is-new' }, 'Nieuw') : null,
+    isLive ? h('span', { class: 'ev-tag is-live' }, ctx.t.live) : null,
+    ctx.fresh.has(story.id) ? h('span', { class: 'ev-tag is-new' }, ctx.t.new) : null,
     story.kind === 'video' ? h('span', { class: 'ev-tag is-video' }, `▶ ${duration(story.durationSec)}`) : null,
     story.section ? h('span', { class: 'ev-section' }, story.section) : null,
     time && story.time && !isLive ? h('span', { class: 'ev-time' }, stamp(story.time, ctx)) : null,

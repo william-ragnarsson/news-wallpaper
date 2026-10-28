@@ -1,40 +1,47 @@
-// The fetch (M2) in the page: everything there is to pick from, loaded live
-// once, as the one document the app stores (app/Sources/NewsStore):
-//   {fetchedAt, ok, errors: [{id, message}], streams: {id: stream}, front, liveblogs: {id: liveblog}}
-// streams    what catalog.loadStream gives: voorpagina, all, live, every
-//            section and a liveblog-<id> per liveblog below
-// front      what getFront gives: VRT's feed
+// The fetch (M2) in the page: everything there is to pick from at one
+// provider, loaded live once, as the one document the app stores
+// (app/Sources/NewsStore):
+//   {fetchedAt, provider, ok, errors: [{id, message}], streams: {id: stream}, front, liveblogs: {id: liveblog}}
+// provider   the provider fetched (the settings'); only its news is in here
+// streams    what catalog.loadStream gives: its front page (VRT: voorpagina,
+//            all, live), every section and a liveblog-<id> per liveblog below
+// front      what getFront gives: VRT's feed; null for another provider
 // liveblogs  what getLiveblog gives, for the liveblogs in the feed and the
-//            ones picked in the settings
-// So any change in Customize can be drawn from it without fetching again
-// (sources/lib/reader.mjs reads it back). The app's Fetcher runs this in its
-// script host, after host.js has set the network.
+//            ones picked in the settings; none for another provider
+// So any change in Customize but the provider can be drawn from it without
+// fetching again (sources/lib/reader.mjs reads it back). The app's Fetcher
+// runs this in its script host, after host.js has set the network.
 
-import { PROVIDERS, SECTIONS, getFront, getLiveblog, loadStream } from '../sources/index.mjs';
+import { frontOf, getFront, getLiveblog, getProvider, loadStream } from '../sources/index.mjs';
 
-// VRT NWS, the one provider so far.
-const OUTLET = PROVIDERS[0].id;
+// The provider of a stored document; one stored before there were others
+// says none, and is VRT NWS's.
+export const providerOf = doc => doc?.provider ?? 'vrt-nws';
 
-// `liveblogs`: the ids picked in the settings. `previous`: the document stored
-// last; what fails now is kept from it, and listed in errors. Throws, and so
-// stores nothing, when VRT's feed fails, or its front page with none from
-// before.
-export async function harvest({ liveblogs = [], previous = null } = {}) {
+// `provider` and `liveblogs`: the settings'. `previous`: the document stored
+// last; what fails now is kept from it (when it is the same provider's), and
+// listed in errors. Throws, and so stores nothing, when VRT's feed fails, or
+// the provider's front page with none from before.
+export async function harvest({ provider, liveblogs = [], previous = null } = {}) {
+  const p = getProvider(provider);
+  const { top, latest, live } = frontOf(p.id);
+  const kept = providerOf(previous) === p.id ? previous : null;
   const fetchedAt = new Date().toISOString();
   const errors = [];
-  // The feed first: it says which liveblogs are running.
-  const front = await getFront();
-  const entries = new Map(front.liveblogs.map(e => [e.liveblogId, e]));
-  const ids = [...new Set([...entries.keys(), ...liveblogs])];
-  const streamIds = ['voorpagina', 'all', 'live', ...SECTIONS.map(s => s.id), ...ids.map(id => `liveblog-${id}`)];
+  // VRT's feed first: it says which liveblogs are running.
+  const front = p.liveblogs ? await getFront() : null;
+  const entries = new Map((front?.liveblogs ?? []).map(e => [e.liveblogId, e]));
+  const ids = p.liveblogs ? [...new Set([...entries.keys(), ...liveblogs])] : [];
+  const streamIds = [top, latest, live, ...p.sections.map(s => s.id)].filter(Boolean)
+    .concat(ids.map(id => `liveblog-${id}`));
 
   const [streams, blogs] = await Promise.all([
-    settle('streams', streamIds, id => loadStream(OUTLET, id), previous?.streams, errors),
-    settle('liveblogs', ids, id => getLiveblog(id, entries.get(id)), previous?.liveblogs, errors),
+    settle('streams', streamIds, id => loadStream(p.id, id), kept?.streams, errors),
+    settle('liveblogs', ids, id => getLiveblog(id, entries.get(id)), kept?.liveblogs, errors),
   ]);
-  const failed = errors.find(e => e.id === 'streams.voorpagina');
-  if (failed && !streams.voorpagina) throw new Error(`The front page failed: ${failed.message}`);
-  return { fetchedAt, ok: errors.length === 0, errors, streams, front, liveblogs: blogs };
+  const failed = errors.find(e => e.id === `streams.${top}`);
+  if (failed && !streams[top]) throw new Error(`The front page failed: ${failed.message}`);
+  return { fetchedAt, provider: p.id, ok: errors.length === 0, errors, streams, front, liveblogs: blogs };
 }
 
 // {id: what load(id) gave}, or for one that failed what `kept` had, if anything.

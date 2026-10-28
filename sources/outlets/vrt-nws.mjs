@@ -31,6 +31,14 @@ export default {
   homepage: 'https://www.vrt.be/vrtnws/nl/',
   description: 'Public broadcaster newsroom: all news, the front page, a stream per section and province, and liveblogs for running stories.',
   ttlMs: 60_000,
+  // The streams of its front page (sources/frontpage.mjs), and the sections
+  // below it until picked otherwise.
+  frontpage: {
+    top: 'voorpagina',
+    latest: 'all',
+    live: 'live',
+    sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap'],
+  },
 
   streams: [
     { id: 'all', name: 'Alle nieuws', group: 'Top stories', url: FEED, topics: ['general'],

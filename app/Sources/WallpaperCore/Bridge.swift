@@ -141,9 +141,12 @@ final class Net: NSObject, URLSessionTaskDelegate, Sendable {
   // No cookies, no disk cache: the sources cache what they need.
   private let session = URLSession(configuration: .ephemeral)
 
+  // The outlets' domains (sources/outlets), as server.mjs's NET_HOSTS.
+  static let hosts = ["vrt.be", "nytimes.com", "washingtonpost.com", "foxnews.com"]
+
   static func allowed(_ url: URL?) -> Bool {
     guard let url, url.scheme == "https", let host = url.host() else { return false }
-    return host == "vrt.be" || host.hasSuffix(".vrt.be")
+    return hosts.contains { host == $0 || host.hasSuffix("." + $0) }
   }
 
   func get(_ url: URL?, headers: [String: String]) async -> Reply {

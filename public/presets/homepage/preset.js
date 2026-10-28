@@ -1,8 +1,8 @@
-// Homepage: VRT NWS's front page set as the homepage of a quality news site.
+// Homepage: the provider's front page set as the homepage of a quality news site.
 // White page, black serif headlines, sans labels and times, thin grey rules.
 //
 // Page anatomy, on a 12-column grid (15 on an ultrawide):
-//   top bar    wordmark (NAMEPLATE) left, date centre, update time and source
+//   top bar    wordmark (the nameplate) left, date centre, update time and source
 //              right; under it a static row of section labels
 //   lead row   the lead story (kicker, headline, summary) with the next top
 //              stories as related headlines under it, the lead photo beside it;
@@ -17,7 +17,6 @@
 // stories that do not fit their region; it starts from everything visible each
 // time, so it can run again when the web fonts land.
 
-const NAMEPLATE = 'Het Nieuws';
 
 const RELATED = 4; // top stories listed under the lead, as many as fit
 const MORE = 6; // top stories in the ultrawide column
@@ -38,7 +37,7 @@ export default {
     // The lead already fills the page; do not repeat it in "Net binnen".
     const latest = (data.latest ?? []).filter(s => s.id !== top[0]?.id);
 
-    root.setAttribute('lang', 'nl');
+    root.setAttribute('lang', ctx.lang);
     root.append(
       topBar(data, sections, ctx),
       h('main', { class: 'hp-main' },
@@ -46,7 +45,7 @@ export default {
         latestRail(latest, ctx),
         sectionRow([...sections, ...topicGroups(rest)], ctx),
       ),
-      footer(ctx),
+      footer(data, ctx),
     );
   },
 
@@ -62,15 +61,15 @@ function topBar(data, sections, ctx) {
   const updated = Date.parse(data.generatedAt);
   return h('header', { class: 'hp-top' },
     h('div', { class: 'hp-mast' },
-      h('div', { class: 'hp-wordmark' }, NAMEPLATE),
+      h('div', { class: 'hp-wordmark' }, ctx.t.nameplate),
       h('div', { class: 'hp-date' }, capitalise(ctx.date(ctx.now, 'long'))),
       h('div', { class: 'hp-meta' },
-        Number.isFinite(updated) ? `Bijgewerkt ${ctx.time(updated)} · ` : '',
-        `Bron: ${data.source?.name ?? 'VRT NWS'}`,
+        Number.isFinite(updated) ? `${ctx.t.updated} ${ctx.time(updated)} · ` : '',
+        `${ctx.t.source}: ${data.source?.name ?? 'VRT NWS'}`,
       ),
     ),
     h('nav', { class: 'hp-nav' },
-      h('span', { class: 'is-current' }, 'Voorpagina'),
+      h('span', { class: 'is-current' }, ctx.t.frontPage),
       sections.map(s => h('span', null, s.name)),
     ),
   );
@@ -104,7 +103,7 @@ function moreColumn(stories, ctx) {
   const { h } = ctx;
   if (!stories.length) return null;
   return h('div', { class: 'hp-more hp-fit' },
-    h('h3', { class: 'hp-label' }, 'Meer nieuws'),
+    h('h3', { class: 'hp-label' }, ctx.t.moreNews),
     card(stories[0], ctx),
     h('ul', { class: 'hp-list' }, stories.slice(1).map(s => h('li', { class: 'hp-drop' }, headline(s, ctx)))),
   );
@@ -113,7 +112,7 @@ function moreColumn(stories, ctx) {
 function latestRail(latest, ctx) {
   const { h } = ctx;
   return h('aside', { class: 'hp-rail' },
-    h('h3', { class: 'hp-label' }, 'Net binnen'),
+    h('h3', { class: 'hp-label' }, ctx.t.justIn),
     h('ol', { class: 'hp-latest hp-fit' },
       latest.slice(0, LATEST).map(story =>
         h('li', { class: 'hp-drop' },
@@ -137,11 +136,11 @@ function sectionRow(blocks, ctx) {
   );
 }
 
-function footer(ctx) {
+function footer(data, ctx) {
   const { h } = ctx;
   return h('footer', { class: 'hp-foot' },
-    h('span', { class: 'hp-foot-mark' }, NAMEPLATE),
-    h('span', { class: 'hp-foot-note' }, 'Alle berichten: VRT NWS'),
+    h('span', { class: 'hp-foot-mark' }, ctx.t.nameplate),
+    h('span', { class: 'hp-foot-note' }, `${ctx.t.allStories}: ${data.source?.name ?? 'VRT NWS'}`),
   );
 }
 
@@ -174,9 +173,9 @@ function kicker(story, ctx) {
 function marks(story, ctx, play = true) {
   const { h } = ctx;
   return [
-    ctx.fresh.has(story.id) ? h('span', { class: 'hp-mark hp-new' }, 'Nieuw') : null,
-    story.kind === 'liveblog' && story.live ? h('span', { class: 'hp-mark hp-live' }, 'Live') : null,
-    play && story.kind === 'video' ? h('span', { class: 'hp-mark hp-play', 'aria-label': 'Video' }) : null,
+    ctx.fresh.has(story.id) ? h('span', { class: 'hp-mark hp-new' }, ctx.t.new) : null,
+    story.kind === 'liveblog' && story.live ? h('span', { class: 'hp-mark hp-live' }, ctx.t.live) : null,
+    play && story.kind === 'video' ? h('span', { class: 'hp-mark hp-play', 'aria-label': ctx.t.video }) : null,
   ].filter(Boolean);
 }
 
@@ -186,7 +185,7 @@ function marks(story, ctx, play = true) {
 function topicGroups(stories) {
   const groups = new Map();
   for (const s of stories) {
-    const name = s.section || 'Meer nieuws';
+    const name = s.section || ctx.t.moreNews;
     if (!groups.has(name)) groups.set(name, { name, stories: [] });
     groups.get(name).stories.push(s);
   }

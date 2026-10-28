@@ -4,7 +4,7 @@ import WallpaperCore
 // M1: the news fetched last (by NewsFeed's Fetcher, its one writer), for
 // everything else to read. One JSON document in the environment's data
 // folder, news.json, as public/harvest.js makes it:
-//   {fetchedAt, ok, errors: [{id, message}], streams: {id: stream}, front, liveblogs: {id: liveblog}}
+//   {fetchedAt, provider, ok, errors: [{id, message}], streams: {id: stream}, front, liveblogs: {id: liveblog}}
 // and the one before it, news.prev.json. A commit writes a temp file and
 // renames it over news.json, so a reader always gets one whole fetch. Only
 // this file knows that layout.
@@ -93,11 +93,14 @@ public struct StoreMeta: Codable, Sendable {
   public struct Counts: Codable, Sendable {
     public let streams: Int
     public let liveblogs: Int
-    // By stream id: "binnenland", "liveblog-123".
+    // By stream id: "binnenland", "liveblog-123", "politics".
     public let items: [String: Int]
   }
 
   public let fetchedAt: String
+  // The provider whose news it is: "vrt-nws", "nyt". One stored before there
+  // were others names none, and is VRT NWS's.
+  public let provider: String
   public let ok: Bool
   public let errors: [Failure]
   public let counts: Counts
@@ -108,13 +111,14 @@ public struct StoreMeta: Codable, Sendable {
       throw StoreError.invalid("not a JSON object")
     }
     guard let fetchedAt = object["fetchedAt"] as? String else { throw StoreError.invalid("no fetchedAt") }
-    guard let streams = object["streams"] as? [String: Any], streams["voorpagina"] != nil else {
-      throw StoreError.invalid("no streams.voorpagina")
+    guard let streams = object["streams"] as? [String: Any], !streams.isEmpty else {
+      throw StoreError.invalid("no streams")
     }
     let errors = (object["errors"] as? [[String: Any]] ?? []).map {
       Failure(id: $0["id"] as? String ?? "?", message: $0["message"] as? String ?? "")
     }
     self.fetchedAt = fetchedAt
+    provider = object["provider"] as? String ?? "vrt-nws"
     self.ok = object["ok"] as? Bool ?? errors.isEmpty
     self.errors = errors
     counts = Counts(

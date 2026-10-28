@@ -1,7 +1,9 @@
 # wallpaper-headlines
 
-Live VRT NWS news as a macOS desktop wallpaper. A menu bar app draws a news
-page every few minutes and sets it as the desktop picture. Everything runs on
+Live news as a macOS desktop wallpaper, from one outlet at a time: VRT NWS
+(in Dutch), The New York Times, The Washington Post or Fox News (in English),
+picked in Customize. A menu bar app draws a news page every few minutes and
+sets it as the desktop picture. Everything runs on
 the Mac: there is no server to host. The pages only collect, format and show
 what the feeds provide: titles, sections, counts and times.
 
@@ -48,7 +50,7 @@ tools/check-boundaries.sh  which part may do what (only the app sets the desktop
 ```
 
 The sources are the backend, but they run inside the wallpaper page. The page
-cannot fetch VRT itself (CORS), so it sends its requests to its host
+cannot fetch the outlets itself (CORS), so it sends its requests to its host
 (`/net?url=…`), and the host fetches them. Both hosts answer the same paths, so
 the page runs the same in a browser and in the app. The contract is in
 `sources/README.md` under Hosts.
@@ -57,8 +59,9 @@ In the app, fetching and drawing are apart. Every 5 minutes, on wake and on
 Update news (the menu, Customize), the Fetcher runs the sources (`public/harvest.js`) and stores all the
 news there is to pick from in `news.json`; then the page is drawn from that
 (`?data=store`: it reads `/api/news`, and has no `/net`). A change in Customize
-only draws again, unless it picks a liveblog the store lacks (one whose own
-fetch failed): that is fetched first. The page's one call is `window.wallpaper.refresh()`: it
+only draws again, unless it picks another provider (the store holds only the
+one picked) or a liveblog the store lacks (one whose own fetch failed): that is
+fetched first. The page's one call is `window.wallpaper.refresh()`: it
 renders and resolves to `{ ok, error, fetchedAt }` once fonts and images are
 in. When it is not ok, the app keeps the picture it has.
 

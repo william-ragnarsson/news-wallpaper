@@ -52,11 +52,13 @@ simulated screen (not the browser window).
 | `ctx.screen` | `{ width, height }` logical px of the simulated Mac screen |
 | `ctx.safe` | `{ top, right, bottom, dockWidth }`: px covered by the menu bar (top), the desktop's files and folders (a column at the right edge, as wide as picked on Customize: `settings.margin`, 0 when none) and the Dock (bottom-center). Also CSS vars `--safe-top`, `--safe-right`, `--safe-bottom`, `--dock-width` on the screen. `top` is 0 when the window already starts below the menu bar (Plash with `?chrome=0`). The Dock area comes from `?dock=WxH`; with `?dock=0` (a Dock that hides itself) `bottom` and `dockWidth` are 0 |
 | `ctx.fresh` | `Set` of post ids (story ids for `'front'`) that arrived since the previous refresh (empty on first load) |
-| `ctx.image(img, cssWidth)` | URL of a VRT image resized for `cssWidth` CSS px. Accepts an image object or a URL |
-| `ctx.time(ts)` | Flemish newsroom time: `20u38` |
-| `ctx.clock(ts)` | `20:38` |
-| `ctx.ago(ts)` | `zonet`, `12 min geleden`, `3 uur geleden`, `gisteren 20u38`, `za 17 okt.` |
-| `ctx.date(ts?, style?)` | `'long'`: `zaterdag 24 oktober 2026`; `'short'`: `za 24 okt.`; `'daymonth'`: `24 oktober` |
+| `ctx.image(img, cssWidth)` | URL of the image for `cssWidth` CSS px: a VRT image resized to fit, any other as it is. Accepts an image object or a URL |
+| `ctx.lang` | the page's language as a BCP 47 tag, the provider's: `nl-BE` (VRT NWS) or `en-US` (the US outlets). For the `lang` attribute |
+| `ctx.t` | the page's own words in that language: `nameplate` (`Het Nieuws` / `The News`), `updated`, `source`, `live`, `liveNow`, `posts`, `new`, `video`, `latest`, `justIn`, `moreNews`, `allStories`, `frontPage`, `noNews`, `yesterday`, `colophon(name)`. Never write a word of the page's own in a preset |
+| `ctx.time(ts)` | newsroom time: `20u38` in Dutch, `8:38 PM` in English |
+| `ctx.clock(ts)` | `20:38` / `8:38 PM` |
+| `ctx.ago(ts)` | `zonet`, `12 min geleden`, `3 uur geleden`, `gisteren 20u38`, `za 17 okt.`; in English `just now`, `12 min ago`, `3 hr ago`, `yesterday 8:38 PM`, `Sat, Oct 17` |
+| `ctx.date(ts?, style?)` | `'long'`: `zaterdag 24 oktober 2026` / `Saturday, October 24, 2026`; `'short'`: `za 24 okt.`; `'daymonth'`: `24 oktober` |
 | `ctx.h(tag, props, ...children)` | DOM builder. `props.class`, `props.style` (object), `'--var'` props, `dataset` |
 | `ctx.html(markup)` | `DocumentFragment` from a post's sanitized `html` |
 
@@ -85,7 +87,7 @@ The settings picked on Customize shape it, and a preset keeps their order:
 {
   source: { id: 'vrt-nws', name: 'VRT NWS', language: 'nl', homepage },
   generatedAt: '2026-10-25T21:44:05.451Z',
-  top: Story[],             // the picked liveblogs, then the front page in VRT's order: top[0] is the lead (about 40)
+  top: Story[],             // the picked liveblogs, then the provider's front page: top[0] is the lead (about 40)
   sections: [{              // in the order picked on Customize (default: Binnenland, Buitenland, Politiek,
                             // Economie, Sport, Cultuur, Wetenschap); can be empty
     id: 'binnenland', name: 'Binnenland',
@@ -194,6 +196,10 @@ else the first one picked on Customize, else `auto`.
 - It must work from 1440×900 up to 2560×1440 and a 3440×1440 ultrawide.
 - Calm motion only. A new post can fade in or carry a small marker via
   `ctx.fresh`; nothing loops faster than a slow pulse.
-- Dutch content, Belgian conventions: `20u38`, `zaterdag 24 oktober`.
-- Credit the source (`VRT NWS`) visibly but quietly. Do not copy VRT's logo or
-  brand styling.
+- The provider's language and conventions: Dutch with Belgian ones (`20u38`,
+  `zaterdag 24 oktober`) for VRT NWS, English with US ones (`8:38 PM`,
+  `Saturday, October 24`) for the US outlets. Words and times come from `ctx`.
+- Some providers' stories have no pictures (The Washington Post's never do):
+  a front-page design fills the space with text, never an empty box.
+- Credit the source (`data.source.name`) visibly but quietly. Do not copy an
+  outlet's logo or brand styling.

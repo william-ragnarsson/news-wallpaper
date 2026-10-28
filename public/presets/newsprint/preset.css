@@ -114,15 +114,15 @@
 }
 
 /* Regions that layout() fits: their height comes from the lead, not from them. */
-.preset-newsprint :is(.np-second, .np-side) { contain: size; overflow: hidden; }
+.preset-newsprint :is(.np-second, .np-side, .np-col) { contain: size; overflow: hidden; }
 
-.preset-newsprint :is(.np-lead, .np-side, .np-second > .np-story) {
+.preset-newsprint :is(.np-lead, .np-side, .np-col, .np-second > .np-story) {
   display: flex; flex-direction: column;
 }
 
 /* Kept at their own height, so what does not fit shows up as overflow
    (a clamped block would otherwise shrink and cut its last line in half). */
-.preset-newsprint :is(.np-lead, .np-side, .np-story) > * { flex-shrink: 0; }
+.preset-newsprint :is(.np-lead, .np-side, .np-col, .np-story) > * { flex-shrink: 0; }
 
 /* --- story parts --------------------------------------------------------------- */
 
@@ -260,9 +260,24 @@
 
 /* --- secondary stories --------------------------------------------------------- */
 
-.preset-newsprint .np-second > .np-story { height: 100%; }
+.preset-newsprint .np-second > .np-story:only-child { height: 100%; }
 .preset-newsprint .np-second .np-photo { flex: 1 0 auto; } /* takes the height the text leaves */
 .preset-newsprint .np-second .np-hed { font-size: calc(2.5 * var(--u)); }
+
+/* --- text in place of a photo ---------------------------------------------------- */
+
+/* The lead's photo columns, or the space under a secondary, without a photo:
+   the next stories, a rule between them. */
+.preset-newsprint .np-col { position: relative; }
+.preset-newsprint .np-col::before {
+  content: ''; position: absolute; inset: 0 auto 0 calc(var(--gap) / -2);
+  border-left: 1px solid var(--hair);
+}
+.preset-newsprint :is(.np-col, .np-second) > .np-story + .np-story {
+  margin-top: calc(1.2 * var(--u)); padding-top: calc(1.2 * var(--u));
+  border-top: 1px solid var(--hair);
+}
+.preset-newsprint :is(.np-col, .np-second > .np-story + .np-story) .np-hed { font-size: calc(2 * var(--u)); }
 
 /* --- section index --------------------------------------------------------------- */
 

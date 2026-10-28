@@ -48,13 +48,17 @@ struct AppearancePane: View {
     return PreviewKey(settings: drawn, screen: model.screen, page: model.page, fetchedAt: model.news?.fetchedAt)
   }
 
+  // The designs that follow one liveblog only for a provider that has them.
   private var designPicker: some View {
-    Picker("Design", selection: model.binding(settings, \.preset)) {
+    let liveblogs = options.providers.first { $0.id == settings.provider }?.liveblogs == true
+    return Picker("Design", selection: model.binding(settings, \.preset)) {
       Section("Front page") {
         ForEach(options.presets.filter { $0.data == "front" }) { Text($0.name).tag($0.id) }
       }
-      Section("One liveblog") {
-        ForEach(options.presets.filter { $0.data != "front" }) { Text($0.name).tag($0.id) }
+      if liveblogs {
+        Section("One liveblog") {
+          ForEach(options.presets.filter { $0.data != "front" }) { Text($0.name).tag($0.id) }
+        }
       }
     }
   }

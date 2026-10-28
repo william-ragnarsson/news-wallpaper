@@ -18,7 +18,9 @@ struct SourcesPane: View {
       if let provider {
         feedSections(provider, design)
       }
-      liveblogSections(design)
+      if provider?.liveblogs == true {
+        liveblogSections(design)
+      }
       fetchedSection
     }
     .formStyle(.grouped)
@@ -45,7 +47,7 @@ struct SourcesPane: View {
     } header: {
       Text("Provider")
     } footer: {
-      Text("The providers the app can build a front page from.")
+      Text("The providers the app can build a front page from. It fetches the news of the one picked only.")
     }
   }
 

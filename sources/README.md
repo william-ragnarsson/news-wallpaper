@@ -53,7 +53,7 @@ answer the same paths:
 | --- | --- |
 | `/` | `public/` |
 | `/sources/…` | `sources/`, as ES modules |
-| `GET /net?url=<url>` | a GET to that URL, made by the host. Only https on `vrt.be` and its subdomains, redirects included. The site's status, content type and body come back, plus the URL it ended at in `x-final-url`. When the site did not answer: 504 with the reason in `x-net-error`. The request's `accept` is passed on and `x-user-agent` becomes the user agent. Any other URL is refused with a 4xx |
+| `GET /net?url=<url>` | a GET to that URL, made by the host. Only https on the outlets' domains (`vrt.be`, `nytimes.com`, `washingtonpost.com`, `foxnews.com`) and their subdomains, redirects included. The site's status, content type and body come back, plus the URL it ended at in `x-final-url`. When the site did not answer: 504 with the reason in `x-net-error`. The request's `accept` is passed on and `x-user-agent` becomes the user agent. Any other URL is refused with a 4xx |
 | `GET /api/news` | the news stored last, as `public/harvest.js` makes it (the app's `news.json`; the dev server's `.dev/news.json`, from `wallpaper-dev fetch`). 503 with `{ error }` when there is none |
 | `GET /api/settings` | the `Settings` (see below) |
 
@@ -105,9 +105,11 @@ defaults.
 ```js
 {
   preset: 'newsprint',           // a preset id from public/presets/index.js
-  provider: 'vrt-nws',           // the outlet the front page comes from; only 'vrt-nws' so far
+  provider: 'vrt-nws',           // the outlet the front page comes from, and the only one the app
+                                 // fetches: 'vrt-nws', 'nyt', 'washington-post' or 'fox-news'
   liveblogs: ['1792507723130'],  // VRT liveblog ids (strings of digits) that lead the front page,
-                                 // in order: the first is the lead story; at most 3, no repeats
+                                 // in order: the first is the lead story; at most 3, no repeats;
+                                 // always [] for a provider without liveblogs (all but VRT NWS)
   otherLiveblogs: true,          // false: the front page's `live` is empty
   sections: ['binnenland', …],   // section stream ids below the front page, in order; none to all
   margin: 104,                   // points kept blank at the right edge for the desktop's files and
@@ -118,14 +120,16 @@ defaults.
 
 Defaults: `preset: 'newsprint'`, `provider: 'vrt-nws'`, `liveblogs: []`, `otherLiveblogs: true`,
 `sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`,
-`margin: 104`.
+`margin: 104`. The sections are the provider's own pick (its `frontpage.sections`).
 
 A change (`SettingsService.update`) takes any of the fields but `updatedAt`;
 each one sent replaces the saved value (arrays whole), and the keeper sets
 `updatedAt`. It saves all or nothing: an unknown key or an invalid value is
 turned down. A
 liveblog id matches the stream `liveblog-<id>` of outlet `vrt-nws`; a section id
-is that outlet's stream of the same id.
+is the provider's stream of the same id. Another provider brings its own
+sections and no liveblogs, and Newsprint if the design in use is a liveblog
+design (those show VRT's liveblogs), unless the same change sets them.
 
 ### SettingsOptions
 
@@ -145,6 +149,8 @@ Its liveblogs come from the stored news, never the network.
   providers: [{                  // the outlets a front page can come from (sources/frontpage.mjs)
     id: 'vrt-nws', name: 'VRT NWS', owner: 'VRT', language: 'nl', homepage: 'https://…', description: '…',
     sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // its section streams
+    defaultSections: ['binnenland', …],  // its own pick
+    liveblogs: true,             // whether it has liveblogs to follow (VRT NWS only)
   }],
   sections: [{ id: 'binnenland', name: 'Binnenland', group: 'News' }],  // every section stream, catalog order
   liveblogs: [{                  // every liveblog in the stored news, live first, then picked ones that left it
@@ -180,8 +186,8 @@ new EventSource('/api/settings/events').addEventListener('settings', e => apply(
 
 - `top` starts with the picked liveblogs, in order, as stories with
   `featured: true` (kind `liveblog` with `live`, `postCount`, `startedAt`; the
-  `summary` is the latest post as "title: first paragraph"), then VRT's own
-  front-page order, without the picked ones (matched by liveblog id, since a
+  `summary` is the latest post as "title: first paragraph"), then the
+  provider's own front page (its `frontpage.top` stream), without the picked ones (matched by liveblog id, since a
   liveblog's URL follows its headline). A picked liveblog that fails to load
   is left out.
 - `sections` come in the settings order, each with up to 6 stories not already
@@ -358,6 +364,13 @@ export default {
   retries: 1,                      // optional: extra tries after a timeout or 5xx (default 0)
   userAgent: BROWSER_USER_AGENT,   // optional: for CDNs that refuse the default agent
   headers: { … },                  // optional: extra request headers
+
+  // Optional: the outlet can be a provider, the one the front page comes from.
+  // Stream ids: the front page itself (required), the whole site newest first,
+  // the index of running liveblogs, and the sections picked by default. Any
+  // but `top` may be null; without `latest` the newest of what was loaded
+  // stands in. The page's words and times follow `language` ('nl' or 'en').
+  frontpage: { top: 'home', latest: 'recent', live: null, sections: ['us', 'world', …] },
 
   streams: [{
     id, name, group, topics, description,
