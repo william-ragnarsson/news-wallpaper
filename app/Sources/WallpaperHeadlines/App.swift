@@ -21,6 +21,7 @@ struct WallpaperHeadlinesApp: App {
         .keyboardShortcut(",")
       Button("Update news") { delegate.updater.refresh() }
       Divider()
+      Button("Settings…") { delegate.customize(.settings) }
       Button("Quit") { NSApp.terminate(nil) }
     }
   }
@@ -63,11 +64,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     return false
   }
 
-  // Opens the Customize window, or brings it to the front.
-  func customize() {
+  // Closing Customize leaves the app running in the menu bar.
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    false
+  }
+
+  // Opens the Customize window, or brings it to the front; on `pane` if one
+  // is given, else on the pane it shows.
+  func customize(_ pane: Pane? = nil) {
     let window = self.window ?? makeWindow()
     self.window = window
-    NSApp.activate()
+    if let pane, let controller = window.contentViewController as? NSHostingController<CustomizeView> {
+      controller.rootView.sidebar.pane = pane
+    }
+    // While the window is open the app is a regular one, in the Dock and in
+    // Cmd+Tab; windowWillClose puts it back in the menu bar only.
+    NSApp.setActivationPolicy(.regular)
+    // Since macOS 14 NSApp.activate() only asks, and for a menu bar app the
+    // answer is no: the window opened behind the app in front. The older
+    // call, which Apple means to deprecate, still brings it forward.
+    NSApp.activate(ignoringOtherApps: true)
     window.makeKeyAndOrderFront(nil)
   }
 
@@ -92,9 +108,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   // A closed window goes, with the preview and the web view that drew it;
-  // the next Customize… makes a new one.
+  // the next Customize… makes a new one. The app leaves the Dock and Cmd+Tab.
   func windowWillClose(_ notification: Notification) {
     window = nil
     customization.closed()
+    NSApp.setActivationPolicy(.accessory)
   }
 }
