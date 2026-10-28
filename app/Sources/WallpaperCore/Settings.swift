@@ -2,12 +2,14 @@ import Foundation
 
 // What the wallpaper shows: settings.json, as the rules in public/settings.js
 // make it (SettingsService).
-public struct WallpaperSettings: Codable, Equatable, Sendable {
+public struct WallpaperSettings: Codable, Hashable, Sendable {
   public var preset: String
   public var provider: String
   public var liveFirst: Bool
   public var sections: [String]
   public var margin: Int
+  public var pictures: String  // none, one or several
+  public var color: Bool
   public var updatedAt: String?
 }
 
@@ -21,6 +23,8 @@ public struct Options: Codable, Sendable {
     public let sections: Bool?
     public let live: Bool?  // lists the other running liveblogs
     public let margin: Bool?
+    public let pictures: Bool?  // follows the pictures setting
+    public let color: Bool?  // follows the color setting
   }
 
   // A news outlet the front page can come from, with its section feeds, and

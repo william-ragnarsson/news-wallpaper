@@ -53,6 +53,8 @@ simulated screen (not the browser window).
 | `ctx.safe` | `{ top, right, bottom, dockWidth }`: px covered by the menu bar (top), the desktop's files and folders (a column at the right edge, as wide as picked on Customize: `settings.margin`, 0 when none) and the Dock (bottom-center). Also CSS vars `--safe-top`, `--safe-right`, `--safe-bottom`, `--dock-width` on the screen. `top` is 0 when the window already starts below the menu bar (Plash with `?chrome=0`). The Dock area comes from `?dock=WxH`; with `?dock=0` (a Dock that hides itself) `bottom` and `dockWidth` are 0 |
 | `ctx.fresh` | `Set` of post ids (story ids for `'front'`) that arrived since the previous refresh (empty on first load) |
 | `ctx.image(img, cssWidth)` | URL of the image for `cssWidth` CSS px: a VRT image resized to fit, any other as it is. Accepts an image object or a URL |
+| `ctx.pictures` | how many photos the settings ask for: `'none'`, `'one'` (the default) or `'several'`. A design that follows it says `pictures: true` in `index.js` |
+| `ctx.color` | `true` for photos in color, `false` (the default) for black and white. A design that follows it says `color: true` in `index.js` |
 | `ctx.lang` | the page's language as a BCP 47 tag, the provider's: `nl-BE` (VRT NWS) or `en-US` (the US outlets). For the `lang` attribute |
 | `ctx.t` | the page's own words in that language: `nameplate` (`Het Nieuws` / `The News`), `updated`, `source`, `live`, `liveNow`, `posts`, `new`, `video`, `latest`, `justIn`, `moreNews`, `allStories`, `frontPage`, `noNews`, `yesterday`, `colophon(name)`. Never write a word of the page's own in a preset |
 | `ctx.time(ts)` | newsroom time: `20u38` in Dutch, `8:38 PM` in English |
@@ -201,5 +203,11 @@ else the first one picked on Customize, else `auto`.
   `Saturday, October 24`) for the US outlets. Words and times come from `ctx`.
 - Some providers' stories have no pictures (The Washington Post's never do):
   a front-page design fills the space with text, never an empty box.
+- Pictures are a seasoning: one photo keeps a page text-led. Follow
+  `ctx.pictures` and `ctx.color` where a design has photos, and tint them with
+  CSS `filter` alone: WebKit leaves an image with `mix-blend-mode` out of a 2×
+  snapshot, so it comes out as an empty box on the desktop.
+- Customize shows each design as a card with a small picture of it, drawn as
+  the desktop picture is (scale 0.25), so a design must also read at that size.
 - Credit the source (`data.source.name`) visibly but quietly. Do not copy an
   outlet's logo or brand styling.

@@ -9,6 +9,7 @@ import { HttpError, PROVIDERS, getProvider } from '../sources/index.mjs';
 import { PRESETS } from './presets/index.js';
 
 export const MAX_MARGIN = 320;
+export const PICTURES = ['none', 'one', 'several'];
 
 export const DEFAULTS = Object.freeze({
   // The design on the desktop.
@@ -23,6 +24,10 @@ export const DEFAULTS = Object.freeze({
   // Points of blank paper kept at the right edge for the files and folders on
   // the desktop (designs that center the page keep as much on the left).
   margin: 104,
+  // How many photos the front page shows: none, one, or several.
+  pictures: 'one',
+  // Photos in color, or in black and white like newsprint.
+  color: false,
   updatedAt: null,
 });
 
@@ -36,6 +41,8 @@ export const FIELDS = {
   sections: (v, s) => Array.isArray(v) && v.every(id => getProvider(s.provider).sections.some(x => x.id === id))
     && new Set(v).size === v.length,
   margin: v => Number.isInteger(v) && v >= 0 && v <= MAX_MARGIN,
+  pictures: v => PICTURES.includes(v),
+  color: v => typeof v === 'boolean',
 };
 
 // The settings from what settings.json holds (anything, or nothing): a field

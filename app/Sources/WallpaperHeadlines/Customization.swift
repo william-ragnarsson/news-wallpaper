@@ -35,6 +35,8 @@ final class Customization {
   // The preview's own, so it never waits behind the desktop picture; made
   // when the preview is first drawn and let go when the window closes.
   @ObservationIgnored private var renderer: Renderer?
+  // The designs' small pictures, for the Appearance pane's cards.
+  @ObservationIgnored let thumbnails = Thumbnails()
 
   init(service: SettingsService, saved: @escaping () -> Void) {
     self.service = service
@@ -87,12 +89,8 @@ final class Customization {
     guard let settings else { return }
     let renderer = self.renderer ?? Renderer(environment)
     self.renderer = renderer
-    // With the stand-in menu bar and Dock, which only cover the page, and
-    // without the page's own status line.
-    var parts = URLComponents(url: page, resolvingAgainstBaseURL: true)!
-    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud"].contains($0.name) } + [URLQueryItem(name: "hud", value: "0")]
     // A page from a server reads its own settings.
-    let request = RenderRequest(page: parts.url!, size: screen, scale: 1, settings: server == nil ? settings : nil)
+    let request = RenderRequest(page: previewPage, size: screen, scale: 1, settings: server == nil ? settings : nil)
     do {
       let snapshot = try await renderer.render(request)
       // A newer one is on its way, or the window closed.
@@ -111,9 +109,27 @@ final class Customization {
     }
   }
 
-  // The window closed: its preview goes, with the renderer's web view.
+  // Draws the small pictures of `designs` that are not drawn yet, with the
+  // settings in the window. Not for a page from a server, which reads its
+  // own settings, so every design would look the same.
+  func drawThumbnails(_ designs: [String]) async {
+    guard let settings, server == nil else { return }
+    let keys = designs.map { Thumbnails.Key($0, settings: settings, fetchedAt: news?.fetchedAt, screen: screen) }
+    await thumbnails.draw(keys, page: previewPage, environment: environment)
+  }
+
+  // The page with the stand-in menu bar and Dock, which only cover the page,
+  // and without the page's own status line.
+  private var previewPage: URL {
+    var parts = URLComponents(url: page, resolvingAgainstBaseURL: true)!
+    parts.queryItems = (parts.queryItems ?? []).filter { !["chrome", "hud"].contains($0.name) } + [URLQueryItem(name: "hud", value: "0")]
+    return parts.url!
+  }
+
+  // The window closed: its preview goes, with the renderers' web views.
   func closed() {
     renderer = nil
+    thumbnails.closed()
     preview = nil
     previewError = nil
   }
@@ -180,6 +196,8 @@ private struct Patch: Encodable {
   var liveFirst: Bool?
   var sections: [String]?
   var margin: Int?
+  var pictures: String?
+  var color: Bool?
 
   init(_ s: WallpaperSettings, since old: WallpaperSettings?) {
     if s.preset != old?.preset { preset = s.preset }
@@ -187,10 +205,13 @@ private struct Patch: Encodable {
     if s.liveFirst != old?.liveFirst { liveFirst = s.liveFirst }
     if s.sections != old?.sections { sections = s.sections }
     if s.margin != old?.margin { margin = s.margin }
+    if s.pictures != old?.pictures { pictures = s.pictures }
+    if s.color != old?.color { color = s.color }
   }
 
   var isEmpty: Bool {
     preset == nil && provider == nil && liveFirst == nil && sections == nil && margin == nil
+      && pictures == nil && color == nil
   }
 
   // These fields over the others, as SettingsService does with a patch.
@@ -201,6 +222,8 @@ private struct Patch: Encodable {
     s.liveFirst = liveFirst ?? s.liveFirst
     s.sections = sections ?? s.sections
     s.margin = margin ?? s.margin
+    s.pictures = pictures ?? s.pictures
+    s.color = color ?? s.color
     return s
   }
 }
