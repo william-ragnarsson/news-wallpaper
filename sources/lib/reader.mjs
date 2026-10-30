@@ -1,4 +1,4 @@
-// Where the wallpaper payloads (getFrontpage, liveblogOptions, getWallpaper)
+// Where the wallpaper payloads (getFrontpage, getWallpaper)
 // read the news from: live from the sites, the default, or from news the app
 // fetched earlier (public/harvest.js) and stored. A reader is the functions
 // the payloads are built from:

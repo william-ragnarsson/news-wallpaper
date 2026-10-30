@@ -3,7 +3,8 @@ import SwiftUI
 import WallpaperCore
 
 // How the wallpaper looks (M4): a preview of the desktop, drawn by the
-// Renderer from the stored news, the design and how wide the page is.
+// Renderer from the stored news; the designs as cards with a small picture of
+// each; pictures and color; how much text; and how wide the page is.
 struct AppearancePane: View {
   let model: Customization
   let settings: WallpaperSettings
@@ -16,7 +17,7 @@ struct AppearancePane: View {
     let size = "\(Int(screen.width)) × \(Int(screen.height))"
     Form {
       Section {
-        designPicker
+        designCards
         if let design {
           Text(design.description).foregroundStyle(.secondary)
         }
@@ -35,6 +36,8 @@ struct AppearancePane: View {
         }
         .padding(.bottom, 12)
       }
+      looksSection(design)
+      densitySection(design)
       widthSection(design)
     }
     .formStyle(.grouped)
@@ -48,13 +51,100 @@ struct AppearancePane: View {
     return PreviewKey(settings: drawn, screen: model.screen, page: model.page, fetchedAt: model.news?.fetchedAt)
   }
 
-  private var designPicker: some View {
-    Picker("Design", selection: model.binding(settings, \.preset)) {
-      Section("Front page") {
-        ForEach(options.presets.filter { $0.data == "front" }) { Text($0.name).tag($0.id) }
+  // The designs that follow one liveblog only for a provider that has them.
+  private var designCards: some View {
+    let liveblogs = options.providers.first { $0.id == settings.provider }?.liveblogs == true
+    let front = options.presets.filter { $0.data == "front" }
+    let others = liveblogs ? options.presets.filter { $0.data != "front" } : []
+    let keys = (front + others).map(thumbnailKey)
+    return VStack(alignment: .leading, spacing: 14) {
+      cardGrid(front)
+      if !others.isEmpty {
+        Text("One liveblog").font(.headline)
+        cardGrid(others)
       }
-      Section("One liveblog") {
-        ForEach(options.presets.filter { $0.data != "front" }) { Text($0.name).tag($0.id) }
+    }
+    .padding(.vertical, 4)
+    .task(id: keys) {
+      // A run of changes draws once, after the preview has started.
+      try? await Task.sleep(for: .milliseconds(700))
+      guard !Task.isCancelled else { return }
+      await model.drawThumbnails(front + others)
+    }
+  }
+
+  private func cardGrid(_ designs: [Options.Design]) -> some View {
+    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 14, alignment: .top)], spacing: 14) {
+      ForEach(designs) { design in
+        let key = thumbnailKey(design)
+        DesignCard(
+          name: design.name,
+          image: model.thumbnails.image(for: key),
+          // Nothing is drawn for a page from a server or before the first fetch.
+          drawing: model.server == nil && model.news != nil && !model.thumbnails.failed.contains(key),
+          screen: model.screen,
+          selected: design.id == settings.preset
+        ) {
+          model.change { $0.preset = design.id }
+        }
+      }
+    }
+  }
+
+  private func thumbnailKey(_ design: Options.Design) -> Thumbnails.Key {
+    model.thumbnailKey(design, settings: settings)
+  }
+
+  // How many photos, and in color or not, for the designs that follow these.
+  private func looksSection(_ design: Options.Design?) -> some View {
+    let follows = options.presets.filter { $0.pictures == true || $0.color == true }.map(\.name)
+    return Section {
+      Picker("Pictures", selection: model.binding(settings, \.pictures)) {
+        Text("None").tag("none")
+        Text("One").tag("one")
+        Text("Several").tag("several")
+      }
+      .pickerStyle(.segmented)
+      .disabled(design?.pictures != true)
+      Picker("Color", selection: model.binding(settings, \.color)) {
+        Text("Black and white").tag(false)
+        Text("Color").tag(true)
+      }
+      .pickerStyle(.segmented)
+      .disabled(design?.color != true)
+    } header: {
+      Text("Pictures")
+    } footer: {
+      if design?.pictures != true && design?.color != true {
+        Text("This design has its own pictures. \(follows.formatted(.list(type: .and))) follows these.")
+      } else {
+        Text("One photo keeps the page calm and text-led; several adds small ones beside the shorter stories.")
+      }
+    }
+  }
+
+  // More stories with little text, or fewer with more text each.
+  private func densitySection(_ design: Options.Design?) -> some View {
+    let follows = options.presets.filter { $0.density == true }.map(\.name)
+    let density = Binding(
+      get: { Double(settings.density) },
+      set: { value in model.change { $0.density = Int(value.rounded()) } })
+    return Section {
+      Slider(value: density, in: 1...Double(options.maxDensity), step: 1) {
+        Text("Density")
+      } minimumValueLabel: {
+        Text("More headlines")
+      } maximumValueLabel: {
+        Text("More text")
+      }
+      .disabled(design?.density != true)
+    } header: {
+      Text("Text")
+    } footer: {
+      if design?.density != true {
+        Text("This design has its own mix of headlines and text. \(follows.formatted(.list(type: .and))) follows this.")
+      } else {
+        Text("Toward more headlines the page lists more stories with a line or none of their text; toward more text it gives fewer stories more of their own words.")
       }
     }
   }
@@ -111,6 +201,46 @@ private struct DesktopPreview: View {
     .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
     .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
     .frame(maxWidth: .infinity)
+  }
+}
+
+// A design to pick: its small picture, or a stand-in while it is drawn (or
+// when it cannot be), and its name.
+private struct DesignCard: View {
+  let name: String
+  let image: NSImage?
+  let drawing: Bool
+  let screen: CGSize
+  let selected: Bool
+  let pick: () -> Void
+
+  var body: some View {
+    Button(action: pick) {
+      VStack(spacing: 6) {
+        ZStack {
+          Rectangle().fill(.quaternary)
+          if let image {
+            Image(nsImage: image).resizable().interpolation(.high)
+          } else if drawing {
+            ProgressView().controlSize(.small)
+          } else {
+            Image(systemName: "newspaper").font(.title2).foregroundStyle(.secondary)
+          }
+        }
+        .aspectRatio(screen, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+          RoundedRectangle(cornerRadius: 6)
+            .strokeBorder(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: selected ? 3 : 1)
+        )
+        Text(name)
+          .font(.callout.weight(selected ? .semibold : .regular))
+          .foregroundStyle(selected ? .primary : .secondary)
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }
 

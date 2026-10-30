@@ -9,8 +9,9 @@ import WallpaperRender
 // (the menu, Customize), it fetches (NewsFeed) and then draws the stored news.
 // A change of screens or a saved change only draws again: the store has all
 // there is to pick from. Nothing is fetched while the Mac sleeps, its screens
-// sleep or it is locked. A failed fetch still draws what is stored, and a
-// failed redraw keeps the picture there is: old news beats none.
+// sleep or it is locked. A failed fetch still draws what is stored (the
+// provider's before, after a switch whose fetch failed), and a failed redraw
+// keeps the picture there is: old news beats none.
 @MainActor
 final class Updater {
   private let fetcher = Fetcher(.app)
@@ -71,33 +72,44 @@ final class Updater {
   }
 
   // After a saved change, which only needs a redraw: a slider sends a few in a
-  // row, so wait for a pause. A liveblog picked that is not stored (one whose
-  // own fetch failed, or one put in settings.json by hand) is fetched first.
+  // row, so wait for a pause. Another provider than the stored news's is
+  // fetched first.
   func refreshSoon() {
     soon?.cancel()
     soon = Task {
       try? await Task.sleep(for: .seconds(1))
-      if !Task.isCancelled { refresh(fetching: missingLiveblog()) }
+      if !Task.isCancelled { refresh(fetching: otherProvider()) }
     }
   }
 
-  // Whether a liveblog picked in the settings is not in the stored news.
-  private func missingLiveblog() -> Bool {
+  // Whether the settings name another provider than the stored news's: the
+  // store has only the one fetched.
+  private func otherProvider() -> Bool {
+    guard let stored = try? Environment.app.news.meta().provider else { return true }
+    return settingsProvider() != stored
+  }
+
+  // The provider in the settings. Settings that name none are VRT NWS's.
+  private func settingsProvider() -> String {
     let settings = try? JSONSerialization.jsonObject(with: Environment.app.settings.load()) as? [String: Any]
-    let picked = (settings?["liveblogs"] as? [Any] ?? []).map { "\($0)" }
-    guard !picked.isEmpty else { return false }
-    let stored = (try? Environment.app.news.liveblogs()) ?? []
-    return picked.contains { !stored.contains($0) }
+    return settings?["provider"] as? String ?? "vrt-nws"
   }
 
   private func redraw(fetching: Bool) async {
     if fetching {
+      let provider = settingsProvider()
       do {
         let meta = try await fetcher.run()
         fetched()
         if !meta.ok { NSLog("Fetched, but kept from before: \(meta.errors.map(\.id).joined(separator: ", "))") }
       } catch {
         NSLog("Fetch failed: \(error)")
+      }
+      // A switch to another provider while it fetched (and back, which
+      // otherProvider did not see) fetches that one next.
+      if settingsProvider() != provider {
+        fetchFirst = true
+        again = true
       }
     }
     // The screen with the menu bar.

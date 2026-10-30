@@ -8,7 +8,8 @@ struct CustomizeView: View {
   let model: Customization
   let refresh: () -> Void  // fetches the news now, then redraws the desktop picture
   // Not @State: its macro plugin does not come with the Command Line Tools.
-  private let sidebar = Sidebar()
+  // The app picks the pane for Settings… (AppDelegate.customize).
+  let sidebar = Sidebar()
 
   var body: some View {
     let pane = sidebar.pane
@@ -97,7 +98,7 @@ private struct ServerNotice: View {
 
 @MainActor
 @Observable
-private final class Sidebar {
+final class Sidebar {
   var pane = Pane.appearance
 }
 
@@ -129,17 +130,5 @@ extension Customization {
   // A setting as a binding: setting it saves the change.
   func binding<Value>(_ settings: WallpaperSettings, _ key: WritableKeyPath<WallpaperSettings, Value>) -> Binding<Value> {
     Binding(get: { settings[keyPath: key] }, set: { value in self.change { $0[keyPath: key] = value } })
-  }
-
-  // Adds an id at the end of a list, or takes it out.
-  func toggle(_ key: WritableKeyPath<WallpaperSettings, [String]>, _ id: String, on: Bool) {
-    change {
-      $0[keyPath: key].removeAll { $0 == id }
-      if on { $0[keyPath: key].append(id) }
-    }
-  }
-
-  func move(_ key: WritableKeyPath<WallpaperSettings, [String]>, _ index: Int, by offset: Int) {
-    change { $0[keyPath: key].swapAt(index, index + offset) }
   }
 }

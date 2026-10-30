@@ -47,6 +47,7 @@ const state = {
   error: null,
   fetchedAt: null,
   seenPostIds: new Set(),
+  seenProvider: null,  // whose stories seenPostIds holds
   fresh: new Set(),
 };
 
@@ -77,13 +78,22 @@ const SOURCES = {
     ids: d => [d.focus, ...d.liveblogs].flatMap(b => (b.posts ?? b.recent).map(p => p.id)),
     signature: d => [d.focus.id, d.focus.posts[0]?.id, ...d.liveblogs.map(b => b.updatedAt), d.headlines[0]?.id].join('|'),
   },
-  // VRT NWS's front page in its own order, the sections and the running liveblogs.
+  // The provider's front page in its own order, the sections and the running liveblogs.
   front: {
-    load: () => sources.getFrontpage(state.settings ?? {}),
+    load: () => sources.getFrontpage(frontSettings()),
     ids: d => frontStories(d).map(s => s.id),
     signature: d => frontStories(d).map(s => `${s.id}@${s.time}`).join('|'),
   },
 };
+
+// Until a switch to another provider has fetched its news, the stored news is
+// still the one before's, with its own sections: old news beats none.
+function frontSettings() {
+  const settings = state.settings ?? {};
+  const stored = host.fromStore && host.storedProvider;
+  if (!stored || stored === sources.getProvider(settings.provider).id) return settings;
+  return { ...settings, provider: stored, sections: undefined };
+}
 
 function dataSource(presetId = state.preset) {
   return SOURCES[PRESETS.find(p => p.id === presetId)?.data ?? 'wallpaper'];
@@ -117,6 +127,11 @@ async function loadData(seq, { markFresh = true } = {}) {
     // The same stored news again (the fetch failed, or nothing was fetched)
     // brings nothing new: what was Nieuw stays so.
     const again = fetchedAt && state.fetchedAt?.toISOString() === fetchedAt;
+    // Another provider's stories are all new to the page, but not news.
+    if (body.source?.id !== state.seenProvider) {
+      state.seenPostIds.clear();
+      state.seenProvider = body.source?.id;
+    }
     if (markFresh && !again) state.fresh = state.seenPostIds.size ? new Set(ids.filter(id => !state.seenPostIds.has(id))) : new Set();
     ids.forEach(id => state.seenPostIds.add(id));
     state.data = body;
@@ -215,7 +230,8 @@ function render() {
   root.replaceChildren();
   root.className = `preset-${state.preset}`;
   if (!state.data) {
-    root.append(h('div', { class: 'wallpaper-status' }, state.error ? `Kon het nieuws niet laden: ${state.error}` : 'Nieuws laden…'));
+    const { words } = locale();
+    root.append(h('div', { class: 'wallpaper-status' }, state.error ? `${words.failed}: ${state.error}` : words.loading));
     return;
   }
   try {
@@ -236,12 +252,20 @@ function layout() {
 
 function makeContext() {
   const { width, height } = screenSize();
+  const { tag, words } = locale();
   return {
     now: new Date(),
+    lang: tag,
+    t: words,
     screen: { width, height, id: state.screen },
     safe: { top: menubarInset(width), right: filesColumn(), bottom: dockArea().height, dockWidth: dockArea().width },
     fresh: state.fresh,
     follow: state.follow,
+    // How many photos, whether in color, and how much text: the settings, or
+    // their defaults.
+    pictures: state.settings?.pictures ?? 'one',
+    color: state.settings?.color ?? false,
+    density: state.settings?.density ?? 3,
     image,
     time,
     clock,
@@ -262,35 +286,85 @@ function image(img, cssWidth = 960) {
   return resized;
 }
 
-const fmtTime = new Intl.DateTimeFormat('nl-BE', { hour: '2-digit', minute: '2-digit', hour12: false });
-const fmtLong = new Intl.DateTimeFormat('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-const fmtShort = new Intl.DateTimeFormat('nl-BE', { weekday: 'short', day: 'numeric', month: 'short' });
-const fmtDayMonth = new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'long' });
+// The page speaks its provider's language: VRT NWS's Flemish Dutch, or the US
+// outlets' American English. `words` are what the presets set themselves
+// (ctx.t); `time` is the newsroom's way of writing the time.
+const LOCALES = {
+  nl: {
+    tag: 'nl-BE',
+    hour12: false,
+    // Flemish newsroom style: 20u38
+    time: clock => clock.replace(':', 'u'),
+    ago: { now: 'zonet', min: n => `${n} min geleden`, hours: n => `${n} uur geleden`, yesterday: 'gisteren' },
+    words: {
+      nameplate: 'Het Nieuws', frontPage: 'Voorpagina', updated: 'Bijgewerkt', source: 'Bron', latest: 'Laatste nieuws', new: 'Nieuw',
+      live: 'Live', video: 'Video', liveNow: 'Nu live', posts: 'berichten', moreNews: 'Meer nieuws',
+      justIn: 'Net binnen', allStories: 'Alle berichten', noNews: 'Geen nieuws beschikbaar.', yesterday: 'gisteren',
+      colophon: name => `Een bureaubladkrant met het nieuws van ${name}`,
+      loading: 'Nieuws laden…', failed: 'Kon het nieuws niet laden',
+    },
+  },
+  en: {
+    tag: 'en-US',
+    hour12: true,
+    // 8:38 PM
+    time: clock => clock,
+    ago: { now: 'just now', min: n => `${n} min ago`, hours: n => `${n} hr ago`, yesterday: 'yesterday' },
+    words: {
+      nameplate: 'The News', frontPage: 'Front page', updated: 'Updated', source: 'Source', latest: 'Latest news', new: 'New',
+      live: 'Live', video: 'Video', liveNow: 'Live now', posts: 'updates', moreNews: 'More news',
+      justIn: 'Just in', allStories: 'All stories', noNews: 'No news available.', yesterday: 'yesterday',
+      colophon: name => `A desktop newspaper with the news from ${name}`,
+      loading: 'Loading the news…', failed: 'Could not load the news',
+    },
+  },
+};
 
-// Flemish newsroom style: 20u38
+// The news on the page says its language; before it has loaded, the settings' provider does.
+function locale() {
+  const lang = state.data?.source?.language ?? sources.getProvider(state.settings?.provider).language;
+  return LOCALES[lang] ?? LOCALES.nl;
+}
+
+const formats = new Map();
+function format(name) {
+  const l = locale();
+  const key = `${l.tag}:${name}`;
+  if (!formats.has(key)) {
+    formats.set(key, new Intl.DateTimeFormat(l.tag, {
+      time: { hour: l.hour12 ? 'numeric' : '2-digit', minute: '2-digit', hour12: l.hour12 },
+      long: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+      short: { weekday: 'short', day: 'numeric', month: 'short' },
+      daymonth: { day: 'numeric', month: 'long' },
+    }[name]));
+  }
+  return formats.get(key);
+}
+
 function time(ts) {
-  return clock(ts).replace(':', 'u');
+  return locale().time(clock(ts));
 }
 
 function clock(ts) {
-  return fmtTime.format(new Date(ts));
+  return format('time').format(new Date(ts));
 }
 
 function ago(ts, now = Date.now()) {
+  const words = locale().ago;
   const min = Math.floor((now - ts) / 60_000);
-  if (min < 1) return 'zonet';
-  if (min < 60) return `${min} min geleden`;
+  if (min < 1) return words.now;
+  if (min < 60) return words.min(min);
   const hours = Math.floor(min / 60);
-  if (hours < 24 && new Date(ts).getDate() === new Date(now).getDate()) return `${hours} uur geleden`;
-  if (hours < 48) return `gisteren ${time(ts)}`;
-  return fmtShort.format(new Date(ts));
+  if (hours < 24 && new Date(ts).getDate() === new Date(now).getDate()) return words.hours(hours);
+  if (hours < 48) return `${words.yesterday} ${time(ts)}`;
+  return format('short').format(new Date(ts));
 }
 
 function date(ts = Date.now(), style = 'long') {
   const d = new Date(ts);
-  if (style === 'short') return fmtShort.format(d);
-  if (style === 'daymonth') return fmtDayMonth.format(d);
-  return fmtLong.format(d);
+  if (style === 'short') return format('short').format(d);
+  if (style === 'daymonth') return format('daymonth').format(d);
+  return format('long').format(d);
 }
 
 // Tiny hyperscript: h('div', { class: 'x', style: { color: 'red' } }, 'text', child)
@@ -430,7 +504,7 @@ function toast(text, ms = 1600) {
 }
 
 function renderHud() {
-  // A front design takes its liveblogs and sections from the settings even when
+  // A front design takes its sections and liveFirst from the settings even when
   // pinned in the URL; the liveblog pin does nothing there.
   const front = dataSource() === SOURCES.front;
   const pinned = ['preset', 'follow'].filter(k => state.pinned[k] && !(k === 'follow' && front));
@@ -476,12 +550,13 @@ function renderHud() {
     return d?.follow === state.follow && d.focus ? `${state.follow} not loaded → ${d.focus.topic}` : state.follow;
   }
 
-  // Front-page designs: the server puts the liveblogs picked in the settings
-  // first (L does not apply to them).
+  // Front-page designs: with liveFirst on, the outlet's running live stories
+  // lead the page, else its own lead does (L does not apply to them).
   function leadRow() {
-    const picked = (state.data?.top ?? []).filter(s => s.featured);
-    return row(null, 'Lead liveblog', picked[0]?.title ?? "none: VRT's own lead",
-      state.settings ? `${picked.length} picked in the settings` : 'settings not loaded');
+    const liveFirst = state.settings?.liveFirst ?? true;
+    const lead = state.data?.top?.[0];
+    return row(null, 'Lead', lead?.live && liveFirst ? `${lead.title} (live first)` : `${state.data?.source?.name ?? '…'}'s own lead`,
+      state.settings ? `liveFirst ${liveFirst ? 'on' : 'off'}` : 'settings not loaded');
   }
 }
 
@@ -600,7 +675,18 @@ async function update() {
 async function settled(timeoutMs = 8000) {
   await document.fonts.ready;
   layout();
-  const images = [...els.wallpaper.querySelectorAll('img')].map(img => img.decode().catch(() => {}));
+  // A resized VRT image that misses is swapped for its original (the error
+  // listener in start); wait for that one too, keyed on the src it had.
+  const wait = img => {
+    const src = img.src;
+    return img.decode().catch(() => {
+      const fallback = imageFallbacks.get(src);
+      if (!fallback) return;
+      if (img.src !== fallback) img.src = fallback;
+      return img.decode().catch(() => {});
+    });
+  };
+  const images = [...els.wallpaper.querySelectorAll('img')].map(wait);
   await Promise.race([Promise.all(images), new Promise(resolve => setTimeout(resolve, timeoutMs))]);
 }
 

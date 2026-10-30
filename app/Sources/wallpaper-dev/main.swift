@@ -16,24 +16,27 @@ let usage = """
   wallpaper-dev <command> [options]
 
   fetch
-      Fetches all the news there is to pick from (every section, the running
-      liveblogs and the ones in the settings) and stores it in news.json,
+      Fetches all the news there is to pick from, from the provider in the
+      settings only (every section, and for VRT NWS the running liveblogs),
+      and stores it in news.json,
       keeping the one before as news.prev.json. Prints {fetchedAt, ok, errors,
       counts}, with counts.items the items in each stream. What fails is kept from the fetch before and listed in errors;
-      when VRT's feed fails (or its front page, with none from before),
-      nothing is stored.
+      when the provider's front page fails, with none from before, or VRT's
+      feed of liveblogs fails, nothing is stored.
 
   news [path]
       Prints the stored news: {fetchedAt, ok, errors, streams, front,
       liveblogs}, or {path, value} for one part of it. A path is jq's, keys and
       indexes only, with | length or | keys at the end:
-      .streams.voorpagina.items[0].title  '.streams["liveblog-123"].header'
-      '.streams.voorpagina.items | length'  '.streams | keys'
+      '.streams | keys'  '.streams.voorpagina.items[0].title'
+      '.streams["liveblog-123"].header'  '.streams.home.items | length'
 
   render --out <file.png> [--size 1512x982] [--scale 2] [--preset <id>] [--follow <liveblog id>]
          [--settings '{"margin": 80}'] [--page <url>]
       Draws the stored news (fetch first) as the app does, and writes the PNG,
       --size points at --scale pixels a point (default: the main screen's).
+      --follow picks the liveblog for the liveblog designs (default: the
+      newest running one).
       Prints {path, width, height, fetchedAt, page}: fetchedAt is when the
       news drawn was fetched. Nothing is fetched while drawing. --settings are
       changes to the saved settings for this picture only: checked as settings
@@ -45,13 +48,24 @@ let usage = """
 
   settings set <key>=<value>…
       Saves the changes and prints the settings. A value is JSON, or else a
-      string: preset=evening margin=80 otherLiveblogs=false sections='["sport"]'.
+      string: preset=evening margin=80 provider=nyt sections='["sport"]'
+      liveFirst=false. Another provider brings its own sections. liveFirst
+      (default true) puts running live stories at the front of the top
+      stories; every story has live: true or false.
       An unknown key or invalid value saves nothing and fails.
 
   options
-      Prints what there is to pick from: presets, providers and their sections,
-      the liveblogs in the stored news and the picked ones (fetch first; before,
-      only the picked ones, by id), maxLiveblogs, maxMargin. Nothing is fetched.
+      Prints what there is to pick from: presets, providers (VRT NWS, The New
+      York Times, The Washington Post, Fox News) and their sections,
+      maxMargin, maxDensity, and headlines: from the stored news, for the
+      provider in the settings, the running live stories in the order
+      liveFirst leads with them and each section's first few stories (null
+      when the stored news is another provider's). Nothing is fetched.
+
+  pane sources --out <file.png> [--size 560x2400] [--appearance light|dark]
+      Draws Customize's Sources pane with the settings and stored news, as
+      the app shows it, and writes the PNG. Prints {path, width, height,
+      provider, fetchedAt}. Nothing is fetched, saved or shown on screen.
 
   Every command takes --data <folder> (default: .dev/ in this worktree), where
   settings.json and news.json are.
@@ -94,6 +108,7 @@ func run(_ arguments: Arguments) async throws -> [String: Any] {
   case "render": return try await render(arguments, environment)
   case "settings": return try await settings(arguments, environment)
   case "options": return try object(await SettingsService(environment).options(news: try? environment.news.read().data))
+  case "pane": return try await pane(arguments, environment)
   case "help", nil: return ["usage": usage]
   case let command?: throw Failure("Unknown command: \(command). Try help.")
   }

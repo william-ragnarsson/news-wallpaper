@@ -6,8 +6,8 @@ import WebKit
 // same in both (public/host.js is the page's side):
 //   /                public/
 //   /sources/        sources/, which the page runs itself
-//   /net?url=<url>   a GET to VRT on the page's behalf: CORS keeps the page
-//                    from fetching VRT itself. Only in a Bridge with the
+//   /net?url=<url>   a GET to an outlet on the page's behalf: CORS keeps the
+//                    page from fetching the outlets itself. Only in a Bridge with the
 //                    network: the one that renders has none, so a picture
 //                    can only show the stored news
 //   /api/news        the stored news (NewsStore's document), from `news`
@@ -32,7 +32,7 @@ public final class Bridge: NSObject, WKURLSchemeHandler {
   // (WallpaperCore does not know it). nil, or a throw, is a 503 with
   // {error}, the reason, which the page shows as its error.
   public var news: (() throws -> Data)?
-  // Whether /net reaches VRT.
+  // Whether /net reaches the outlets.
   private let network: Bool
 
   public init(_ environment: Environment, network: Bool = true) {
@@ -130,7 +130,7 @@ struct Reply: Sendable {
   static let notFound = Reply(status: 404, type: "text/plain; charset=utf-8", body: Data("Not found".utf8))
 }
 
-// /net: GETs on https VRT URLs only, redirects included, since that is all the
+// /net: GETs on https URLs of the outlets (Net.hosts) only, redirects included, since that is all the
 // sources read (server.mjs allows the same). Sends back the site's status,
 // type and body, the URL it ended at in x-final-url, and, when the site did
 // not answer, a 504 with the reason in x-net-error. The user agent comes from
@@ -141,9 +141,12 @@ final class Net: NSObject, URLSessionTaskDelegate, Sendable {
   // No cookies, no disk cache: the sources cache what they need.
   private let session = URLSession(configuration: .ephemeral)
 
+  // The outlets' domains (sources/outlets), as server.mjs's NET_HOSTS.
+  static let hosts = ["vrt.be", "nytimes.com", "washingtonpost.com", "foxnews.com"]
+
   static func allowed(_ url: URL?) -> Bool {
     guard let url, url.scheme == "https", let host = url.host() else { return false }
-    return host == "vrt.be" || host.hasSuffix(".vrt.be")
+    return hosts.contains { host == $0 || host.hasSuffix("." + $0) }
   }
 
   func get(_ url: URL?, headers: [String: String]) async -> Reply {
@@ -167,7 +170,7 @@ final class Net: NSObject, URLSessionTaskDelegate, Sendable {
     }
   }
 
-  // Each redirect must stay on VRT too; one that does not ends the request
+  // Each redirect must stay on the outlets too; one that does not ends the request
   // with the redirect itself, which the page treats as an error.
   func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                   newRequest request: URLRequest) async -> URLRequest? {

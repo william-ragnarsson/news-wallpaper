@@ -15,6 +15,7 @@
 // page reads the settings again then.
 
 import * as sources from '/sources/index.mjs';
+import { providerOf } from './harvest.js';
 
 export const inApp = location.protocol === 'wallpaper:';
 // Whether the page draws the stored news (see loadStoredNews), not the sites'.
@@ -57,15 +58,21 @@ export async function loadStoredNews() {
 }
 
 // Points the sources at `doc`, a stored document, as loadStoredNews does with
-// the host's. The app's settings (SettingsService.swift) list the liveblogs
-// from it.
+// the host's. The app's settings (SettingsService.swift) read their options
+// through it.
 export function useStoredNews(doc) {
   sources.setReader(storedReader(doc));
+  storedProvider = providerOf(doc);
 }
 
-// The reader for a stored document ({fetchedAt, streams, front, liveblogs},
-// public/harvest.js has it). What it does not have fails, as a site that is
-// down would.
+// Whose news is stored, once loadStoredNews has read it: the provider fetched
+// last, which a switch to another one has not replaced while its fetch is on
+// its way or failed.
+export let storedProvider = null;
+
+// The reader for a stored document ({fetchedAt, provider, streams, front,
+// liveblogs}, public/harvest.js has it). What it does not have fails, as a
+// site that is down would: another provider's streams too.
 function storedReader(doc) {
   const fetchedAt = Date.parse(doc.fetchedAt);
   const find = (what, table, id) => {
@@ -73,7 +80,10 @@ function storedReader(doc) {
     return table[id];
   };
   return {
-    loadStream: async (_outletId, streamId) => find('stream', doc.streams, streamId),
+    loadStream: async (outletId, streamId) => {
+      if (outletId !== providerOf(doc)) throw new Error(`Not in the stored news: ${outletId}, it has ${providerOf(doc)}'s`);
+      return find('stream', doc.streams, streamId);
+    },
     getFront: async () => find('feed', doc, 'front'),
     getLiveblog: async id => find('liveblog', doc.liveblogs, String(id)),
     now: () => fetchedAt,

@@ -1,295 +1,739 @@
-@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700&family=Playfair+Display:wght@900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..500&display=block');
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Playfair+Display:wght@700;800;900&display=block');
+@import url('../kit.css');
 
-/* Newsprint: VRT NWS's front page as a classic broadsheet.
-   Warm newsprint with a CSS-only paper grain, black ink, photos printed in
-   greyscale onto the paper, and one red accent for what is live.
-   Type scales with the short side of the screen (cqmin); the column count,
-   gutters and lead photo height come from preset.js (--cols, --gap, --photo-h).
-   Faces: Playfair Display Black (nameplate), Source Serif 4 (headlines and
-   text), Libre Franklin (kickers and labels). */
+/* Newsprint: the provider's front page as a classic broadsheet, in the same
+   hand as the Broadsheet liveblog design. Warm newsprint, near-black ink, one
+   oxblood accent for what is live. Type scales with the short side of the
+   screen (cqmin); the number of columns comes from the width (geometry() in
+   preset.js), so every column is about 33 characters wide on every screen.
+
+   Faces: Playfair Display for the flag, Newsreader for headlines and text,
+   Libre Franklin for labels. Photos are printed in black and white unless the
+   color setting is on (.is-color). */
 
 .preset-newsprint {
-  --paper: #f1e9d8; --ink: #1a1713; --ink-2: #3b362f; --ink-3: #6a6155;
-  --hair: rgb(26 23 19 / 0.22); --red: #b0261c;
+  --paper: #f1ebdd;
+  --paper-deep: #e6dcc6;
+  --ink: #1c1915;
+  --ink-2: #3f3a33;
+  --ink-3: #6e665a;
+  --hair: rgb(28 25 21 / 0.26);
+  --rule: rgb(28 25 21 / 0.9);
+  --accent: #9d2219;
+  /* Photos warmed toward the paper, by a filter alone: WebKit leaves an image
+     with mix-blend-mode out of a 2x snapshot. */
+  --photo-filter: grayscale(1) sepia(0.16) contrast(1.05) brightness(0.97);
+  --photo-filter-color: saturate(0.82) sepia(0.1) contrast(1.04) brightness(0.98);
 
-  --nameplate: 'Playfair Display', 'Bodoni 72', 'Times New Roman', serif;
-  --serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --flag: 'Playfair Display', 'Bodoni 72', Didot, 'Times New Roman', serif;
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
   --sans: 'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
 
   --u: 1cqmin;
-  --text: clamp(12.5px, calc(1.45 * var(--u)), 22px);
-  --small: clamp(9.5px, calc(1.02 * var(--u)), 15px);
-  /* Bare paper under the page, tall enough for a Dock that is shown. */
-  --blank: max(calc(var(--safe-bottom) + 3 * var(--u)), 16cqh);
+  --mx: max(28px, calc(2.4cqmin + 1.1cqw));
+  --gap: calc(2.2 * var(--u));
+  --body: clamp(12.5px, calc(1.45 * var(--u)), 24px);
+  --lh: 1.37;
+  --label: clamp(9.5px, calc(1.04 * var(--u)), 16px);
+  --small: clamp(10.5px, calc(1.2 * var(--u)), 18px);
+  /* Bare paper under the page: room for the Dock, and calm. */
+  --blank: max(calc(var(--safe-bottom) + 3 * var(--u)), 12cqh);
 
-  position: absolute; inset: 0; overflow: hidden;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
   color: var(--ink);
-  font: 400 var(--text) / 1.38 var(--serif);
+  font-family: var(--serif);
+  font-size: var(--body);
+  line-height: var(--lh);
+  font-kerning: normal;
+  font-optical-sizing: auto;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-
-  /* Newsprint: a soft darker rim, a lighter mottle, fine laid lines. */
-  background-color: var(--paper);
-  background-image:
-    radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(120 88 44 / 0.1)),
-    radial-gradient(ellipse 45% 35% at 22% 30%, rgb(255 251 240 / 0.5), transparent),
-    radial-gradient(ellipse 40% 40% at 76% 68%, rgb(160 120 60 / 0.07), transparent),
-    repeating-linear-gradient(0deg, rgb(90 66 30 / 0.03) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgb(90 66 30 / 0.025) 0 1px, transparent 1px 6px);
 }
 
-.preset-newsprint [hidden] { display: none !important; }
-
-.preset-newsprint :where(h1, h2, h3, h4, p, ul, figure) {
-  margin: 0; padding: 0; font-size: inherit; font-weight: inherit; list-style: none;
+.preset-newsprint [hidden] {
+  display: none !important;
 }
 
+.preset-newsprint :where(h1, h2, h3, h4, h5, p, ul, figure, figcaption) {
+  margin: 0;
+  padding: 0;
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+/* --- paper ---------------------------------------------------------------- */
+
+.preset-newsprint .np-paper {
+  position: absolute;
+  inset: 0;
+  background:
+    /* fine grain */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .25 0 0 0 0 .2 0 0 0 0 .13 0 0 0 .5 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    /* fibre clouds */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .009' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .22 0 0 0 .6 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E"),
+    /* the fold */
+    linear-gradient(180deg, transparent calc(50% - 4cqh), rgb(90 70 40 / 0.045) calc(50% - 1px), rgb(255 255 255 / 0.28) calc(50% + 1px), transparent calc(50% + 3cqh)),
+    /* warm edges */
+    radial-gradient(130% 115% at 50% 42%, transparent 58%, rgb(120 90 50 / 0.13) 100%),
+    var(--paper);
+}
+
+/* The sides are kit-page's: the margin for the desktop files (--safe-right)
+   on both sides, centered. */
 .preset-newsprint .np-page {
-  position: absolute; inset: 0;
+  --col: calc((100cqw - 2 * (var(--mx) + var(--safe-right)) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  position: absolute;
+  inset: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  row-gap: calc(1.5 * var(--u));
-  /* The right margin clears the desktop's files and folders; the left one
-     matches it, so the page sits centered under the Dock. */
-  padding: calc(var(--safe-top) + 1.3 * var(--u)) calc(var(--mx) + var(--safe-right)) var(--blank);
+  row-gap: calc(1.4 * var(--u));
+  padding-block: calc(var(--safe-top) + 1.1 * var(--u)) var(--blank);
 }
 
-/* --- masthead ---------------------------------------------------------------- */
+/* --- masthead ------------------------------------------------------------- */
 
-.preset-newsprint .np-masthead {
+.preset-newsprint .np-mast {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+}
+
+.preset-newsprint .np-flagrow {
+  display: grid;
+  grid-template-columns: var(--col) minmax(0, 1fr) var(--col);
   column-gap: var(--gap);
+  align-items: center;
+  padding: calc(0.5 * var(--u)) 0 calc(1 * var(--u));
 }
 
 .preset-newsprint .np-nameplate {
-  padding-bottom: calc(0.5 * var(--u));
-  font: 900 clamp(46px, calc(7.4 * var(--u)), 124px) / 1 var(--nameplate);
-  letter-spacing: -0.01em;
+  font-family: var(--flag);
+  font-weight: 900;
+  font-size: calc(7.4 * var(--u));
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  text-align: center;
+  white-space: nowrap;
+  overflow-x: clip;
+  overflow-y: visible;
+  font-feature-settings: 'lnum' 1, 'liga' 1;
+}
+
+.preset-newsprint .np-nameplate > span {
+  display: inline-block;
+  padding: 0 0.04em;
 }
 
 .preset-newsprint .np-ear {
-  justify-self: start;
-  display: grid; gap: 0.35em;
-  padding: 0.55em 0;
-  border-block: 1px solid var(--hair);
-  font: 500 var(--small) / 1.2 var(--sans);
-  letter-spacing: 0.08em;
+  display: grid;
+  align-content: center;
+  gap: calc(0.25 * var(--u));
+  padding: calc(0.7 * var(--u)) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.preset-newsprint .np-ear-right {
+  text-align: right;
+}
+
+.preset-newsprint .np-ear-label {
+  font: 700 var(--label) / 1.1 var(--sans);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.preset-newsprint .np-ear-main {
+  font: 600 calc(2.5 * var(--u)) / 1 var(--serif);
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums;
+  white-space: nowrap;
+}
+
+.preset-newsprint .np-ear-sub {
+  font: italic 400 var(--small) / 1.25 var(--serif);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dateline: a heavy rule over a hairline, then the folio line, then a rule. */
+.preset-newsprint .np-dateline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--gap);
+  padding: calc(0.55 * var(--u)) 0 calc(0.5 * var(--u));
+  border-top: calc(0.32 * var(--u)) solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  box-shadow: 0 calc(-0.32 * var(--u) - 3px) 0 -2px var(--paper), 0 calc(-0.32 * var(--u) - 3px) 0 -1px var(--ink);
+  font: 500 var(--small) / 1.2 var(--sans);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.preset-newsprint .np-dateline-side {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-newsprint .np-dateline-side:first-child {
+  font-family: var(--serif);
+  font-style: italic;
+  letter-spacing: 0;
+  font-size: calc(var(--small) * 1.1);
+}
+
+.preset-newsprint .np-dateline-mid {
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.preset-newsprint .np-source {
+  text-align: right;
   color: var(--ink-3);
 }
 
-.preset-newsprint .np-ear b { font-weight: 700; color: var(--ink); }
-.preset-newsprint .np-time { text-transform: none; } /* 21u23, not 21U23 */
-.preset-newsprint .np-ear-right { justify-self: end; text-align: right; }
-
-/* Thick-and-thin double rule under the masthead. */
-.preset-newsprint .np-rule {
-  grid-column: 1 / -1;
-  height: 2px;
-  margin-top: calc(0.5 * var(--u));
-  border-top: max(3px, calc(0.34 * var(--u))) solid var(--ink);
-  border-bottom: 1px solid var(--ink);
-}
-
-/* --- body grid: columns with hairline rules ---------------------------------- */
+/* --- body grid ------------------------------------------------------------ */
 
 .preset-newsprint .np-body {
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr);
   column-gap: var(--gap);
+  min-height: 0;
+}
+
+.preset-newsprint .np-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  text-align: center;
+  font: italic 400 calc(2.4 * var(--u)) / 1.3 var(--serif);
+  color: var(--ink-3);
+}
+
+/* The lead: kicker, headline, the row of its text and photo, the head over
+   the briefs, and the briefs' columns, which take the rest. */
+.preset-newsprint .np-lead {
+  grid-column: 1 / span var(--lead-cols);
+  display: grid;
+  grid-template-columns: repeat(var(--lead-cols), minmax(0, 1fr));
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  column-gap: var(--gap);
+  min-height: 0;
+}
+
+/* --- kicker, headline ----------------------------------------------------- */
+
+.preset-newsprint .np-kicker {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.9em;
+  font: 500 var(--small) / 1.2 var(--sans);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.preset-newsprint .np-kicker > span + span::before {
+  content: '';
+  display: inline-block;
+  width: 0.3em;
+  height: 0.3em;
+  margin-right: 0.9em;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 0.22em;
+  opacity: 0.55;
+}
+
+.preset-newsprint .np-kicker-tag {
+  font-weight: 800;
+  font-size: var(--label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.preset-newsprint .np-kicker > .np-live + span::before,
+.preset-newsprint .np-kicker > .np-new::before {
+  display: none;
+}
+
+.preset-newsprint .np-kicker-time {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.preset-newsprint .np-headline {
+  grid-column: 1 / -1;
+  margin: calc(0.5 * var(--u)) 0 calc(1.4 * var(--u));
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(6 * var(--u));
+  line-height: 1.02;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+  font-variant-numeric: lining-nums;
+}
+
+/* --- the lead's row: its text beside its photo ----------------------------- */
+
+.preset-newsprint .np-leadrow {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: repeat(var(--lead-cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  align-items: start;
+}
+
+/* Its text in columns, a size up (layout() sets it larger to fill the row). */
+.preset-newsprint .np-deck {
+  grid-column: 1 / span var(--deck-cols);
+  min-height: 0;
+  overflow: hidden;
+  column-count: var(--deck-cols);
+  column-gap: var(--gap);
+  column-rule: 1px solid var(--hair);
+  font-size: 1.12em;
+  line-height: 1.32;
+}
+
+/* With little text: kicker, headline and text stacked beside the photo, the
+   text a standfirst at the foot of the row. */
+.preset-newsprint .np-stack {
+  grid-column: 1 / span var(--deck-cols);
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 
-.preset-newsprint :is(.np-body, .np-index) > * { position: relative; min-width: 0; }
-
-/* The rule sits in the gutter left of each block; the first column's falls
-   outside the grid and is clipped. */
-.preset-newsprint :is(.np-body, .np-index) > *::before {
-  content: ''; position: absolute; inset: 0 auto 0 calc(var(--gap) / -2);
-  border-left: 1px solid var(--hair);
+.preset-newsprint .np-stack .np-headline {
+  margin-bottom: calc(1.1 * var(--u));
 }
 
-/* Regions that layout() fits: their height comes from the lead, not from them. */
-.preset-newsprint :is(.np-second, .np-side) { contain: size; overflow: hidden; }
-
-.preset-newsprint :is(.np-lead, .np-side, .np-second > .np-story) {
-  display: flex; flex-direction: column;
-}
-
-/* Kept at their own height, so what does not fit shows up as overflow
-   (a clamped block would otherwise shrink and cut its last line in half). */
-.preset-newsprint :is(.np-lead, .np-side, .np-story) > * { flex-shrink: 0; }
-
-/* --- story parts --------------------------------------------------------------- */
-
-/* Headlines are never clamped: layout() sizes them, drops their summary or
-   leaves the whole story out. Only summaries end in an ellipsis. */
-
-.preset-newsprint .np-kicker {
-  display: flex; gap: 0.75em;
-  margin-bottom: 0.5em;
-  overflow: hidden; white-space: nowrap;
-  font: 600 var(--small) / 1.2 var(--sans);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
-.preset-newsprint .np-tag-live {
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--red);
-}
-
-.preset-newsprint .np-tag-live::before {
-  content: ''; display: inline-block; width: 0.55em; height: 0.55em; margin-right: 0.4em;
-  border-radius: 50%; background: currentColor; vertical-align: 0.06em;
-}
-
-/* A play mark, drawn with borders. */
-.preset-newsprint .np-tag-video {
-  align-self: center;
-  border-left: 0.62em solid var(--ink);
-  border-block: 0.37em solid transparent;
-}
-
-.preset-newsprint .np-tag-new { padding: 0 0.4em; border: 1px solid; color: var(--ink); }
-
-.preset-newsprint :is(.np-dek, .np-standfirst) {
-  display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
-}
-
-.preset-newsprint .np-hed {
-  padding-bottom: 0.06em; /* room for the last line's descenders */
-  font-weight: 700;
-  font-variation-settings: 'opsz' 28; /* the sturdy text cut, not the thin display one */
-  line-height: 1.1;
-  letter-spacing: -0.005em;
-  text-wrap: balance;
-}
-
-.preset-newsprint .np-dek { margin-top: 0.45em; color: var(--ink-2); -webkit-line-clamp: 3; }
-
-.preset-newsprint .np-photo {
-  position: relative; aspect-ratio: 3 / 2; overflow: hidden;
-  margin-bottom: calc(0.9 * var(--u));
-  background: rgb(26 23 19 / 0.08);
-}
-
-/* Printed onto the paper: greyscale, multiplied with the paper tone. */
-.preset-newsprint .np-photo img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover;
-  filter: grayscale(1) contrast(1.06);
-  mix-blend-mode: multiply;
-}
-
-/* --- lead ---------------------------------------------------------------------- */
-
-.preset-newsprint .np-lead { grid-column: span var(--lead); }
-
-.preset-newsprint .np-lead > .np-hed {
-  padding-bottom: 0.1em;
-  font-size: clamp(30px, calc(5 * var(--u)), 84px);
-  line-height: 1.04;
-  letter-spacing: -0.015em;
-}
-
-.preset-newsprint .np-lead-body {
-  flex: 1 1 var(--photo-h); /* the photo takes the height the headline leaves */
-  display: grid;
-  grid-template-columns: repeat(var(--lead), minmax(0, 1fr));
-  column-gap: var(--gap);
-  min-height: 22cqh;
-  margin-top: calc(1.4 * var(--u));
-}
-
-.preset-newsprint .np-side {
-  grid-column: span var(--side);
-  justify-content: space-between;
-  gap: calc(1.2 * var(--u));
-}
-
-.preset-newsprint .np-lead .np-photo { grid-column: span var(--photo); aspect-ratio: auto; margin: 0; }
-
-.preset-newsprint .np-standfirst {
-  font-size: clamp(14px, calc(1.8 * var(--u)), 28px);
+.preset-newsprint .np-stack .np-deck {
+  margin-top: auto;
+  column-count: 1;
+  font-size: 1.18em;
   line-height: 1.3;
   color: var(--ink-2);
-  -webkit-line-clamp: 3;
 }
 
-/* --- live panel ---------------------------------------------------------------- */
-
-/* As tall as its rows; the side's spare height stays bare paper above it. */
-.preset-newsprint .np-live {
-  display: flex; flex-direction: column;
-  padding: 0.7em 0.85em 0.2em;
-  border: 3px double var(--ink);
+.preset-newsprint .np-stack .np-deck p {
+  text-align: left;
+  text-wrap: pretty;
 }
 
-.preset-newsprint .np-live-head {
-  padding-bottom: 0.6em;
-  font: 700 var(--small) / 1 var(--sans);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--red);
+/* A liveblog's summary points, each after a small square. */
+.preset-newsprint .np-point {
+  margin-top: 0.45em;
+  padding-left: 0.95em;
+  text-indent: -0.95em;
 }
 
-.preset-newsprint .np-live ul {
-  display: grid;
-  grid-template-columns: repeat(var(--side), minmax(0, 1fr));
-  column-gap: 1.2em;
+.preset-newsprint .np-point::before {
+  content: '';
+  display: inline-block;
+  width: 0.38em;
+  height: 0.38em;
+  margin-right: 0.57em;
+  background: var(--accent);
+  vertical-align: 0.14em;
 }
 
-.preset-newsprint .np-live li { padding: 0.6em 0; border-top: 1px solid var(--hair); }
-
-.preset-newsprint .np-live-title { font-weight: 600; line-height: 1.2; }
-
-.preset-newsprint .np-live-meta {
-  margin-top: 0.35em;
-  font: 500 var(--small) / 1.2 var(--sans);
-  letter-spacing: 0.04em;
-  color: var(--ink-3);
+.preset-newsprint .np-leadphoto {
+  grid-column: span var(--photo-cols) / -1;
+  position: relative;
 }
 
-/* --- secondary stories --------------------------------------------------------- */
+.preset-newsprint .np-leadphoto .kit-frame {
+  aspect-ratio: 3 / 2;
+}
 
-.preset-newsprint .np-second > .np-story { height: 100%; }
-.preset-newsprint .np-second .np-photo { flex: 1 0 auto; } /* takes the height the text leaves */
-.preset-newsprint .np-second .np-hed { font-size: calc(2.5 * var(--u)); }
+.preset-newsprint .kit-frame {
+  background: var(--paper-deep);
+}
 
-/* --- section index --------------------------------------------------------------- */
+/* The head over the briefs, under the lead's row. */
+.preset-newsprint .np-lead > .np-flow-head {
+  grid-column: 1 / -1;
+  grid-row: 4;
+  margin-bottom: calc(1.1 * var(--u));
+}
 
-/* The page ends on a thin rule under the index, so the paper below reads as a
-   margin, not as a gap. */
-.preset-newsprint .np-index {
-  display: grid;
-  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+/* --- flowing columns ------------------------------------------------------- */
+
+.preset-newsprint .np-flow {
+  grid-column: 1 / -1;
+  grid-row: 5;
+  min-height: 0;
+  overflow: hidden;
+  column-count: var(--lead-cols);
   column-gap: var(--gap);
-  padding-block: var(--u);
-  border-top: 3px double var(--ink);
-  border-bottom: 1px solid var(--ink);
+  column-fill: auto;
+  column-rule: 1px solid var(--hair);
+}
+
+.preset-newsprint :is(.np-flow, .np-deck) p {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 6 3 2;
+  text-indent: 1.1em;
+  orphans: 2;
+  widows: 2;
+}
+
+.preset-newsprint :is(.np-flow, .np-deck) p:is(.np-opener, .np-first) {
+  text-indent: 0;
+}
+
+.preset-newsprint :is(.np-flow, .np-deck) p.np-point {
+  text-indent: -0.95em;
+}
+
+/* The lead's summary opens its text, a size up, with a three-line drop cap. */
+.preset-newsprint .np-leadtext p.np-opener {
+  font-size: 1.12em;
+  line-height: 1.32;
+}
+
+.preset-newsprint :is(.np-leadtext, .np-leadrow > .np-deck) p.np-opener::first-letter {
+  float: left;
+  margin: 0.06em 0.08em 0 -0.02em;
+  font-family: var(--flag);
+  font-weight: 800;
+  font-size: calc(1.32 * 3em + 0.1em);
+  line-height: 0.8;
+  color: var(--ink);
+}
+
+@supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+  .preset-newsprint :is(.np-leadtext, .np-leadrow > .np-deck) p.np-opener::first-letter {
+    float: none;
+    margin: 0 0.1em 0 0;
+    font-size: inherit;
+    line-height: inherit;
+    -webkit-initial-letter: 3;
+    initial-letter: 3;
+  }
+}
+
+/* Section head inside the columns */
+.preset-newsprint .np-flow-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin: calc(1.5 * var(--u)) 0 calc(1 * var(--u));
+  font: 800 var(--label) / 1.2 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  break-after: avoid;
+  break-inside: avoid;
+}
+
+.preset-newsprint .np-flow-head:first-child {
+  margin-top: 0;
+}
+
+.preset-newsprint .np-flow-head::before,
+.preset-newsprint .np-flow-head::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--rule);
+}
+
+.preset-newsprint .np-flow-head::before {
+  flex: 0 0 1.2em;
+  border-top-width: 3px;
+}
+
+/* The next stories, and with no head, the first after the lead's text */
+.preset-newsprint .np-brief + .np-brief,
+.preset-newsprint .np-flow-head[hidden] ~ .np-brief {
+  margin-top: calc(1.05 * var(--u));
+  padding-top: calc(1.05 * var(--u));
+  border-top: 1px solid var(--hair);
+}
+
+.preset-newsprint .np-brief-title {
+  margin-bottom: 0.3em;
+  font: 650 calc(1.82 * var(--u)) / 1.1 var(--serif);
+  letter-spacing: -0.006em;
+  text-wrap: balance;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 14 6 6;
+}
+
+.preset-newsprint .np-dl {
+  font: 700 0.8em / 1 var(--sans);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* A brief's headline, with its picture over it, is the first line of its
+   paragraph: an inline block, which WebKit's columns keep whole, and the
+   paragraph's orphans keep with the line after it. (A heading of its own
+   they split from its text, and from its picture, even with break-inside
+   or break-after: avoid.) A brief with no text is one inline block as a
+   whole: WebKit's columns misplace the line after so tall a first one, with
+   a gap over it in the next column. */
+.preset-newsprint .np-first > :is(.np-brief-head, .np-brief-title) {
+  display: inline-block;
+  width: 100%;
+  vertical-align: top;
+  text-align: start;
+}
+
+.preset-newsprint .np-first:not(:has(.kit-t)) {
+  display: inline-block;
+  width: 100%;
+  vertical-align: top;
+}
+
+.preset-newsprint .np-brief-fig {
+  margin-bottom: calc(0.8 * var(--u));
+  break-inside: avoid;
+}
+
+.preset-newsprint .np-brief-fig .kit-frame {
+  aspect-ratio: 3 / 2;
+}
+
+.preset-newsprint .np-brief-fig .kit-caption {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35em;
+}
+
+/* --- captions ------------------------------------------------------------- */
+
+.preset-newsprint .np-leadphoto .kit-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  column-gap: 1em;
+  row-gap: 0.15em;
+  margin-top: calc(0.6 * var(--u));
+  padding-bottom: calc(0.6 * var(--u));
+  border-bottom: 1px solid var(--hair);
+}
+
+.preset-newsprint .kit-cap {
+  flex: 1 1 60%;
+  font: italic 400 var(--small) / 1.3 var(--serif);
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
-.preset-newsprint .np-entry .np-kicker { margin-bottom: 0.35em; color: var(--ink); }
+.preset-newsprint .kit-credit {
+  font: 600 calc(var(--label) * 0.92) / 1.3 var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
 
-.preset-newsprint .np-entry-hed {
-  font-size: clamp(11.5px, calc(1.3 * var(--u)), 19px);
-  line-height: 1.25;
+/* Rules between the lead's text and its photo, and before the rail. */
+.preset-newsprint .np-leadphoto::before,
+.preset-newsprint .np-rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gap) / -2);
+  border-left: 1px solid var(--hair);
+}
+
+/* --- rail ----------------------------------------------------------------- */
+
+.preset-newsprint .np-rail {
+  grid-column: span var(--rail-cols) / -1;
+  position: relative;
+  min-height: 0;
+}
+
+.preset-newsprint .np-rail::before {
+  border-left-color: var(--rule);
+}
+
+.preset-newsprint .np-rail-flow {
+  height: 100%;
+  overflow: hidden;
+  column-count: var(--rail-cols);
+  column-gap: var(--gap);
+  column-fill: auto;
+  column-rule: 1px solid var(--hair);
+}
+
+.preset-newsprint .np-rail-head {
+  padding-top: calc(0.55 * var(--u));
+  margin-bottom: calc(0.3 * var(--u));
+  break-after: avoid;
+  border-top: calc(0.32 * var(--u)) solid var(--ink);
+  font: 800 var(--label) / 1 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.preset-newsprint .np-other {
+  padding: calc(0.85 * var(--u)) 0;
+  border-bottom: 1px solid var(--hair);
+  break-inside: avoid;
+}
+
+.preset-newsprint .np-other:last-child {
+  border-bottom: 0;
+}
+
+.preset-newsprint .np-other-topic {
+  margin-bottom: 0.35em;
+  font: 700 var(--label) / 1.15 var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--ink-2);
 }
 
-.preset-newsprint .np-colophon { font: 500 var(--small) / 1.35 var(--sans); color: var(--ink-3); }
+.preset-newsprint .np-other-topic:empty {
+  display: none;
+}
 
-.preset-newsprint .np-colophon-name {
-  margin-bottom: 0.2em;
-  font: 900 calc(1.6 * var(--u)) / 1.1 var(--nameplate);
-  color: var(--ink);
+.preset-newsprint .np-other-title {
+  font: 600 calc(1.6 * var(--u)) / 1.16 var(--serif);
+  letter-spacing: -0.004em;
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.preset-newsprint .np-other-text {
+  margin-top: 0.35em;
+  font-size: 0.94em;
+  line-height: 1.3;
+  color: var(--ink-2);
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  text-wrap: pretty;
+}
+
+.preset-newsprint .np-other-meta {
+  margin-top: 0.4em;
+  font: 500 var(--label) / 1.2 var(--sans);
+  color: var(--ink-3);
+}
+
+/* --- section index -------------------------------------------------------- */
+
+.preset-newsprint .np-index {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  column-gap: var(--gap);
+  padding-top: calc(0.9 * var(--u));
+  border-top: calc(0.32 * var(--u)) solid var(--ink);
+  box-shadow: 0 calc(-0.32 * var(--u) - 3px) 0 -2px var(--paper), 0 calc(-0.32 * var(--u) - 3px) 0 -1px var(--ink);
+}
+
+.preset-newsprint .np-entry {
+  position: relative;
+  min-width: 0;
+}
+
+.preset-newsprint .np-entry + .np-entry::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gap) / -2);
+  border-left: 1px solid var(--hair);
+}
+
+.preset-newsprint .np-entry-label {
+  margin-bottom: 0.45em;
+  font: 800 var(--label) / 1.1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-newsprint .np-entry-items {
+  display: grid;
+  grid-template-columns: repeat(var(--per), minmax(0, 1fr));
+  column-gap: var(--gap);
+}
+
+.preset-newsprint .np-entry-hed {
+  font: 600 calc(1.5 * var(--u)) / 1.16 var(--serif);
+  letter-spacing: -0.004em;
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.preset-newsprint .np-entry-meta {
+  margin-top: 0.35em;
+  font: 500 var(--label) / 1.2 var(--sans);
+  color: var(--ink-3);
+}
+
+/* --- tags ----------------------------------------------------------------- */
+
+/* LIVE: a small red tag on stories that are being followed live. */
+.preset-newsprint .np-live,
+.preset-newsprint .np-new {
+  display: inline-block;
+  margin-right: 0.5em;
+  padding: 0.2em 0.45em 0.15em;
+  font: 800 var(--label) / 1 var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  vertical-align: 0.2em;
+  white-space: nowrap;
+}
+
+.preset-newsprint .np-live {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.preset-newsprint .np-new {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: calc(0.2em - 1px) calc(0.45em - 1px) calc(0.15em - 1px);
+}
+
+.preset-newsprint .np-kicker .np-live,
+.preset-newsprint .np-kicker .np-new,
+.preset-newsprint .np-other-topic .np-live {
+  vertical-align: baseline;
+  margin-right: 0;
+}
+
+.preset-newsprint .np-other-topic .np-live {
+  margin-right: 0.6em;
+}
+
+.preset-newsprint .np-entry-hed .np-live,
+.preset-newsprint .np-other-title .np-new {
+  font-size: calc(var(--label) * 0.92);
+  vertical-align: 0.15em;
 }

@@ -5,8 +5,9 @@ import WallpaperCore
 // M2: fetches all the news there is to pick from and stores it (NewsStore),
 // the store's one writer. The sources do the fetching, in a ScriptHost
 // (public/harvest.js) with the Bridge's /net as their network. What fails is
-// kept from the fetch before; when VRT's feed fails (or its front page, with
-// none from before), nothing is stored and run() throws. Runs go one at a time.
+// kept from the fetch before; when VRT's feed fails (or the provider's front
+// page, with none from before), nothing is stored and run() throws. Only the
+// provider in the settings is fetched. Runs go one at a time.
 @MainActor
 public final class Fetcher {
   public let environment: Environment
@@ -41,7 +42,8 @@ public final class Fetcher {
         let saved = {}, previous = null;
         try { saved = JSON.parse(settings); } catch {}
         try { previous = JSON.parse(stored); } catch {}
-        const news = await harvest({ liveblogs: normalize(saved).liveblogs, previous });
+        const { provider } = normalize(saved);
+        const news = await harvest({ provider, previous });
         return { news: JSON.stringify(news) };
       } catch (error) {
         return { error: error.message ?? String(error) };
@@ -56,7 +58,7 @@ public final class Fetcher {
   }
 }
 
-// A fetch that stored nothing: VRT's feed or front page failed, or the script did.
+// A fetch that stored nothing: VRT's feed or the front page failed, or the script did.
 public struct FetchError: Error, LocalizedError, CustomStringConvertible {
   public let message: String
   public init(_ message: String) { self.message = message }

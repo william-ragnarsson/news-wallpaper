@@ -16,6 +16,7 @@ swift run --package-path app --build-system native wallpaper-dev render --out .d
 swift run --package-path app --build-system native wallpaper-dev render --out .dev/wide.png --settings '{"margin": 0}'
 swift run --package-path app --build-system native wallpaper-dev settings set preset=evening margin=80
 swift run --package-path app --build-system native wallpaper-dev options
+swift run --package-path app --build-system native wallpaper-dev pane sources --out .dev/sources.png --appearance dark
 ```
 
 - Each command prints one JSON object. A failure prints `{"error": …}` and exits 1.
@@ -29,10 +30,12 @@ swift run --package-path app --build-system native wallpaper-dev options
   [path]` prints it, or one part (a jq path: keys, indexes, `| length`,
   `| keys`). The page reads it with `?data=store`, from `/api/news`: the
   app and `render` always do, the dev server when you add it to the URL.
+- `pane sources` draws Customize's Sources pane with the stored news and
+  settings, as the app shows it, off screen, and writes the PNG: read it to
+  check a change to the pane. Its controls do nothing there.
 - `settings` prints the settings; `settings set <key>=<value>…` checks and saves
   them, as the app's Customize does (the rules are `public/settings.js`).
-  `options` lists what there is to pick from; its liveblogs are those in the
-  stored news, so `fetch` first.
+  `options` lists what there is to pick from.
 - Its data (settings.json, news.json) lives in `.dev/` in your worktree (gitignored), or
   in `--data <folder>`. The dev server (`npm run dev`) in your worktree uses the
   same `.dev/settings.json`.
@@ -55,10 +58,12 @@ swift run --package-path app --build-system native wallpaper-dev options
 |---|---|
 | `sources/` | the news: feeds, liveblogs, the front page (plain JS) |
 | `public/` | the wallpaper page (`app.js`, `host.js`) and its designs (`presets/`) |
+| `public/presets/kit.js`, `kit.css` | M6: the template kit. A design declares its regions; the kit fills them by the settings (pictures, color, density, width) and fits them to the screen. The contract is in `public/presets/README.md` |
 | `app/Sources/WallpaperCore` | `Environment` (every path), `Bridge` (the page's host), `SettingsService` (the settings, by `public/settings.js`) |
 | `app/Sources/NewsStore` | M1: the news fetched last, `news.json`; `read()`, `meta()`, and `commit` for the fetcher only |
 | `app/Sources/NewsFeed` | M2: `Fetcher`, which runs `public/harvest.js` and commits what it gives |
 | `app/Sources/WallpaperRender` | `Renderer`: draws the page for a `RenderRequest`, returns a PNG; `PNGOutput`, `FileOutput` |
+| `app/Sources/CustomizeUI` | Customize's Sources pane: `SourcesDigest` (what it shows, from the options and stored news) and its views |
 | `app/Sources/WallpaperHeadlines` | the app: menu bar, `Updater`, `DesktopOutput`, the Customize window |
 | `app/Sources/wallpaper-dev` | the command line above |
 | `server.mjs` | the dev server for the explorer (`npm run dev`, port 4174) |

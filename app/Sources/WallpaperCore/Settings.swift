@@ -2,13 +2,15 @@ import Foundation
 
 // What the wallpaper shows: settings.json, as the rules in public/settings.js
 // make it (SettingsService).
-public struct WallpaperSettings: Codable, Equatable, Sendable {
+public struct WallpaperSettings: Codable, Hashable, Sendable {
   public var preset: String
   public var provider: String
-  public var liveblogs: [String]
-  public var otherLiveblogs: Bool
+  public var liveFirst: Bool
   public var sections: [String]
   public var margin: Int
+  public var pictures: String  // none, one or several
+  public var color: Bool
+  public var density: Int  // 1, more headlines, to maxDensity, more text each
   public var updatedAt: String?
 }
 
@@ -22,9 +24,13 @@ public struct Options: Codable, Sendable {
     public let sections: Bool?
     public let live: Bool?  // lists the other running liveblogs
     public let margin: Bool?
+    public let pictures: Bool?  // follows the pictures setting
+    public let color: Bool?  // follows the color setting
+    public let density: Bool?  // follows the density setting
   }
 
-  // A news outlet the front page can come from, with its section feeds.
+  // A news outlet the front page can come from, with its section feeds, and
+  // whether it has liveblogs to follow (VRT NWS only).
   public struct Provider: Codable, Identifiable, Sendable {
     public let id: String
     public let name: String
@@ -33,6 +39,7 @@ public struct Options: Codable, Sendable {
     public let homepage: URL
     public let description: String?
     public let sections: [Section]
+    public let liveblogs: Bool?
   }
 
   public struct Section: Codable, Identifiable, Sendable {
@@ -41,17 +48,9 @@ public struct Options: Codable, Sendable {
     public let group: String
   }
 
-  public struct Liveblog: Codable, Identifiable, Sendable {
-    public let id: String
-    public let title: String
-    public let section: String?
-    public let live: Bool?
-    public let postCount: Int?
-  }
-
   public let presets: [Design]
   public let providers: [Provider]
-  public let liveblogs: [Liveblog]
-  public let maxLiveblogs: Int
   public let maxMargin: Int
+  public let maxDensity: Int
+  public let headlines: Headlines?  // from the stored news (Headlines.swift)
 }

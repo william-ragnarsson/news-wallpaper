@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..800&family=Instrument+Sans:wght@400..600&display=block');
+@import url('../kit.css');
 
 /* Evening Edition: the front page in dark ink.
    Warm charcoal paper, cream type, low-contrast hairlines and dimmed photos
@@ -8,7 +9,9 @@
    The main band takes the height that is left; the rest is sized by its
    type, which scales with the short side of the screen (cqmin).
    Faces: Bodoni Moda (optical sizes 6-96) for the nameplate, headlines and
-   summaries; Instrument Sans for labels. */
+   summaries; Instrument Sans for labels.
+   A template on the kit (../kit.css): the photos dim by --photo-filter (black
+   and white) or --photo-filter-color, and the page keeps the width setting. */
 
 .preset-evening {
   --paper: #15140f;
@@ -28,6 +31,8 @@
   --mx: clamp(28px, 3.1cqw, 76px);
   --gutter: calc(2.4 * var(--u));
   --label: clamp(10px, calc(1.05 * var(--u)), 15px);
+  --photo-filter: grayscale(1) brightness(0.8) contrast(1.08);
+  --photo-filter-color: saturate(0.68) brightness(0.8) contrast(1.05) sepia(0.08);
 
   position: absolute;
   inset: 0;
@@ -48,8 +53,8 @@
   font-size: inherit;
 }
 
-/* Headlines and summaries are cut by line clamps, never mid-line. */
-.preset-evening :where(.ev-lead-title, .ev-lead-summary, .ev-second-title, .ev-summary, .ev-brief-title) {
+/* Headlines are cut by line clamps, never mid-line; summaries by words (layout()). */
+.preset-evening :where(.ev-lead-title, .ev-second-title, .ev-brief-title) {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -70,9 +75,8 @@
   inset: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
-  padding:
-    calc(var(--safe-top) + 1.4 * var(--u)) var(--mx)
-    calc(var(--safe-bottom) + 0.8 * var(--u));
+  padding-top: calc(var(--safe-top) + 1.4 * var(--u));
+  padding-bottom: calc(var(--safe-bottom) + 0.8 * var(--u));
 }
 
 /* --- nameplate ------------------------------------------------------------ */
@@ -140,14 +144,9 @@
   background: var(--paper-2);
 }
 
-.preset-evening :is(.ev-photo, .ev-thumb) img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 25%; /* wide crops keep heads, which sit high in news photos */
-  filter: saturate(0.68) brightness(0.8) contrast(1.05) sepia(0.08);
-}
+.preset-evening :is(.ev-photo, .ev-thumb) .kit-frame { height: 100%; }
+/* Wide crops keep heads, which sit high in news photos. */
+.preset-evening :is(.ev-photo, .ev-thumb) .kit-img { object-position: 50% 25%; }
 
 .preset-evening :is(.ev-photo, .ev-thumb)::after {
   content: '';
@@ -175,7 +174,7 @@
 }
 
 .preset-evening .ev-lead-title {
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 8;
   font-size: calc(3.3 * var(--u));
   font-weight: 600;
   line-height: 1.1;
@@ -184,7 +183,6 @@
 }
 
 .preset-evening .ev-lead-summary {
-  -webkit-line-clamp: 3;
   max-width: 68ch;
   margin-top: 0.7em;
   font-size: calc(1.7 * var(--u));
@@ -192,10 +190,29 @@
   color: var(--ink-2);
 }
 
+/* A liveblog's summary points (VRT NWS), each behind a small square. */
+.preset-evening .ev-point {
+  max-width: 68ch;
+  margin-top: 0.45em;
+  padding-left: 1em;
+  text-indent: -1em;
+  font-size: calc(1.5 * var(--u));
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.preset-evening .ev-point::before {
+  content: '';
+  display: inline-block;
+  width: 0.36em;
+  height: 0.36em;
+  margin: 0 0.64em 0.14em 0;
+  background: var(--ink-3);
+}
+
 /* A lead without a photo is set as a large type-only story in the middle of its column. */
 .preset-evening .ev-lead.no-photo { grid-template-rows: auto; align-content: center; overflow: hidden; }
 .preset-evening .no-photo .ev-lead-title { -webkit-line-clamp: 6; font-size: calc(4.4 * var(--u)); }
-.preset-evening .no-photo .ev-lead-summary { -webkit-line-clamp: 5; font-size: calc(1.9 * var(--u)); }
+.preset-evening .no-photo .ev-lead-summary { font-size: calc(1.9 * var(--u)); }
 
 .preset-evening .ev-side {
   display: grid;
@@ -207,10 +224,12 @@
   border-left: 1px solid var(--hair);
 }
 
+/* A stack of stories at their own height; layout() fills it to the bottom. */
 .preset-evening .ev-stack {
-  display: grid;
-  grid-auto-rows: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .preset-evening .ev-stack + .ev-stack {
@@ -220,10 +239,9 @@
 
 .preset-evening .ev-second {
   display: grid;
+  flex: none;
   grid-template-columns: minmax(0, 1fr) 40%;
-  grid-template-rows: minmax(0, 1fr);
   gap: calc(1.8 * var(--u));
-  overflow: hidden;
   padding: calc(1.5 * var(--u)) 0;
   border-top: 1px solid var(--hair);
 }
@@ -235,7 +253,6 @@
   align-self: start;
   width: 100%;
   aspect-ratio: 3 / 2;
-  max-height: 100%;
 }
 
 .preset-evening .ev-second-title {
@@ -247,7 +264,6 @@
 }
 
 .preset-evening .ev-summary {
-  -webkit-line-clamp: 3;
   margin-top: 0.55em;
   font-size: calc(1.42 * var(--u));
   line-height: 1.4;
@@ -268,8 +284,9 @@
   padding: 0 calc(var(--gutter) / 2);
   border-left: 1px solid var(--hair);
 }
-.preset-evening .ev-brief:first-child { padding-left: 0; border-left: 0; }
-.preset-evening .ev-brief:last-child { padding-right: 0; }
+/* layout() shows some of them: the first and last shown keep to the edges. */
+.preset-evening .ev-brief:not(:not([hidden]) ~ .ev-brief) { padding-left: 0; border-left: 0; }
+.preset-evening .ev-brief:not(:has(~ :not([hidden]))) { padding-right: 0; }
 .preset-evening .ev-brief .ev-kicker { margin-bottom: 0.55em; }
 
 .preset-evening .ev-brief-title {
@@ -280,22 +297,30 @@
   text-wrap: pretty;
 }
 
+.preset-evening .ev-brief-summary {
+  margin-top: 0.5em;
+  font-size: calc(1.36 * var(--u));
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
 /* --- live line ------------------------------------------------------------ */
 
 .preset-evening .ev-live {
-  display: grid;
-  grid-template-columns: auto;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  display: flex;
   align-items: baseline;
   gap: var(--gutter);
+  overflow: hidden;
   padding-top: var(--u);
   border-top: 1px solid var(--hair);
+  white-space: nowrap;
 }
 
+/* Each story whole (layout()); one too long for the line ends in an ellipsis. */
 .preset-evening .ev-live-item {
+  flex: none;
+  min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
   font: 400 calc(1.36 * var(--u)) / 1.3 var(--serif);
   letter-spacing: 0;

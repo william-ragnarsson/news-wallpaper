@@ -10,6 +10,14 @@
 // Liveblogs show up in all of them; their posts come from VRT's web backend
 // (sources/liveblog.mjs), and each live one becomes its own stream.
 // VRT has no paywall, so nothing is premium.
+// Live: a liveblog is live while VRT's backend gives it status "live"
+// (enrichLiveblogs); articles are never live.
+// What is weak:
+//   - Section lists have no leads: only items still in the Atom feed (the 50
+//     newest) get one, so most section stories show a title and picture only.
+//   - VRT leaves some liveblogs "live" for weeks after the story calmed down;
+//     the front page counts one as live only while its newest post is under
+//     12 hours old (frontpage.mjs).
 
 import { getFront, getLiveblog } from '../liveblog.mjs';
 import { normalizeEntry, parseFeed } from '../lib/feed.mjs';
@@ -31,6 +39,14 @@ export default {
   homepage: 'https://www.vrt.be/vrtnws/nl/',
   description: 'Public broadcaster newsroom: all news, the front page, a stream per section and province, and liveblogs for running stories.',
   ttlMs: 60_000,
+  // The streams of its front page (sources/frontpage.mjs), and the sections
+  // below it until picked otherwise.
+  frontpage: {
+    top: 'voorpagina',
+    latest: 'all',
+    live: 'live',
+    sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap'],
+  },
 
   streams: [
     { id: 'all', name: 'Alle nieuws', group: 'Top stories', url: FEED, topics: ['general'],
@@ -202,7 +218,8 @@ function teaserItem(t, leads) {
     id: url,
     kind: liveblogId ? 'liveblog' : t.type === 'mediaTeaser' ? 'video' : 'article',
     url,
-    title: t.title?.text?.trim() ?? '',
+    // Teaser titles keep the editors' stray double spaces.
+    title: t.title?.text?.replace(/\s+/g, ' ').trim() ?? '',
     summary: leads.get(url) ?? null,
     // A liveblog teaser's time is its newest post's; enrichLiveblogs() adds the start.
     publishedAt: liveblogId ? null : time,

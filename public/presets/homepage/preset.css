@@ -1,11 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..800;1,8..60,400..800&display=swap');
+@import url('../kit.css');
 
 /* Homepage: a quality news site's front page as a wallpaper.
    White page, black serif headlines (Source Serif 4), sans labels and times
    (Inter), thin grey rules, one brick-red accent for LIVE and Nieuw.
    A 12-column grid (15 on an ultrawide) that the lead row and the section row
    share through subgrid; the "Net binnen" rail takes the last three columns.
-   Type scales with the short side of the screen (1u = 1cqmin). */
+   Type scales with the short side of the screen (1u = 1cqmin). Headlines run
+   whole, never clamped: layout() drops a story that does not fit, and a word
+   too long for its column is hyphenated (layout()), or else breaks anywhere.
+   A template on the kit (kit.css): the sides are kit-page's, pictures and
+   color kit's. */
 
 .preset-homepage {
   --bg: #fff;
@@ -23,6 +28,9 @@
   --gap: calc(2.4 * var(--u));
   --gap-y: calc(2 * var(--u));
   --photo: 3 / 2;
+  /* A column of the grid, and the height a lead photo takes (no photo: the lead). */
+  --col: calc((100cqw - 2 * (var(--mx) + var(--safe-right)) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  --lead-h: calc((5 * var(--col) + 4 * var(--gap)) / (var(--photo)));
 
   position: absolute;
   inset: 0;
@@ -32,10 +40,9 @@
   background: var(--bg);
   color: var(--ink);
   font-family: var(--serif);
+  overflow-wrap: anywhere;
   -webkit-font-smoothing: antialiased;
 }
-
-.preset-homepage [hidden] { display: none !important; }
 
 .preset-homepage :where(h1, h2, h3, h4, p, ul, ol, li, figure) {
   margin: 0;
@@ -44,17 +51,9 @@
   list-style: none;
 }
 
-/* Every headline and summary is clamped to whole lines (--lines). */
-.preset-homepage :is(.hp-lead-title, .hp-lead-summary, .hp-related-title, .hp-card-title, .hp-headline) {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--lines);
-  overflow: hidden;
-}
-
 /* --- top bar ------------------------------------------------------------- */
 
-.preset-homepage .hp-top { padding: var(--safe-top) var(--mx) 0; }
+.preset-homepage .hp-top { padding-top: var(--safe-top); }
 
 .preset-homepage .hp-mast {
   display: grid;
@@ -98,7 +97,7 @@
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
   grid-template-rows: auto minmax(0, 1fr);
   gap: var(--gap-y) var(--gap);
-  padding: calc(2.2 * var(--u)) var(--mx) var(--gap-y);
+  padding-block: calc(2.2 * var(--u)) var(--gap-y);
 }
 
 /* Container labels: section blocks, the rail, the ultrawide column. */
@@ -143,37 +142,73 @@
 .preset-homepage .hp-lead-photo {
   grid-column: 5 / span 5;
   aspect-ratio: var(--photo);
-  overflow: hidden;
   background: var(--tint);
 }
 
-.preset-homepage :is(.hp-lead-photo, .hp-thumb) img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.preset-homepage :is(.hp-lead-photo, .hp-thumb) .kit-frame { height: 100%; }
 
 .preset-homepage .hp-lead-title {
-  --lines: 5;
   font: 700 calc(var(--k, 1) * var(--lead-size, 3.4) * var(--u)) / 1.1 var(--serif);
   letter-spacing: -0.012em;
   text-wrap: pretty;
 }
 
 .preset-homepage .hp-lead-summary {
-  --lines: 3;
   margin-top: calc(1.2 * var(--u));
   font: 400 max(13px, calc(1.68 * var(--u))) / 1.45 var(--serif);
   color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* A liveblog's summary points (VRT NWS), with a square in front. */
+.preset-homepage .hp-point {
+  position: relative;
+  margin-top: calc(0.8 * var(--u));
+  padding-left: calc(1.6 * var(--u));
+  font: 400 max(12.5px, calc(1.5 * var(--u))) / 1.4 var(--serif);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.preset-homepage .hp-point::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.4em;
+  height: 0.4em;
+  background: var(--accent);
+}
+
+/* Short summaries under a headline: related, rail, sections. */
+.preset-homepage .hp-summary {
+  margin-top: calc(0.5 * var(--u));
+  font: 400 max(12px, calc(1.42 * var(--u))) / 1.4 var(--serif);
+  color: var(--ink-2);
+  text-wrap: pretty;
 }
 
 /* Related headlines stand on the foot of the photo; spare room opens above. */
 .preset-homepage .hp-related { margin-top: auto; padding-top: calc(1.8 * var(--u)); }
 .preset-homepage .hp-related li { padding-top: calc(1.3 * var(--u)); border-top: 1px solid var(--rule); }
 .preset-homepage .hp-related li + li { margin-top: calc(1.3 * var(--u)); }
-.preset-homepage .hp-related-title { --lines: 3; font: 600 max(14px, calc(1.8 * var(--u))) / 1.2 var(--serif); }
+.preset-homepage .hp-related-title { font: 600 max(14px, calc(1.8 * var(--u))) / 1.2 var(--serif); }
 
-/* No lead photo: the story takes the whole lead width. */
-.preset-homepage .hp-lead.no-photo .hp-lead-text { grid-column: 1 / span 9; contain: none; }
+/* No lead photo: the story where the text was, its related headlines where
+   the photo was, as high as the photo would be. */
+.preset-homepage .hp-lead.no-photo .hp-lead-text {
+  grid-column: 1 / span 9;
+  display: grid;
+  grid-template-columns: subgrid;
+  height: var(--lead-h);
+}
+
+.preset-homepage .no-photo :is(.hp-lead-story, .hp-related) { min-height: 0; overflow: hidden; }
+.preset-homepage .no-photo .hp-lead-story { grid-column: 1 / span 5; }
+.preset-homepage .no-photo .hp-related { grid-column: 6 / span 4; margin-top: 0; padding-top: 0; }
 
 /* Ultrawide only: more top stories between the photo and the rail. */
-.preset-homepage .hp-more { display: none; grid-column: 10 / span 3; contain: size; overflow: hidden; }
+.preset-homepage .hp-more { grid-column: 10 / span 3; contain: size; overflow: hidden; }
 
 /* --- rail: Net binnen -------------------------------------------------------- */
 
@@ -195,6 +230,8 @@
   border-bottom: 1px solid var(--rule);
 }
 
+.preset-homepage .hp-latest li > :not(time) { grid-column: 2; }
+
 .preset-homepage .hp-latest li:first-child { padding-top: 0; }
 
 .preset-homepage .hp-latest time {
@@ -203,7 +240,7 @@
   color: var(--ink-3);
 }
 
-.preset-homepage .hp-headline { --lines: 3; font: 500 max(13px, calc(1.6 * var(--u))) / 1.25 var(--serif); }
+.preset-homepage .hp-headline { font: 500 max(13px, calc(1.6 * var(--u))) / 1.25 var(--serif); }
 
 /* --- section row ------------------------------------------------------------- */
 
@@ -216,7 +253,6 @@
 }
 
 .preset-homepage .hp-section { grid-column: span 3; min-height: 0; overflow: hidden; }
-.preset-homepage .hp-section:nth-child(n + 4) { display: none; }
 
 .preset-homepage .hp-card {
   display: grid;
@@ -227,17 +263,16 @@
 }
 
 .preset-homepage .hp-card.no-photo { grid-template-columns: 1fr; }
+.preset-homepage .hp-card > .hp-summary { grid-column: 1 / -1; margin-top: 0; }
 
 .preset-homepage .hp-thumb {
   position: relative;
   aspect-ratio: 3 / 2;
-  overflow: hidden;
   background: var(--tint);
 }
 
-.preset-homepage .hp-card-title { --lines: 4; font: 600 max(14px, calc(1.75 * var(--u))) / 1.2 var(--serif); }
+.preset-homepage .hp-card-title { font: 600 max(14px, calc(1.75 * var(--u))) / 1.2 var(--serif); }
 .preset-homepage .hp-list li { padding: var(--u) 0; border-top: 1px solid var(--rule); }
-.preset-homepage .hp-list .hp-headline { --lines: 2; }
 
 /* --- marks: Nieuw, LIVE, video --------------------------------------------- */
 
@@ -289,7 +324,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--mx);
   border-top: 1px solid var(--rule);
   background: var(--tint);
   font: 500 max(11px, calc(1.15 * var(--u))) / 1 var(--sans);
@@ -305,9 +339,7 @@
   .preset-homepage { --photo: 16 / 9; }
 }
 
-/* Ultrawide: 15 columns, a column of more top stories, a fourth section. */
-@container desktop (min-aspect-ratio: 2 / 1) {
-  .preset-homepage { --cols: 15; --lead-size: 3.9; }
-  .preset-homepage :is(.hp-lead, .hp-sections) { grid-column: 1 / span 12; }
-  .preset-homepage :is(.hp-more, .hp-section:nth-child(4)) { display: block; }
-}
+/* Ultrawide (is-wide, by the width the margin leaves): 15 columns, a column
+   of more top stories, a fourth section. */
+.preset-homepage.is-wide { --cols: 15; --lead-size: 3.9; }
+.preset-homepage.is-wide :is(.hp-lead, .hp-sections) { grid-column: 1 / span 12; }

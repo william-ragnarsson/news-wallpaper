@@ -1,21 +1,45 @@
-// Newsprint: VRT NWS's front page set as a classic broadsheet on warm newsprint.
+// Newsprint: the provider's front page as a classic broadsheet, set like the
+// Broadsheet liveblog design: one big lead with its own photo, text in columns.
+// A template on the kit (../kit.js, presets/README.md "Templates").
 //
 // Page anatomy (top to bottom):
-//   masthead  left ear (the date), the nameplate, right ear (update time and
-//             source), a thick-and-thin double rule
-//   front     the lead across most columns: kicker, headline, then the standfirst
-//             with a boxed "Nu live" panel beside a big photo; one secondary
-//             story per remaining column (photo, headline, summary)
-//   index     one row: each section with its newest headline
+//   masthead  the date in the left ear, the nameplate, the update time in the
+//             right ear; a dateline under a heavy rule
+//   body      the lead across most columns, as one package: kicker (section,
+//             time), headline, and its own photo beside its text (summary with
+//             a drop cap, a liveblog's summary points). A lead with little
+//             text has its headline beside the photo instead. Under a rule,
+//             "More news": the next top stories as briefs in columns. A rail
+//             on the right with the latest news.
+//   index     one row: each picked section with its newest headline (two where
+//             a section's share of the row has room for them)
 //   (blank)   bare paper at the bottom for the Dock, down the right edge for
 //             the files on the desktop, and as much down the left to center it
 //
 // The number of columns comes from the screen (geometry()); type scales with
-// cqmin. layout() shrinks the lead headline to three lines and gives each
-// summary the lines its column has room for. Headlines are never cut short,
-// and a summary gets two lines or none (a secondary's at most four).
+// cqmin. layout() fits the headline, sizes the photo and the lead's text to
+// one row, and lets the briefs and the rail drop whole stories from the end,
+// the first one left out coming back trimmed to the words that fit.
+//
+// Without a photo for the lead (pictures 'none', or none in the feed) its text
+// opens the columns, as a broadsheet's text-only lead does. A story with
+// `live: true` gets a red LIVE tag.
 
-const NAMEPLATE = 'Het Nieuws';
+import * as kit from '../kit.js';
+
+// What each region shows; [a, b] is a at density 1 (more headlines) and b at
+// 5 (fewer stories, more text each). The lead's photo is its own story's.
+const REGIONS = {
+  lead: { from: 'top', stories: 1, words: [40, Infinity], points: [0, 4], pictures: 1 },
+  briefs: { from: 'top', stories: [16, 8], words: [0, 70], pictures: [1, 3] },
+  rail: { from: 'latest', stories: 14, words: [0, 30] },
+  index: { from: 'sections', stories: [2, 1] },
+};
+
+// The lead's photo row may take this share of the room under the headline,
+// leaving the briefs under it at least this many lines.
+const LEAD_ROW = [0.44, 0.64];
+const FLOW_LINES = [12, 8];
 
 export default {
   id: 'newsprint',
@@ -24,234 +48,523 @@ export default {
 
   render(root, data, ctx) {
     const { h } = ctx;
+    kit.page(root, ctx);
     const geo = geometry(ctx.screen, ctx.safe);
-    // top[] starts with the liveblogs picked on Customize, then VRT's own order.
-    const [lead, ...rest] = data.top ?? [];
-    const seconds = rest.slice(0, geo.seconds);
-    // "Nu live" lists the running liveblogs that are not on the page already.
-    const onFront = new Set([lead, ...seconds].filter(Boolean).map(storyKey));
-    const live = (data.live ?? []).filter(s => !onFront.has(storyKey(s)));
+    const idx = indexRegion(data, geo, ctx);
+    const { lead: [lead] = [], briefs, rail, index } = kit.plan(data, ctx, { ...REGIONS, index: idx.spec });
 
-    root.setAttribute('lang', 'nl');
-    root.append(h('div', {
-      class: 'np-page',
-      '--cols': geo.cols, '--lead': geo.lead, '--photo': geo.photo, '--side': geo.side,
-      '--photo-h': `${geo.photoH}px`, '--mx': `${geo.mx}px`, '--gap': `${geo.gap}px`,
-    },
-      masthead(data, ctx),
-      h('main', { class: 'np-body' },
-        lead && leadStory(lead, live, geo, ctx),
-        seconds.map(s => h('div', { class: 'np-second', 'data-fit': '' }, story(s, ctx, geo.colW)))),
-      sectionIndex(data, geo, ctx)));
+    root.setAttribute('lang', ctx.lang);
+    root.append(
+      h('div', { class: 'np-paper', 'aria-hidden': 'true' }),
+      h('div', {
+        class: 'np-page kit-page',
+        '--cols': geo.cols, '--lead-cols': geo.lead, '--rail-cols': geo.rail,
+        '--photo-cols': geo.photo, '--deck-cols': geo.lead - geo.photo,
+      },
+        masthead(data, ctx),
+        h('main', { class: 'np-body' },
+          lead ? leadPackage(lead, briefs, geo, ctx) : h('p', { class: 'np-empty' }, ctx.t.noNews),
+          latestRail(rail, ctx)),
+        sectionIndex(index, idx.per, ctx)));
   },
 
-  layout(root) {
-    // Start from the rendered state, so a second pass (after web fonts load) can
-    // bring back what the first one dropped.
-    root.querySelectorAll('[hidden]').forEach(el => { el.hidden = false; });
-    root.querySelectorAll('.np-hed, .np-dek, .np-standfirst, .np-photo').forEach(el => el.removeAttribute('style'));
-    const lead = root.querySelector('.np-lead > .np-hed');
-    if (lead) sizeToFit(lead, 3, 0.7, 1.15);
-    // Secondaries side by side share one size: the smallest any of them needs.
-    const seconds = [...root.querySelectorAll('.np-second .np-hed')];
-    seconds.forEach(el => sizeToFit(el, 4, 0.75, 1));
-    const size = Math.min(...seconds.map(el => parseFloat(el.style.fontSize)));
-    seconds.forEach(el => { el.style.fontSize = `${size}px`; });
-    root.querySelectorAll('[data-fit]').forEach(fit);
-    // Their photos line up too: all as tall as the shortest.
-    const photos = [...root.querySelectorAll('.np-second .np-photo:not([hidden])')];
-    const height = Math.min(...photos.map(el => el.offsetHeight));
-    photos.forEach(el => { el.style.flex = `0 0 ${height}px`; });
-    // Chrome can keep the ellipsis of an earlier, shorter clamp: rebuild the boxes.
+  layout(root, ctx) {
     const page = root.querySelector('.np-page');
-    page.style.display = 'none';
-    void page.offsetHeight;
-    page.style.removeProperty('display');
+    if (!page) return;
+    // From the rendered state each time, so the pass after web fonts load can
+    // bring back what the first one dropped.
+    kit.reset(page);
+    fitNameplate(page);
+    fitLead(page, ctx);
+    fitFlow(page);
+    fitRail(page);
+    justifyFlow(page);
+    justifyRail(page);
   },
 };
 
 // --- geometry ---------------------------------------------------------------
 
-// Columns of about 19 ems of body text: 5 on a MacBook, 6 at 2560, 8 on an
-// ultrawide, counted on the width left of the desktop files (safe.right). The
-// page is centered, with as much paper on the left, which only narrows them.
+// Columns of about 33 characters, as many as fit between the margins for the
+// desktop files (safe.right), kept on both sides so the page stays centered:
+// 5 on a MacBook, 6 at 2560, 8 on an ultrawide. The rail takes one, two from 8;
+// the lead's photo about two fifths of the rest.
 function geometry({ width, height }, safe) {
-  const unit = Math.min(width, height) / 100;
-  const text = Math.min(22, Math.max(12.5, 1.45 * unit));
-  const cols = Math.max(4, Math.min(8, Math.floor((width - safe.right) / (text * 19.5))));
-  const seconds = cols >= 8 ? 3 : 2;
-  const lead = cols - seconds;
-  const photo = Math.min(lead - 1, 3);
-  const mx = Math.round(Math.max(24, width * 0.022));
-  const gap = Math.round(Math.max(16, 1.9 * unit));
-  const colW = (width - 2 * (safe.right + mx) - (cols - 1) * gap) / cols;
-  const photoH = Math.round(Math.min((photo * (colW + gap) - gap) * 9 / 16, height * 0.4));
-  return { cols, seconds, lead, photo, photoH, side: lead - photo, mx, gap, colW };
+  const u = Math.min(width, height) / 100; // 1cqmin
+  const mx = Math.max(28, 2.4 * u + 0.011 * width);
+  const gap = 2.2 * u;
+  const inner = width - 2 * (mx + safe.right);
+  const cols = Math.max(4, Math.min(11, Math.floor((inner + gap) / (22 * u + gap))));
+  const rail = cols >= 8 ? 2 : 1;
+  const lead = cols - rail;
+  const colW = (inner - (cols - 1) * gap) / cols;
+  return { cols, rail, lead, photo: Math.max(1, Math.round(lead * 0.42)), u, gap, inner, colW };
 }
 
 // --- masthead ---------------------------------------------------------------
 
 function masthead(data, ctx) {
   const { h } = ctx;
-  const [weekday, ...day] = ctx.date(ctx.now, 'long').split(' ');
+  const now = ctx.now.getTime();
+  // "dinsdag 27 oktober 2026", "Tuesday, October 27, 2026"
+  const long = ctx.date(ctx.now, 'long');
+  const weekday = long.split(' ')[0].replace(/,$/, '');
+  const year = long.match(/\d{4}/)?.[0] ?? '';
   const updated = Date.parse(data.generatedAt);
-  return h('header', { class: 'np-masthead' },
-    h('div', { class: 'np-ear' },
-      h('b', null, weekday),
-      h('span', null, day.join(' '))),
-    h('h1', { class: 'np-nameplate' }, NAMEPLATE),
-    h('div', { class: 'np-ear np-ear-right' },
-      h('b', null, Number.isNaN(updated) ? 'Laatste nieuws'
-        : ['Bijgewerkt ', h('span', { class: 'np-time' }, ctx.time(updated))]),
-      h('span', null, 'Bron: VRT NWS')),
-    h('div', { class: 'np-rule' }));
+  const source = data.source?.name ?? 'VRT NWS';
+  return h('header', { class: 'np-mast' },
+    h('div', { class: 'np-flagrow' },
+      h('div', { class: 'np-ear' },
+        h('span', { class: 'np-ear-label' }, weekday),
+        h('span', { class: 'np-ear-main' }, ctx.date(ctx.now, 'daymonth')),
+        h('span', { class: 'np-ear-sub' }, year)),
+      h('h1', { class: 'np-nameplate' }, h('span', null, ctx.t.nameplate)),
+      h('div', { class: 'np-ear np-ear-right' },
+        h('span', { class: 'np-ear-label' }, ctx.t.updated),
+        h('span', { class: 'np-ear-main' }, Number.isNaN(updated) ? '–' : ctx.time(updated)),
+        h('span', { class: 'np-ear-sub' }, Number.isNaN(updated) ? '' : cap(ctx.ago(updated, now))))),
+    h('div', { class: 'np-dateline' },
+      h('span', { class: 'np-dateline-side' }, ctx.t.colophon(source)),
+      h('span', { class: 'np-dateline-mid' }, ctx.t.frontPage),
+      h('span', { class: 'np-dateline-side np-source' }, `${ctx.t.source}: ${source}`)));
 }
 
-// --- stories ----------------------------------------------------------------
+// --- lead package -----------------------------------------------------------
 
-function leadStory(s, live, geo, ctx) {
+// The lead and the briefs under it. With a photo, three ways:
+//   across  kicker and headline over the lead's columns, then a row: its text
+//           in columns beside its photo
+//   side    (little text) kicker, headline and text beside the photo
+//   none    no photo: its text opens the columns the briefs run on in
+function leadPackage(lead, briefs, geo, ctx) {
   const { h } = ctx;
-  return h('article', { class: 'np-lead' },
-    kicker(s, ctx),
-    h('h2', { class: 'np-hed' }, s.title),
-    h('div', { class: 'np-lead-body' },
-      h('div', { class: 'np-side', 'data-fit': '' },
-        s.summary && h('p', { class: 'np-standfirst np-fill' }, s.summary),
-        live.length > 0 && livePanel(live, ctx)),
-      photo(s.image, geo.photo * (geo.colW + geo.gap), ctx)));
+  const s = lead.story;
+  const headline = kit.typo(s.title);
+  const kick = kicker(s, ctx, true);
+  const hed = h('h2', { class: 'np-headline', dataset: { len: headline.length } }, headline);
+  const head = briefs.length ? h('h4', { class: 'np-flow-head' }, h('span', null, ctx.t.moreNews)) : null;
+  const items = briefs.map(b => brief(b, ctx));
+  if (!lead.picture) {
+    return h('article', { class: 'np-lead' }, kick, hed,
+      h('div', { class: 'np-flow' }, deck(lead, ctx, 'np-leadtext'), head, items));
+  }
+  const deckCols = geo.lead - geo.photo;
+  const words = [lead.summary, ...lead.points].join(' ').split(/\s+/).filter(Boolean).length;
+  const side = words < 22 * deckCols;
+  const photo = kit.photo(ctx, lead.picture, geo.photo * (geo.colW + geo.gap), { caption: true, cls: 'np-leadphoto' });
+  return h('article', { class: `np-lead has-photo${side ? ' is-side' : ''}` },
+    side ? null : kick,
+    side ? null : hed,
+    h('div', { class: 'np-leadrow' },
+      side ? h('div', { class: 'np-stack' }, kick, hed, deck(lead, ctx, 'np-deck')) : deck(lead, ctx, 'np-deck'),
+      photo),
+    head,
+    h('div', { class: 'np-flow' }, items));
 }
 
-function story(s, ctx, photoWidth = 0) {
+// The lead's own text: its summary, then its summary points (VRT NWS
+// liveblogs), each a paragraph layout() can cut by words.
+function deck(lead, ctx, cls) {
+  if (!lead.summary && !lead.points.length) return null;
+  return ctx.h('div', { class: cls },
+    lead.summary ? kit.prose(ctx, lead.summary, 'np-opener') : null,
+    lead.points.map(p => kit.prose(ctx, p, 'np-point')));
+}
+
+// An earlier story in the columns: headline, then its summary after a run-in
+// dateline (section and time). A picture sits above the headline, the two in
+// one block so a column break never comes between them. That block, or the
+// headline alone, is the first line of the summary's paragraph, so the
+// paragraph's orphans keep it with the dateline and text that follow.
+function brief({ story: s, summary, picture }, ctx) {
   const { h } = ctx;
-  return h('article', { class: 'np-story np-drop' },
-    photoWidth > 0 && photo(s.image, photoWidth, ctx),
-    kicker(s, ctx),
-    h('h3', { class: 'np-hed' }, s.title),
-    s.summary && h('p', { class: 'np-dek' }, s.summary));
+  const meta = [s.section, kit.when(s, ctx)].filter(Boolean).join(' · ');
+  const title = h('h3', { class: 'np-brief-title' }, liveTag(s, ctx), newTag(s, ctx), kit.typo(s.title));
+  const head = picture ? h('div', { class: 'np-brief-head' },
+    kit.photo(ctx, picture, 420, { credit: true, cls: 'np-brief-fig' }), title) : title;
+  return h('article', { class: 'np-brief', dataset: { drop: 'brief' } },
+    summary ? kit.prose(ctx, summary, 'np-first', [head, meta ? h('b', { class: 'np-dl' }, `${meta} — `) : null])
+      : h('p', { class: 'np-first' }, head, meta ? h('b', { class: 'np-dl' }, meta) : null));
 }
 
-function photo(image, cssWidth, ctx) {
-  if (!image?.url) return null;
-  return ctx.h('figure', { class: 'np-photo' },
-    ctx.h('img', { src: ctx.image(image, cssWidth), alt: image.alt || '', decoding: 'async' }));
-}
-
-// Section label with the small marks: LIVE, a play mark for video, "Nieuw".
-function kicker(s, ctx, label = s.section) {
+// Section label with the small marks: a red LIVE tag, the time, "Nieuw".
+function kicker(s, ctx, withTime = false) {
   const { h } = ctx;
+  const now = ctx.now.getTime();
+  const today = s.time && kit.sameDay(s.time, now);
   return h('p', { class: 'np-kicker' },
-    s.kind === 'liveblog' && s.live && h('span', { class: 'np-tag-live' }, 'Live'),
-    s.kind === 'video' && h('span', { class: 'np-tag-video', title: 'Video' }),
-    label && h('span', null, label),
-    ctx.fresh?.has(s.id) && h('span', { class: 'np-tag-new' }, 'Nieuw'),
-    ' ');
+    liveTag(s, ctx),
+    s.section ? h('span', { class: 'np-kicker-tag' }, s.section) : null,
+    withTime && today ? h('span', { class: 'np-kicker-time' }, ctx.time(s.time)) : null,
+    withTime && s.time ? h('span', null, ctx.ago(s.time, now)) : null,
+    newTag(s, ctx));
 }
 
-function livePanel(live, ctx) {
+function liveTag(s, ctx) {
+  return s.live === true ? ctx.h('span', { class: 'np-live' }, ctx.t.live) : null;
+}
+
+function newTag(s, ctx) {
+  return ctx.fresh?.has(s.id) ? ctx.h('span', { class: 'np-new' }, ctx.t.new) : null;
+}
+
+// --- rail -------------------------------------------------------------------
+
+// The latest news that is not on the page already, newest first; with more
+// text (density), a line or two of each.
+function latestRail(items, ctx) {
   const { h } = ctx;
-  return h('section', { class: 'np-live' },
-    h('h4', { class: 'np-live-head' }, 'Nu live'),
-    h('ul', null, live.map(s => h('li', { class: 'np-drop' },
-      h('p', { class: 'np-live-title' }, s.title),
-      h('p', { class: 'np-live-meta' },
-        h('span', { class: 'np-tag-live' }, 'Live'),
-        s.postCount ? ` · ${s.postCount} berichten` : '')))));
+  if (!items.length) return null;
+  return h('aside', { class: 'np-rail' },
+    h('div', { class: 'np-rail-flow' },
+      h('section', { class: 'np-rail-sec' },
+        h('h4', { class: 'np-rail-head' }, h('span', null, ctx.t.latest)),
+        items.map(({ story: s, summary }) => h('article', { class: 'np-other', dataset: { drop: 'other' } },
+          h('p', { class: 'np-other-topic' }, liveTag(s, ctx), s.section ? h('span', null, s.section) : null),
+          h('h5', { class: 'np-other-title' }, newTag(s, ctx), kit.typo(s.title)),
+          summary ? kit.prose(ctx, summary, 'np-other-text') : null,
+          kit.when(s, ctx) ? h('p', { class: 'np-other-meta' }, kit.when(s, ctx)) : null)))));
 }
 
 // --- section index ----------------------------------------------------------
 
-// One row, a section per column, in the order picked on Customize. When there
-// are fewer sections than columns (fewer picked, or an upstream failed) the
-// latest news fills the row; a leftover column gets the colophon, so the row
-// never ends in a hole.
-function sectionIndex(data, geo, ctx) {
+// One row, the picked sections in order, each with its newest headlines that
+// are not on the page yet: two where a section's share of the row is as wide
+// as two body columns (few sections, a wide screen) and the density asks for
+// them. With no sections the latest news fills the row.
+function indexRegion(data, geo, ctx) {
+  const n = Math.min((data.sections ?? []).filter(s => s.stories?.length).length, geo.cols + 1);
+  if (!n) return { spec: { from: 'latest', stories: geo.cols }, per: 1 };
+  const room = (geo.inner - (n - 1) * geo.gap) / n >= 2 * geo.colW + geo.gap;
+  const per = room ? kit.at(ctx, REGIONS.index.stories) : 1;
+  return { spec: { ...REGIONS.index, stories: per, groups: geo.cols + 1 }, per };
+}
+
+function sectionIndex(index, per, ctx) {
   const { h } = ctx;
-  const used = new Set([...(data.live ?? []), ...(data.top ?? [])].map(storyKey));
-  const entry = (s, label) => {
-    used.add(storyKey(s));
-    return h('div', { class: 'np-entry' }, kicker(s, ctx, label), h('p', { class: 'np-entry-hed' }, s.title));
+  // Sections, or the latest stories each under its own section's name.
+  const groups = index.map(x => x.items ? x : { name: x.story.section ?? ctx.t.latest, items: [x] });
+  if (!groups.length) return null;
+  const item = ({ story: s }) => h('article', { class: 'np-entry-item' },
+    h('h5', { class: 'np-entry-hed' }, liveTag(s, ctx), newTag(s, ctx), kit.typo(s.title)),
+    kit.when(s, ctx) ? h('p', { class: 'np-entry-meta' }, kit.when(s, ctx)) : null);
+  return h('footer', { class: 'np-index', '--n': groups.length, '--per': per },
+    groups.map(g => h('section', { class: 'np-entry' },
+      h('p', { class: 'np-entry-label' }, g.name),
+      h('div', { class: 'np-entry-items' }, g.items.map(item)))));
+}
+
+// --- layout: fit and fill ---------------------------------------------------
+
+// The nameplate steps down to fit between the ears.
+function fitNameplate(page) {
+  const plate = page.querySelector('.np-nameplate');
+  const span = plate?.firstElementChild;
+  if (!span) return;
+  const max = parseFloat(getComputedStyle(plate).fontSize);
+  const w = span.getBoundingClientRect().width;
+  if (w > plate.clientWidth) kit.setStyle(plate, 'font-size', `${Math.max(max * 0.5, max * plate.clientWidth / w * 0.98)}px`);
+}
+
+// The lead: its headline as large as fits, and with a photo, one row of photo
+// and text. The row may take a share of the room under the headline (by
+// density), and leaves the briefs under it FLOW_LINES, or with several
+// pictures room for one and its headline in a column; the photo is 3:2, or cropped to the row, never wider than about
+// 2.3:1 unless the row is too low for that. Its text is set larger to fill
+// the row, or cut by words to fit it.
+function fitLead(page, ctx) {
+  const lead = page.querySelector('.np-lead');
+  if (!lead) return;
+  const hed = lead.querySelector('.np-headline');
+  const u = Math.min(ctx.screen.width, ctx.screen.height) / 100;
+  const len = Number(hed.dataset.len) || 80;
+  const wide = Math.min(1.3, Math.max(1, Math.sqrt(ctx.screen.width / ctx.screen.height / 1.6)));
+  const hi = (len < 45 ? 8.6 * u : len < 80 ? 7.4 * u : 6.4 * u) * wide;
+  const lo = 3.2 * u;
+  const lines = () => Math.round(hed.getBoundingClientRect().height / (parseFloat(getComputedStyle(hed).lineHeight) || 1));
+  const photo = lead.querySelector('.np-leadphoto');
+  if (!photo) {
+    kit.fitSize(hed, lo, hi, () => lines() <= 3 && hed.getBoundingClientRect().height <= lead.clientHeight * 0.34);
+    return;
+  }
+  const frame = photo.querySelector('.kit-frame');
+  const row = lead.querySelector('.np-leadrow');
+  const text = row.querySelector('.np-deck');
+  const capH = photo.getBoundingClientRect().height - frame.getBoundingClientRect().height;
+  const w = frame.clientWidth;
+  const height = el => el.getBoundingClientRect().height;
+  const share = kit.at(ctx, LEAD_ROW);
+  const stack = row.querySelector('.np-stack');
+  const below = () => lead.getBoundingClientRect().bottom - row.getBoundingClientRect().top;
+  const flow = () => {
+    const head = lead.querySelector('.np-lead > .np-flow-head');
+    const line = parseFloat(getComputedStyle(lead).lineHeight) || 20;
+    const headH = head ? head.getBoundingClientRect().height + 3 * line / 2 : 0;
+    const least = kit.at(ctx, FLOW_LINES) * line;
+    const pic = lead.querySelector('.np-flow .np-brief-head');
+    const withPic = pic ? Math.max(least, pic.offsetHeight + 2 * line) : least;
+    // Not at the cost of the lead's own photo: then the briefs' go.
+    return (below() - withPic - headH >= w / 2.3 + capH ? withPic : least) + headH;
   };
-  const entries = (data.sections ?? []).map(sec => {
-    const s = sec.stories?.find(st => !used.has(storyKey(st))) ?? sec.stories?.[0];
-    return s && entry(s, sec.name);
-  }).filter(Boolean).slice(0, geo.cols);
-  for (const s of data.latest ?? []) {
-    if (entries.length >= geo.cols - 1) break;
-    if (!used.has(storyKey(s))) entries.push(entry(s));
-  }
-  if (entries.length < geo.cols) {
-    entries.push(h('div', { class: 'np-entry np-colophon' },
-      h('p', { class: 'np-colophon-name' }, NAMEPLATE),
-      h('p', null, 'Een bureaubladkrant met het nieuws van VRT NWS')));
-  }
-  return h('footer', { class: 'np-index' }, entries);
-}
-
-// A liveblog's URL slug follows its headline, so the same blog can come in
-// under two ids; the ~number at the end stays.
-function storyKey(s) {
-  return s.id?.match(/~(\d+)\/?$/)?.[1] ?? s.id;
-}
-
-// --- fitting ----------------------------------------------------------------
-
-function overflows(el) { return el.scrollHeight > el.clientHeight + 1; }
-
-// Lines of text in an element, clamped ones included.
-const lineCount = el => Math.round(el.scrollHeight / parseFloat(getComputedStyle(el).lineHeight));
-
-// Shrink a headline until it takes `lines` lines (down to `min` times its
-// size), or grow it (up to `max` times) as long as it needs no extra line.
-function sizeToFit(el, lines, min, max) {
-  const base = parseFloat(getComputedStyle(el).fontSize);
-  const set = f => { el.style.fontSize = `${base * f}px`; };
-  let f = 1;
-  while (lineCount(el) > lines && f > min) set(f *= 0.95);
-  if (f < 1) return;
-  const start = lineCount(el);
-  while (f * 1.05 <= max) {
-    set(f * 1.05);
-    if (lineCount(el) > start) break;
-    f *= 1.05;
-  }
-  set(f);
-}
-
-// Drop whole items from the end of a region until it fits, then give the
-// region's flexible text (the standfirst, or the last summary) the lines left.
-// If a headline still does not fit, a secondary gives up its photo, then
-// stories leave from the end; a live panel with no rows left goes too.
-function fit(region) {
-  const over = () => overflows(region);
-  const drops = [...region.querySelectorAll('.np-drop')];
-  while (over() && drops.length > 1) drops.pop().hidden = true;
-  fillLines(region, over);
-  const photo = region.querySelector('.np-photo');
-  if (over() && photo) {
-    photo.hidden = true;
-    fillLines(region, over);
-  }
-  while (over() && drops.length) drops.pop().hidden = true;
-  for (const live of region.querySelectorAll('.np-live')) {
-    if (!live.querySelector('li:not([hidden])')) live.hidden = true;
-  }
-}
-
-// Two lines or none: a summary is never cut to one. A secondary's summary
-// stops at four, so the columns do not turn into a wall of text.
-function fillLines(region, over) {
-  const el = region.querySelector('.np-fill')
-    ?? [...region.querySelectorAll('.np-dek')].filter(d => !d.parentElement.closest('[hidden]')).at(-1);
-  if (!el) return;
-  el.hidden = false;
-  const max = el.classList.contains('np-dek') ? 4 : 24;
-  for (let n = 1; n <= max; n++) {
-    el.style.webkitLineClamp = n;
-    if (over()) {
-      if (n <= 2) el.hidden = true;
-      else el.style.webkitLineClamp = n - 1;
-      return;
+  let most;
+  if (stack) {
+    // Side: the headline as large as lets kicker, headline and text fit
+    // beside the photo, at most four lines.
+    most = Math.min(w / 1.5 + capH, lead.clientHeight * share, below() - flow());
+    kit.fitSize(hed, lo, hi, () => lines() <= 4 && height(stack) <= most);
+    if (text && height(stack) > most) {
+      const over = () => height(stack) > most;
+      if (!kit.trimToFit(text, over, 6)) kit.hide(text);
     }
-    if (!overflows(el)) return;
+  } else {
+    kit.fitSize(hed, lo, hi, () => lines() <= 3 && height(hed) <= lead.clientHeight * 0.26);
+    most = Math.min(w / 1.5 + capH, below() * share, below() - flow());
+    if (text) {
+      const body = parseFloat(getComputedStyle(text).fontSize);
+      kit.fitSize(text, body, body * 1.45, () => height(text) <= most);
+      if (height(text) > most) {
+        kit.setStyle(text, 'height', `${most}px`);
+        if (!kit.trimToFit(text, () => kit.overflows(text), 6)) kit.hide(text);
+      }
+    }
   }
+  const content = stack ? height(stack) : text && !text.hidden ? height(text) : 0;
+  const rowH = Math.min(most, Math.max(content, w / 2.3 + capH));
+  kit.setStyle(frame, 'aspect-ratio', 'auto');
+  kit.setStyle(frame, 'height', `${Math.max(rowH - capH, 0)}px`);
+  // The side's text sits at the foot of the row, by the caption.
+  if (stack) kit.setStyle(stack, 'height', `${rowH}px`);
+}
+
+// Columns: drop whole briefs from the end, the first one left out coming back
+// trimmed to the words that fit, so the last column ends on a full line.
+// A head left alone at the foot of a column, its first story in the next, goes.
+// A brief's picture that would fill most of a column (a low row under the
+// lead) goes. A brief that, with its picture or a long headline, did not fit
+// at the foot of a column and left a hole there: while some briefs are left
+// out, it opens the column after all, with two lines of its text, if the rules
+// over it come closer, or else the brief before it (not a live one) is cut by
+// a few lines, unless the columns then end with fewer stories or more room;
+// else it loses its picture, or goes, if the column then ends fuller. Each
+// hole once, a few tries.
+function fitFlow(page) {
+  const flow = page.querySelector('.np-flow');
+  if (!flow) return;
+  const lead = flow.closest('.np-lead');
+  const head = lead.querySelector('.np-flow-head');
+  const briefs = [...flow.querySelectorAll('[data-drop="brief"]')];
+  const over = () => kit.overflows(flow);
+  const line = parseFloat(getComputedStyle(flow).lineHeight) || 20;
+  const out = [];
+  const ups = [];
+  const fit = () => {
+    kit.reset(flow);
+    out.forEach(kit.hide);
+    kit.picturesToFit(flow, 2 * line);
+    ups.forEach(up => up());
+    kit.dropToFit(briefs, over, { trim: 8 });
+    // Even the lead's own text is too long (it opens the columns): cut it.
+    const text = flow.querySelector('.np-leadtext');
+    if (over() && text) kit.trimToFit(text, over, 6);
+  };
+  fit();
+  const shown = () => briefs.filter(el => !el.hidden).length;
+  const tried = new Set();
+  for (let k = 0; k < 6; k++) {
+    const first = briefs.find(el => !el.hidden);
+    if (head && flow.contains(head) && !head.hidden && first
+      && Math.abs(head.getBoundingClientRect().left - first.getBoundingClientRect().left) >= 2) {
+      out.push(head);
+      fit();
+      continue;
+    }
+    const hole = afterHole(flow, tried);
+    if (!hole) break;
+    const b = hole.el.closest('.np-brief');
+    tried.add(b);
+    const a = briefs.slice(0, briefs.indexOf(b)).findLast(el => !el.hidden);
+    // With every brief shown, closer rules or a cut bring nothing more in.
+    const up = shown() < briefs.length && (closeUp(flow, b, hole.col) ?? (a && cutFor(flow, a, b, hole.col)));
+    if (up) {
+      const n = shown(), room = roomIn(flow);
+      ups.push(up);
+      fit();
+      if (shown() > n || (shown() === n && roomIn(flow) <= room)) continue;
+      ups.pop();
+    }
+    out.push(hole.el);
+    fit();
+    if (holeIn(flow, hole.col) > hole.size - hole.line) {
+      out.pop();
+      fit();
+    }
+  }
+  // A brief whose headline ends a column without two lines of its text under
+  // it: the rules over it come closer, or else it loses its picture, if it
+  // then opens there with them, the column ends at most two lines short and
+  // no story goes.
+  for (const b of briefs) {
+    const top = (b.querySelector('.np-brief-fig:not([hidden])') ?? b.querySelector('.np-brief-title'))?.getClientRects()[0];
+    if (b.hidden || !top) continue;
+    const { colAt } = kit.columnsOf(flow);
+    const col = colAt(top.left);
+    if (opensIn(b, col, colAt)) continue;
+    const n = shown();
+    const opens = () => shown() >= n && opensIn(b, col, kit.columnsOf(flow).colAt)
+      && holeIn(flow, col) <= 2 * line;
+    const up = closeUp(flow, b, col);
+    if (up) {
+      ups.push(up);
+      fit();
+      if (opens()) continue;
+      ups.pop();
+      fit();
+    }
+    const fig = b.querySelector('.np-brief-fig:not([hidden])');
+    if (!fig) continue;
+    out.push(fig);
+    fit();
+    if (!opens()) {
+      out.pop();
+      fit();
+    }
+  }
+  if (head && !briefs.some(el => !el.hidden)) kit.hide(head);
+}
+
+// A brief not tried yet that opens a column (under its rule at most) after one
+// that ends more lines early than spreading can fill: {el: its picture or the
+// brief, col: the column that ends early, size, line}.
+function afterHole(flow, tried) {
+  const { r, colAt, line } = kit.columnsOf(flow);
+  for (const b of flow.querySelectorAll('.np-brief:not([hidden])')) {
+    if (tried.has(b)) continue;
+    const el = b.querySelector('.np-brief-fig:not([hidden])') ?? b;
+    const q = el.getClientRects()[0];
+    const c = q ? colAt(q.left) : 0;
+    if (c === 0 || q.top > r.top + line * 2) continue;
+    const size = holeIn(flow, c - 1);
+    if (size > line * 3) return { el, col: c - 1, size, line };
+  }
+  return null;
+}
+
+// Brief a's text, unless a is live, cut by the words of three lines at most
+// (back to a sentence's end only within them), so that brief b, after it,
+// opens in column col, at its foot, and nothing before it moves: what cuts
+// it again, or null.
+function cutFor(flow, a, b, col) {
+  const span = a.querySelector('.np-first .kit-t');
+  if (!span || a.querySelector('.np-live')) return null;
+  const { colAt, ends } = kit.columnsOf(flow);
+  const before = ends().slice(0, col);
+  const full = span.textContent;
+  const words = full.split(/\s+/);
+  const least = Math.max(8, words.length - Math.ceil(3 * words.length / span.getClientRects().length));
+  const opens = n => {
+    span.textContent = kit.cutWords(full, n);
+    return span.textContent.split(/\s+/).length >= least && opensIn(b, col, colAt);
+  };
+  let lo = least;
+  let hi = words.length - 1;
+  if (lo > hi || !opens(lo)) {
+    span.textContent = full;
+    return null;
+  }
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (opens(mid)) lo = mid; else hi = mid - 1;
+  }
+  opens(lo);
+  const moved = ends().slice(0, col).some((v, k) => Math.abs(v - before[k]) > 1);
+  span.textContent = full;
+  if (moved) return null;
+  return () => {
+    span.dataset.kitFull ??= span.textContent;
+    span.textContent = kit.cutWords(span.textContent, lo);
+  };
+}
+
+// The rules in column col, and the one over brief b, closer by two fifths of
+// their space, so that b opens in col after all, at its foot: what brings
+// them closer again, or null.
+function closeUp(flow, b, col) {
+  const { r, colAt } = kit.columnsOf(flow);
+  const rules = [...flow.querySelectorAll('.np-brief:not([hidden])')].filter(el => {
+    const q = el.getClientRects()[0];
+    return el === b || (q && colAt(q.left) === col && q.top > r.top + 2
+      && parseFloat(getComputedStyle(el).borderTopWidth) > 0);
+  });
+  const by = e => rules.forEach(el => {
+    kit.grow(el, 'margin-top', -e / 2);
+    kit.grow(el, 'padding-top', -e / 2);
+  });
+  const most = 0.8 * parseFloat(getComputedStyle(b).paddingTop);
+  by(most);
+  const opens = opensIn(b, col, colAt);
+  by(-most);
+  return opens ? () => by(most) : null;
+}
+
+// Whether brief b opens in column col: its picture or headline, and two lines
+// of its text with it (the one its dateline starts, and the next), not only a
+// word or two.
+function opensIn(b, col, colAt) {
+  const top = (b.querySelector('.np-brief-fig:not([hidden])') ?? b.querySelector('.np-brief-title'))?.getClientRects()[0];
+  const span = b.querySelector('.np-first .kit-t');
+  const lines = span ? [...span.getClientRects()].slice(0, 2) : [];
+  return [top, ...lines].every(q => q && colAt(q.left) === col);
+}
+
+// How far a column of the flow ends above its foot.
+function holeIn(flow, c) {
+  const { ends, bottom } = kit.columnsOf(flow);
+  return bottom - ends()[c];
+}
+
+// How far its columns end above their feet, in all.
+function roomIn(flow) {
+  const { r, ends, bottom } = kit.columnsOf(flow);
+  return ends().reduce((sum, v) => sum + bottom - Math.max(v, r.top), 0);
+}
+
+function fitRail(page) {
+  const col = page.querySelector('.np-rail-flow');
+  if (!col) return;
+  kit.dropToFit([...col.querySelectorAll('[data-drop="other"]')], () => kit.overflows(col), { trim: 6 });
+}
+
+// Vertical justification: a column that ends early gets its spare space
+// spread over its separators (kit.spreadColumns).
+function justifyFlow(page) {
+  const flow = page.querySelector('.np-flow');
+  if (!flow) return;
+  kit.spreadColumns(flow, () => {
+    const units = [];
+    const head = flow.querySelector('.np-flow-head');
+    if (head && !head.hidden) units.push({ el: head, apply: e => kit.grow(head, 'margin-top', e) });
+    // The briefs with a rule over them (not the first under the head).
+    [...flow.querySelectorAll('.np-brief')]
+      .filter(el => !el.hidden && parseFloat(getComputedStyle(el).borderTopWidth) > 0)
+      .forEach(el => {
+        units.push({ el, apply: e => { kit.grow(el, 'margin-top', e / 2); kit.grow(el, 'padding-top', e / 2); } });
+      });
+    return units;
+  }, true);
+}
+
+function justifyRail(page) {
+  const box = page.querySelector('.np-rail-flow');
+  if (!box) return;
+  kit.spreadColumns(box, () => {
+    const items = [...box.querySelectorAll('[data-drop]')].filter(el => !el.hidden);
+    return items.slice(1).map((el, k) => ({
+      el, apply: e => { kit.grow(items[k], 'padding-bottom', e / 2); kit.grow(el, 'padding-top', e / 2); },
+    }));
+  }, true);
+}
+
+function cap(s) {
+  s = String(s ?? '');
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

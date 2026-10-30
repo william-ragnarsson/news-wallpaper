@@ -196,9 +196,8 @@ nav {
 
 .dot.live { background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 20%, transparent); }
 
-/* Picked in the settings; the lead liveblog gets a ring. */
+/* Picked in the settings. */
 .dot.pick { background: var(--accent); }
-.dot.pick.lead { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 
 .link { color: var(--accent); }
 .link:hover { text-decoration: underline; }

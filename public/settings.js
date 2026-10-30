@@ -5,73 +5,99 @@
 // (settings.mjs). Nothing here reads or writes a file: the callers keep
 // settings.json.
 
-import { DEFAULT_SECTIONS, HttpError, PROVIDERS, SECTIONS, liveblogOptions } from '../sources/index.mjs';
+import { HttpError, PROVIDERS, getHeadlines, getProvider } from '../sources/index.mjs';
 import { PRESETS } from './presets/index.js';
 
-export const MAX_LIVEBLOGS = 3;
 export const MAX_MARGIN = 320;
+export const PICTURES = ['none', 'one', 'several'];
+export const MAX_DENSITY = 5;
 
 export const DEFAULTS = Object.freeze({
   // The design on the desktop.
   preset: PRESETS[0].id,
-  // The news provider the front page comes from.
+  // The news provider the front page comes from, the one the app fetches.
   provider: PROVIDERS[0].id,
-  // Liveblog ids that lead the front page, in order: the first is the lead story.
-  liveblogs: [],
-  // Whether the other running liveblogs still show (newsprint's "Nu live" box).
-  otherLiveblogs: true,
-  // Section streams below the front page, in order.
-  sections: DEFAULT_SECTIONS,
+  // Whether running live stories (liveblogs, live pages) lead the front page.
+  liveFirst: true,
+  // Section streams below the front page, in order; the provider's own pick
+  // when it changes.
+  sections: PROVIDERS[0].defaultSections,
   // Points of blank paper kept at the right edge for the files and folders on
   // the desktop (designs that center the page keep as much on the left).
   margin: 104,
+  // How many photos the front page shows: none, one, or several.
+  pictures: 'one',
+  // Photos in color, or in black and white like newsprint.
+  color: false,
+  // From 1, more headlines with little text, to MAX_DENSITY, fewer stories
+  // with more text each (presets/kit.js).
+  density: 3,
   updatedAt: null,
 });
 
-// Each field: is a value valid?
+// Each field: is a value valid in settings `s`? Some depend on the provider,
+// which comes first: its sections, and its liveblogs (VRT NWS's only) for
+// the designs that show one.
 export const FIELDS = {
-  preset: v => PRESETS.some(p => p.id === v),
   provider: v => PROVIDERS.some(p => p.id === v),
-  liveblogs: v => Array.isArray(v) && v.length <= MAX_LIVEBLOGS
-    && v.every(id => typeof id === 'string' && /^\d+$/.test(id)) && new Set(v).size === v.length,
-  otherLiveblogs: v => typeof v === 'boolean',
-  sections: v => Array.isArray(v) && v.every(id => SECTIONS.some(s => s.id === id)) && new Set(v).size === v.length,
+  preset: (v, s) => PRESETS.some(p => p.id === v && (p.data === 'front' || getProvider(s.provider).liveblogs)),
+  liveFirst: v => typeof v === 'boolean',
+  sections: (v, s) => Array.isArray(v) && v.every(id => getProvider(s.provider).sections.some(x => x.id === id))
+    && new Set(v).size === v.length,
   margin: v => Number.isInteger(v) && v >= 0 && v <= MAX_MARGIN,
+  pictures: v => PICTURES.includes(v),
+  color: v => typeof v === 'boolean',
+  density: v => Number.isInteger(v) && v >= 1 && v <= MAX_DENSITY,
 };
 
 // The settings from what settings.json holds (anything, or nothing): a field
 // that is missing or no longer valid (a preset or section that was removed)
-// takes its default.
+// takes its default (the provider's own, for the sections), and one no
+// longer kept (liveblogs, otherLiveblogs) is dropped.
 export function normalize(saved) {
   const settings = { ...DEFAULTS, updatedAt: typeof saved?.updatedAt === 'string' ? saved.updatedAt : null };
   for (const [key, valid] of Object.entries(FIELDS)) {
-    if (saved?.[key] !== undefined && valid(saved[key])) settings[key] = saved[key];
+    if (saved?.[key] !== undefined && valid(saved[key], settings)) settings[key] = saved[key];
+    else if (key === 'provider') Object.assign(settings, providerDefaults(settings.provider));
+    else if (key === 'sections') settings.sections = getProvider(settings.provider).defaultSections;
   }
   return settings;
 }
 
 // `patch` over `current`, stamped `now` (an ISO date). Throws for the whole
-// patch if any field in it is unknown or invalid.
+// patch if any field in it is unknown or invalid. Another provider brings its
+// own sections, and a front-page design if the one in use
+// shows a liveblog it has not got, unless the patch says otherwise.
 export function apply(current, patch, now) {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new HttpError(400, 'Expected a JSON object');
+  const before = normalize(current);
+  const next = { ...before };
+  if (patch.provider !== undefined && patch.provider !== before.provider && FIELDS.provider(patch.provider)) {
+    Object.assign(next, providerDefaults(patch.provider));
+    if (!FIELDS.preset(next.preset, next)) next.preset = DEFAULTS.preset;
+  }
+  Object.assign(next, patch);
   for (const [key, value] of Object.entries(patch)) {
     if (!Object.hasOwn(FIELDS, key)) throw new HttpError(400, `Unknown setting: ${key}`);
-    if (!FIELDS[key](value)) throw new HttpError(400, `Invalid value for ${key}`);
+    if (!FIELDS[key](value, next)) throw new HttpError(400, `Invalid value for ${key}`);
   }
-  return { ...normalize(current), ...patch, updatedAt: now };
+  return { ...next, updatedAt: now };
 }
 
-// What there is to pick from. The liveblogs are the running ones, plus those
-// in `settings` that ended, so a picked one stays listed. They come from the
-// sources' reader: the stored news in the app (host.js useStoredNews), the
-// network by default.
-export async function options(settings) {
+function providerDefaults(provider) {
+  return { provider, sections: getProvider(provider).defaultSections };
+}
+
+// What there is to pick from. Async, as the callers await it: `headlines`
+// comes from the stored news the callers point the sources at
+// (SettingsService.swift), and is null when that is not the provider's in
+// `saved`.
+export async function options(saved) {
   return {
     presets: PRESETS,
     providers: PROVIDERS,
-    sections: SECTIONS,
-    liveblogs: await liveblogOptions(normalize(settings).liveblogs),
-    maxLiveblogs: MAX_LIVEBLOGS,
     maxMargin: MAX_MARGIN,
+    maxDensity: MAX_DENSITY,
+    headlines: await getHeadlines({ provider: normalize(saved).provider }).catch(() => null),
   };
 }
