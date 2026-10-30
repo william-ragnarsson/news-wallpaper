@@ -173,16 +173,18 @@ function deck(lead, ctx, cls) {
 
 // An earlier story in the columns: headline, then its summary after a run-in
 // dateline (section and time). A picture sits above the headline, the two in
-// one block so a column break never comes between them.
+// one block so a column break never comes between them. That block, or the
+// headline alone, is the first line of the summary's paragraph, so the
+// paragraph's orphans keep it with the dateline and text that follow.
 function brief({ story: s, summary, picture }, ctx) {
   const { h } = ctx;
   const meta = [s.section, kit.when(s, ctx)].filter(Boolean).join(' · ');
   const title = h('h3', { class: 'np-brief-title' }, liveTag(s, ctx), newTag(s, ctx), kit.typo(s.title));
+  const head = picture ? h('div', { class: 'np-brief-head' },
+    kit.photo(ctx, picture, 420, { credit: true, cls: 'np-brief-fig' }), title) : title;
   return h('article', { class: 'np-brief', dataset: { drop: 'brief' } },
-    picture ? h('div', { class: 'np-brief-head' },
-      kit.photo(ctx, picture, 420, { credit: true, cls: 'np-brief-fig' }), title) : title,
-    summary ? kit.prose(ctx, summary, 'np-first', meta ? h('b', { class: 'np-dl' }, `${meta} — `) : null)
-      : meta ? h('p', { class: 'np-first' }, h('b', { class: 'np-dl' }, meta)) : null);
+    summary ? kit.prose(ctx, summary, 'np-first', [head, meta ? h('b', { class: 'np-dl' }, `${meta} — `) : null])
+      : h('p', { class: 'np-first' }, head, meta ? h('b', { class: 'np-dl' }, meta) : null));
 }
 
 // Section label with the small marks: a red LIVE tag, the time, "Nieuw".
@@ -338,9 +340,13 @@ function fitLead(page, ctx) {
 // trimmed to the words that fit, so the last column ends on a full line.
 // A head left alone at the foot of a column, its first story in the next, goes.
 // A brief's picture that would fill most of a column (a low row under the
-// lead) goes. A brief that, with its picture or a long headline, did not fit at the foot
-// of a column and left a hole there loses its picture, or goes, if the column
-// then ends fuller; a few tries.
+// lead) goes. A brief that, with its picture or a long headline, did not fit
+// at the foot of a column and left a hole there: while some briefs are left
+// out, it opens the column after all, with two lines of its text, if the rules
+// over it come closer, or else the brief before it (not a live one) is cut by
+// a few lines, unless the columns then end with fewer stories or more room;
+// else it loses its picture, or goes, if the column then ends fuller. Each
+// hole once, a few tries.
 function fitFlow(page) {
   const flow = page.querySelector('.np-flow');
   if (!flow) return;
@@ -350,17 +356,21 @@ function fitFlow(page) {
   const over = () => kit.overflows(flow);
   const line = parseFloat(getComputedStyle(flow).lineHeight) || 20;
   const out = [];
+  const ups = [];
   const fit = () => {
     kit.reset(flow);
     out.forEach(kit.hide);
     kit.picturesToFit(flow, 2 * line);
+    ups.forEach(up => up());
     kit.dropToFit(briefs, over, { trim: 8 });
     // Even the lead's own text is too long (it opens the columns): cut it.
     const text = flow.querySelector('.np-leadtext');
     if (over() && text) kit.trimToFit(text, over, 6);
   };
   fit();
-  for (let k = 0; k < 3; k++) {
+  const shown = () => briefs.filter(el => !el.hidden).length;
+  const tried = new Set();
+  for (let k = 0; k < 6; k++) {
     const first = briefs.find(el => !el.hidden);
     if (head && flow.contains(head) && !head.hidden && first
       && Math.abs(head.getBoundingClientRect().left - first.getBoundingClientRect().left) >= 2) {
@@ -368,25 +378,67 @@ function fitFlow(page) {
       fit();
       continue;
     }
-    const hole = afterHole(flow);
+    const hole = afterHole(flow, tried);
     if (!hole) break;
+    const b = hole.el.closest('.np-brief');
+    tried.add(b);
+    const a = briefs.slice(0, briefs.indexOf(b)).findLast(el => !el.hidden);
+    // With every brief shown, closer rules or a cut bring nothing more in.
+    const up = shown() < briefs.length && (closeUp(flow, b, hole.col) ?? (a && cutFor(flow, a, b, hole.col)));
+    if (up) {
+      const n = shown(), room = roomIn(flow);
+      ups.push(up);
+      fit();
+      if (shown() > n || (shown() === n && roomIn(flow) <= room)) continue;
+      ups.pop();
+    }
     out.push(hole.el);
     fit();
     if (holeIn(flow, hole.col) > hole.size - hole.line) {
       out.pop();
       fit();
-      break;
+    }
+  }
+  // A brief whose headline ends a column without two lines of its text under
+  // it: the rules over it come closer, or else it loses its picture, if it
+  // then opens there with them, the column ends at most two lines short and
+  // no story goes.
+  for (const b of briefs) {
+    const top = (b.querySelector('.np-brief-fig:not([hidden])') ?? b.querySelector('.np-brief-title'))?.getClientRects()[0];
+    if (b.hidden || !top) continue;
+    const { colAt } = kit.columnsOf(flow);
+    const col = colAt(top.left);
+    if (opensIn(b, col, colAt)) continue;
+    const n = shown();
+    const opens = () => shown() >= n && opensIn(b, col, kit.columnsOf(flow).colAt)
+      && holeIn(flow, col) <= 2 * line;
+    const up = closeUp(flow, b, col);
+    if (up) {
+      ups.push(up);
+      fit();
+      if (opens()) continue;
+      ups.pop();
+      fit();
+    }
+    const fig = b.querySelector('.np-brief-fig:not([hidden])');
+    if (!fig) continue;
+    out.push(fig);
+    fit();
+    if (!opens()) {
+      out.pop();
+      fit();
     }
   }
   if (head && !briefs.some(el => !el.hidden)) kit.hide(head);
 }
 
-// A brief that opens a column (under its rule at most) after one that ends
-// more lines early than spreading can fill: {el: its picture or the brief,
-// col: the column that ends early, size, line}.
-function afterHole(flow) {
+// A brief not tried yet that opens a column (under its rule at most) after one
+// that ends more lines early than spreading can fill: {el: its picture or the
+// brief, col: the column that ends early, size, line}.
+function afterHole(flow, tried) {
   const { r, colAt, line } = kit.columnsOf(flow);
   for (const b of flow.querySelectorAll('.np-brief:not([hidden])')) {
+    if (tried.has(b)) continue;
     const el = b.querySelector('.np-brief-fig:not([hidden])') ?? b;
     const q = el.getClientRects()[0];
     const c = q ? colAt(q.left) : 0;
@@ -397,10 +449,83 @@ function afterHole(flow) {
   return null;
 }
 
+// Brief a's text, unless a is live, cut by the words of three lines at most
+// (back to a sentence's end only within them), so that brief b, after it,
+// opens in column col, at its foot, and nothing before it moves: what cuts
+// it again, or null.
+function cutFor(flow, a, b, col) {
+  const span = a.querySelector('.np-first .kit-t');
+  if (!span || a.querySelector('.np-live')) return null;
+  const { colAt, ends } = kit.columnsOf(flow);
+  const before = ends().slice(0, col);
+  const full = span.textContent;
+  const words = full.split(/\s+/);
+  const least = Math.max(8, words.length - Math.ceil(3 * words.length / span.getClientRects().length));
+  const opens = n => {
+    span.textContent = kit.cutWords(full, n);
+    return span.textContent.split(/\s+/).length >= least && opensIn(b, col, colAt);
+  };
+  let lo = least;
+  let hi = words.length - 1;
+  if (lo > hi || !opens(lo)) {
+    span.textContent = full;
+    return null;
+  }
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (opens(mid)) lo = mid; else hi = mid - 1;
+  }
+  opens(lo);
+  const moved = ends().slice(0, col).some((v, k) => Math.abs(v - before[k]) > 1);
+  span.textContent = full;
+  if (moved) return null;
+  return () => {
+    span.dataset.kitFull ??= span.textContent;
+    span.textContent = kit.cutWords(span.textContent, lo);
+  };
+}
+
+// The rules in column col, and the one over brief b, closer by two fifths of
+// their space, so that b opens in col after all, at its foot: what brings
+// them closer again, or null.
+function closeUp(flow, b, col) {
+  const { r, colAt } = kit.columnsOf(flow);
+  const rules = [...flow.querySelectorAll('.np-brief:not([hidden])')].filter(el => {
+    const q = el.getClientRects()[0];
+    return el === b || (q && colAt(q.left) === col && q.top > r.top + 2
+      && parseFloat(getComputedStyle(el).borderTopWidth) > 0);
+  });
+  const by = e => rules.forEach(el => {
+    kit.grow(el, 'margin-top', -e / 2);
+    kit.grow(el, 'padding-top', -e / 2);
+  });
+  const most = 0.8 * parseFloat(getComputedStyle(b).paddingTop);
+  by(most);
+  const opens = opensIn(b, col, colAt);
+  by(-most);
+  return opens ? () => by(most) : null;
+}
+
+// Whether brief b opens in column col: its picture or headline, and two lines
+// of its text with it (the one its dateline starts, and the next), not only a
+// word or two.
+function opensIn(b, col, colAt) {
+  const top = (b.querySelector('.np-brief-fig:not([hidden])') ?? b.querySelector('.np-brief-title'))?.getClientRects()[0];
+  const span = b.querySelector('.np-first .kit-t');
+  const lines = span ? [...span.getClientRects()].slice(0, 2) : [];
+  return [top, ...lines].every(q => q && colAt(q.left) === col);
+}
+
 // How far a column of the flow ends above its foot.
 function holeIn(flow, c) {
   const { ends, bottom } = kit.columnsOf(flow);
   return bottom - ends()[c];
+}
+
+// How far its columns end above their feet, in all.
+function roomIn(flow) {
+  const { r, ends, bottom } = kit.columnsOf(flow);
+  return ends().reduce((sum, v) => sum + bottom - Math.max(v, r.top), 0);
 }
 
 function fitRail(page) {

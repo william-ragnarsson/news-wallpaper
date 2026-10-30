@@ -472,8 +472,6 @@
   hyphens: auto;
   -webkit-hyphens: auto;
   hyphenate-limit-chars: 14 6 6;
-  break-after: avoid;
-  break-inside: avoid;
 }
 
 .preset-newsprint .np-dl {
@@ -482,10 +480,21 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* A brief's picture and its headline stay in one column. WebKit's columns
-   split them even with break-inside or break-after: avoid; an inline block
-   they keep whole. */
-.preset-newsprint .np-brief-head {
+/* A brief's headline, with its picture over it, is the first line of its
+   paragraph: an inline block, which WebKit's columns keep whole, and the
+   paragraph's orphans keep with the line after it. (A heading of its own
+   they split from its text, and from its picture, even with break-inside
+   or break-after: avoid.) A brief with no text is one inline block as a
+   whole: WebKit's columns misplace the line after so tall a first one, with
+   a gap over it in the next column. */
+.preset-newsprint .np-first > :is(.np-brief-head, .np-brief-title) {
+  display: inline-block;
+  width: 100%;
+  vertical-align: top;
+  text-align: start;
+}
+
+.preset-newsprint .np-first:not(:has(.kit-t)) {
   display: inline-block;
   width: 100%;
   vertical-align: top;
