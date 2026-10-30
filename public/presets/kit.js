@@ -109,7 +109,7 @@ export function plan(data, ctx, regions) {
     const ok = s => free(s) && (!spec.filter || spec.filter(s));
     const take = (pool, allowed) => {
       const picked = pick(pool, ok, n + at(ctx, spec.spares ?? 0));
-      if (spec.newest) picked.sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
+      if (spec.newest) picked.sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
       return picked.map((s, i) => ({ ...item(s, spec, allowed), spare: i >= n }));
     };
     const from = [spec.from ?? 'top'].flat();
