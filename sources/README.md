@@ -114,13 +114,15 @@ defaults.
   pictures: 'one',               // how many photos the front page shows: 'none', 'one' or 'several'
                                  // (ctx.pictures)
   color: false,                  // photos in color (true) or in black and white (false) (ctx.color)
+  density: 3,                    // from 1, more headlines with little text, to 5 (maxDensity), fewer
+                                 // stories with more text each (ctx.density, presets/kit.js)
   updatedAt: '2026-10-26T16:29:29.263Z' | null,  // ISO time of the last save; null for the defaults
 }
 ```
 
 Defaults: `preset: 'newsprint'`, `provider: 'vrt-nws'`, `liveFirst: true`,
 `sections: ['binnenland', 'buitenland', 'politiek', 'economie', 'sport', 'cultuur', 'wetenschap']`,
-`margin: 104`, `pictures: 'one'`, `color: false`. The sections are the
+`margin: 104`, `pictures: 'one'`, `color: false`, `density: 3`. The sections are the
 provider's own pick (its `frontpage.sections`).
 
 A change (`SettingsService.update`) takes any of the fields but `updatedAt`;
@@ -151,6 +153,7 @@ Nothing in it is fetched.
     margin: true,                // designs that keep the `margin` clear; absent otherwise
     pictures: true,              // designs that follow `pictures`; absent otherwise
     color: true,                 // designs that follow `color`; absent otherwise
+    density: true,               // designs that follow `density`; absent otherwise
   }],
   providers: [{                  // the outlets a front page can come from (sources/frontpage.mjs)
     id: 'vrt-nws', name: 'VRT NWS', owner: 'VRT', language: 'nl', homepage: 'https://…', description: '…',
@@ -159,6 +162,12 @@ Nothing in it is fetched.
     liveblogs: true,             // whether it has liveblogs to follow (VRT NWS only)
   }],
   maxMargin: 320,
+  maxDensity: 5,
+  headlines: {                   // the saved provider's live stories and each section's first ones
+    provider: 'vrt-nws',         // (getHeadlines), for the Sources pane; null when the stored
+    live: [Story],               // news has not got that provider's front page
+    sections: { binnenland: [Story], … },  // up to 3 per section, by section id
+  },
 }
 ```
 
