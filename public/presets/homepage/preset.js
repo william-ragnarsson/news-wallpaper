@@ -240,14 +240,14 @@ function leadPackage(lead, related, more, ctx) {
   const { story } = lead;
   return h('section', { class: `hp-lead${lead.picture ? '' : ' no-photo'}` },
     h('div', { class: 'hp-lead-text' },
-      h('article', { class: 'hp-lead-story' },
+      h('article', { class: 'hp-lead-story', dataset: { story: story.url } },
         kicker(story, ctx),
         h('h1', { class: 'hp-lead-title', '--k': titleScale(story.title) }, kit.typo(story.title)),
         lead.summary ? kit.prose(ctx, lead.summary, 'hp-lead-summary') : null,
         lead.points.map(p => kit.prose(ctx, p, 'hp-point')),
       ),
       related.length ? h('ul', { class: 'hp-related' },
-        related.map(item => kit.spare(h('li', { dataset: { id: item.story.id } },
+        related.map(item => kit.spare(h('li', { dataset: { id: item.story.id, story: item.story.url } },
           kicker(item.story, ctx),
           h('h2', { class: 'hp-related-title' }, kit.typo(item.story.title)),
           item.summary ? kit.prose(ctx, item.summary, 'hp-summary') : null,
@@ -278,7 +278,7 @@ function latestRail(items, live, ctx) {
   return h('aside', { class: 'hp-rail' },
     h('h3', { class: 'hp-label' }, ctx.t.justIn),
     h('ol', { class: 'hp-latest' },
-      all.map(item => kit.spare(h('li', { dataset: item.twin ? { twin: item.twin } : null },
+      all.map(item => kit.spare(h('li', { dataset: { story: item.story.url, ...(item.twin ? { twin: item.twin } : {}) } },
         h('time', null, ctx.time(item.story.time)),
         headline(item.story, ctx),
         item.summary ? kit.prose(ctx, item.summary, 'hp-summary') : null,
@@ -315,7 +315,7 @@ function card(item, ctx) {
   const { h } = ctx;
   const { story, picture } = item;
   const video = picture && story.kind === 'video';
-  return h('article', { class: `hp-card${picture ? '' : ' no-photo'}` },
+  return h('article', { class: `hp-card${picture ? '' : ' no-photo'}`, dataset: { story: story.url } },
     picture ? kit.photo(ctx, picture, ctx.screen.width * 0.1, { cls: `hp-thumb${video ? ' is-video' : ''}` }) : null,
     h('h4', { class: 'hp-card-title' }, marks(story, ctx, !video), kit.typo(story.title)),
     item.summary ? kit.prose(ctx, item.summary, 'hp-summary') : null,
@@ -323,7 +323,7 @@ function card(item, ctx) {
 }
 
 function listItem(item, ctx) {
-  return kit.spare(ctx.h('li', null,
+  return kit.spare(ctx.h('li', { dataset: { story: item.story.url } },
     headline(item.story, ctx),
     item.summary ? kit.prose(ctx, item.summary, 'hp-summary') : null,
   ), item);

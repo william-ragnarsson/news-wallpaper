@@ -44,6 +44,24 @@ export default {
 screen is a CSS size container, so `cqw`, `cqh`, `cqmin` work and refer to the
 simulated screen (not the browser window).
 
+## Marking stories: `data-story`
+
+The app's menu bar lists the articles the picture shows under Articles, and
+opens one when it is clicked. Its list comes from the page: mark the element
+that shows a story (its block, with the headline) with the story's url,
+`dataset: { story: s.url }`. Mark one element a story, and mark every story
+the design shows: the lead, the columns, a rail of headlines, a liveblog
+(`data.focus`, an entry of `data.liveblogs`), a headline of `data.headlines`.
+A post has no url of its own; its liveblog stands for it.
+
+The page lists a marked story when fitting left it in view: not `hidden` or
+`display: none`, not `opacity: 0`, and not cut off by the screen or by a box
+with `overflow: hidden`. One still fading in (an animation that ends) counts
+as shown. It takes the title from the data, so a design may trim its own; a
+liveblog's is its topic and its headline, `topic: title`. A story marked
+twice (or a liveblog under two slugs) is listed once, where it comes first. `wallpaper.onScreen()` in the page's console
+shows the list, and `wallpaper-dev render` prints it as `stories`.
+
 ## `ctx`
 
 | field | what |

@@ -141,7 +141,7 @@ function leadPackage(lead, briefs, geo, ctx) {
   const s = lead.story;
   const headline = kit.typo(s.title);
   const kick = kicker(s, ctx, true);
-  const hed = h('h2', { class: 'np-headline', dataset: { len: headline.length } }, headline);
+  const hed = h('h2', { class: 'np-headline', dataset: { len: headline.length, story: s.url } }, headline);
   const head = briefs.length ? h('h4', { class: 'np-flow-head' }, h('span', null, ctx.t.moreNews)) : null;
   const items = briefs.map(b => brief(b, ctx));
   if (!lead.picture) {
@@ -182,7 +182,7 @@ function brief({ story: s, summary, picture }, ctx) {
   const title = h('h3', { class: 'np-brief-title' }, liveTag(s, ctx), newTag(s, ctx), kit.typo(s.title));
   const head = picture ? h('div', { class: 'np-brief-head' },
     kit.photo(ctx, picture, 420, { credit: true, cls: 'np-brief-fig' }), title) : title;
-  return h('article', { class: 'np-brief', dataset: { drop: 'brief' } },
+  return h('article', { class: 'np-brief', dataset: { drop: 'brief', story: s.url } },
     summary ? kit.prose(ctx, summary, 'np-first', [head, meta ? h('b', { class: 'np-dl' }, `${meta} — `) : null])
       : h('p', { class: 'np-first' }, head, meta ? h('b', { class: 'np-dl' }, meta) : null));
 }
@@ -219,7 +219,7 @@ function latestRail(items, ctx) {
     h('div', { class: 'np-rail-flow' },
       h('section', { class: 'np-rail-sec' },
         h('h4', { class: 'np-rail-head' }, h('span', null, ctx.t.latest)),
-        items.map(({ story: s, summary }) => h('article', { class: 'np-other', dataset: { drop: 'other' } },
+        items.map(({ story: s, summary }) => h('article', { class: 'np-other', dataset: { drop: 'other', story: s.url } },
           h('p', { class: 'np-other-topic' }, liveTag(s, ctx), s.section ? h('span', null, s.section) : null),
           h('h5', { class: 'np-other-title' }, newTag(s, ctx), kit.typo(s.title)),
           summary ? kit.prose(ctx, summary, 'np-other-text') : null,
@@ -245,7 +245,7 @@ function sectionIndex(index, per, ctx) {
   // Sections, or the latest stories each under its own section's name.
   const groups = index.map(x => x.items ? x : { name: x.story.section ?? ctx.t.latest, items: [x] });
   if (!groups.length) return null;
-  const item = ({ story: s }) => h('article', { class: 'np-entry-item' },
+  const item = ({ story: s }) => h('article', { class: 'np-entry-item', dataset: { story: s.url } },
     h('h5', { class: 'np-entry-hed' }, liveTag(s, ctx), newTag(s, ctx), kit.typo(s.title)),
     kit.when(s, ctx) ? h('p', { class: 'np-entry-meta' }, kit.when(s, ctx)) : null);
   return h('footer', { class: 'np-index', '--n': groups.length, '--per': per },

@@ -206,7 +206,7 @@ function leadStory(item, ctx, { narrow, photoPx }) {
   const { story: s } = item;
   const title = kit.typo(s.title);
   const size = title.length > 115 ? ' is-long' : title.length < 60 ? ' is-short' : '';
-  return h('section', { class: `hl-lead${size}${narrow ? ' is-narrow' : ''}` },
+  return h('section', { class: `hl-lead${size}${narrow ? ' is-narrow' : ''}`, dataset: { story: s.url } },
     kicker(s, ctx),
     headline(h, 'h2', 'hl-lead-title', title),
     h('div', { class: 'hl-lead-side' },
@@ -222,7 +222,7 @@ function leadStory(item, ctx, { narrow, photoPx }) {
 function story(item, ctx, thumbPx) {
   const { h } = ctx;
   const { story: s } = item;
-  return h('article', { class: 'hl-story', dataset: { key: kit.storyKey(s) } },
+  return h('article', { class: 'hl-story', dataset: { key: kit.storyKey(s), story: s.url } },
     item.picture ? kit.photo(ctx, item.picture, thumbPx, { cls: 'hl-thumb' }) : null,
     kicker(s, ctx),
     headline(h, 'h3', 'hl-title', kit.typo(s.title)),
@@ -252,7 +252,7 @@ function liveLine(stories, ctx) {
   return h('footer', { class: 'hl-foot' },
     h('span', { class: 'hl-live' }, ctx.t.live),
     h('p', { class: 'hl-foot-items' },
-      stories.map(s => h('span', { class: 'hl-foot-item', dataset: { key: kit.storyKey(s) } },
+      stories.map(s => h('span', { class: 'hl-foot-item', dataset: { key: kit.storyKey(s), story: s.url } },
         s.section ? h('b', null, s.section) : null,
         kit.typo(s.title),
       )),

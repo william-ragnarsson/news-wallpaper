@@ -374,7 +374,7 @@ function h(tag, props, ...children) {
     if (v == null || v === false) continue;
     if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
     else if (k.startsWith('--')) el.style.setProperty(k, v);
-    else if (k === 'dataset') Object.assign(el.dataset, v);
+    else if (k === 'dataset') for (const [key, value] of Object.entries(v)) { if (value != null) el.dataset[key] = value; }
     else el.setAttribute(k, v === true ? '' : v);
   }
   el.append(...children.flat(Infinity).filter(c => c != null && c !== false));
@@ -652,8 +652,8 @@ async function refresh(announce = false) {
 
 // What the app calls before each picture: catch up with the settings, fetch,
 // render, and wait until the fonts and images are in, so the picture is
-// complete. Resolves to { ok, error, fetchedAt }; on an error the page still
-// shows the last news it had.
+// complete. Resolves to { ok, error, fetchedAt, stories }; on an error the
+// page still shows the last news it had.
 async function update() {
   await ready;
   const settings = await host.loadSettings();
@@ -666,8 +666,58 @@ async function update() {
   tickClock();
   render();
   await settled();
-  return { ok: !state.error, error: state.error, fetchedAt: state.fetchedAt?.toISOString() ?? null };
+  return { ok: !state.error, error: state.error, fetchedAt: state.fetchedAt?.toISOString() ?? null, stories: onScreen() };
 }
+
+// The stories the picture shows, in the design's order: [{ title, url }], one
+// for each story a design marks with data-story (its url) that fitting left
+// in view. The app lists them in the menu bar, under Articles. The titles are
+// the data's, never the ones a design trimmed; a liveblog's leads with its
+// topic, which the designs show it by.
+function onScreen() {
+  const d = state.data;
+  if (!d || !preset) return [];
+  const byUrl = new Map();
+  const front = Array.isArray(d.top);
+  for (const s of front ? [...frontStories(d), ...(d.latest ?? [])] : [d.focus, ...(d.liveblogs ?? []), ...(d.headlines ?? [])]) {
+    if (s?.url && !byUrl.has(s.url)) byUrl.set(s.url, s);
+  }
+  // A liveblog's slug follows its headline: one blog, two urls.
+  const key = url => url.match(/~(\d+)\/?$/)?.[1] ?? url;
+  const screen = els.wallpaper.getBoundingClientRect();
+  const seen = new Set();
+  const stories = [];
+  for (const el of els.wallpaper.querySelectorAll('[data-story]')) {
+    const story = byUrl.get(el.dataset.story);
+    const [topic, headline] = [story?.topic, story?.title].map(t => t?.replace(/\s+/g, ' ').trim());
+    const title = topic && headline && !headline.startsWith(topic) ? `${topic}: ${headline}` : headline || topic;
+    if (!title || seen.has(key(story.url)) || !inView(el, screen)) continue;
+    seen.add(key(story.url));
+    stories.push({ title, url: story.url });
+  }
+  return stories;
+}
+
+// Whether `el` shows on the screen: laid out (not hidden), not invisible, and
+// not cut off by the screen's edge or a box that clips it down to a sliver.
+// One still fading in (a story arriving) counts: it is about to show.
+function inView(el, screen) {
+  const rect = el.getBoundingClientRect();
+  if (!el.getClientRects().length || getComputedStyle(el).visibility === 'hidden') return false;
+  let { top, right, bottom, left } = rect;
+  const clip = (r, x = true, y = true) => {
+    if (x) { left = Math.max(left, r.left); right = Math.min(right, r.right); }
+    if (y) { top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom); }
+  };
+  clip(screen);
+  for (let box = el; box && box !== els.wallpaper; box = box.parentElement) {
+    const style = getComputedStyle(box);
+    if (Number(style.opacity) === 0 && !fadingIn(box)) return false;
+    if (box !== el) clip(box.getBoundingClientRect(), style.overflowX !== 'visible', style.overflowY !== 'visible');
+  }
+  return right - left >= Math.min(rect.width, 16) && bottom - top >= Math.min(rect.height, 16) && right > left && bottom > top;
+}
+const fadingIn = el => el.getAnimations().some(a => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming().endTime));
 
 // Waits for the web fonts (then lays out again) and for every image on the
 // wallpaper, at most `timeoutMs`: an image that never loads must not hold up
@@ -760,5 +810,5 @@ window.wallpaper = {
   refresh: update,
   sources,
   presets: PRESETS,
-  state, setPreset, followAll, render,
+  state, setPreset, followAll, render, onScreen,
 };
