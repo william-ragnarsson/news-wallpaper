@@ -24,6 +24,19 @@ struct WallpaperHeadlinesApp: App {
       Button("Settings…") { delegate.customize(.settings) }
       Button("Quit") { NSApp.terminate(nil) }
     }
+    // The menus in the menu bar while Customize is open (the app is a regular
+    // one then): a menu bar app's have no Settings… and no Close.
+    .commands {
+      CommandGroup(replacing: .appSettings) {
+        Button("Customize…") { delegate.customize() }
+          .keyboardShortcut(",")
+        Button("Settings…") { delegate.customize(.settings) }
+      }
+      CommandGroup(before: .windowSize) {
+        Button("Close") { NSApp.keyWindow?.performClose(nil) }
+          .keyboardShortcut("w")
+      }
+    }
   }
 }
 
@@ -36,6 +49,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   func applicationDidFinishLaunching(_ notification: Notification) {
     // Info.plist's LSUIElement does this for the .app; this covers `swift run`.
     NSApp.setActivationPolicy(.accessory)
+    // Its icon in the Dock and Cmd+Tab while Customize is open.
+    let icon = ImageRenderer(content: AppTile(size: 412).padding(50))
+    icon.scale = 2
+    NSApp.applicationIconImage = icon.nsImage
     updater.redrawing = { [weak self] in self?.customization.redrawing($0) }
     // New news: an open Customize lists it and draws its preview again.
     updater.fetched = { [weak self] in

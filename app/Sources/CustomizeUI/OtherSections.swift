@@ -13,7 +13,13 @@ struct OtherSections: View {
     let name = digest.provider?.name ?? "the provider"
     Section {
       if digest.others.isEmpty {
-        Text("All of \(name)’s sections are on the front page.").foregroundStyle(.secondary)
+        Text("All of \(name)’s sections are on the front page.")
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background { DropHighlight(on: drop.id == "") }
+          .dropDestination(for: String.self) { ids, _ in remove(ids) } isTargeted: { over in
+            drop.over(over, "")
+          }
       }
       ForEach(digest.others) { section in
         SectionRow(section: section, place: nil, targeted: drop.id == section.id) {
