@@ -167,6 +167,7 @@ export default {
     const focusCol = h('article', {
       class: `fp-col fp-col--focus${focusLive ? '' : ' is-ended'}`,
       '--span': span,
+      dataset: { story: data.focus.url },
     },
     head(1, focus, focusLive),
     h('div', { class: 'fp-meter' }, gauge(focus, true), facts(focus)),
@@ -197,7 +198,7 @@ export default {
       const rest = listable(older).slice(0, 2);
       const background = cleanIntro(blog.intro);
       const isEnded = blog.status !== 'live';
-      return h('article', { class: `fp-col${isEnded ? ' is-ended' : ''}` },
+      return h('article', { class: `fp-col${isEnded ? ' is-ended' : ''}`, dataset: { story: blog.url } },
         head(i + 2, blog, false),
         h('div', { class: 'fp-meter' }, gauge(blog, false)),
         h('div', { class: 'fp-body' },
@@ -250,8 +251,8 @@ export default {
         bandItems.map(a => headline(h, ctx, a, 'article')),
       ) : null,
       h('footer', { class: 'fp-footer' },
-        offList(h, 'Ook live', liveOff.map(b => [b.topic || b.title]), 'fp-footer-left'),
-        offList(h, 'Afgelopen', endedOff.map(b => [b.topic || b.title, sameDay(b.updatedAt, now) ? ctx.time(b.updatedAt) : ctx.date(b.updatedAt, 'short')]), 'fp-footer-right'),
+        offList(h, 'Ook live', liveOff.map(b => [b.topic || b.title, null, b.url]), 'fp-footer-left'),
+        offList(h, 'Afgelopen', endedOff.map(b => [b.topic || b.title, sameDay(b.updatedAt, now) ? ctx.time(b.updatedAt) : ctx.date(b.updatedAt, 'short'), b.url]), 'fp-footer-right'),
       ),
     ));
   },
@@ -379,7 +380,7 @@ function unit(screen) {
 // The feed is ordered by last update, so that is the time shown.
 function headline(h, ctx, a, tag) {
   const ts = a.updatedAt ?? a.publishedAt;
-  return h(tag, { class: 'fp-hl' },
+  return h(tag, { class: 'fp-hl', dataset: { story: a.url } },
     ts || a.section ? h('p', { class: 'fp-hl-kicker' },
       ts ? h('time', null, ctx.time(ts)) : null,
       a.section ? h('span', null, a.section) : null) : null,
@@ -387,12 +388,12 @@ function headline(h, ctx, a, tag) {
   );
 }
 
-// names: [[name, time?]]. The time is kept whole when a long name is shortened.
+// names: [[name, time?, url]]. The time is kept whole when a long name is shortened.
 function offList(h, label, names, cls) {
   if (!names.length) return h('p', { class: cls });
   return h('p', { class: `fp-off ${cls}` },
     h('b', null, label),
-    names.map(([name, time], i) => h('span', { class: 'fp-off-name' },
+    names.map(([name, time, url], i) => h('span', { class: 'fp-off-name', dataset: { story: url } },
       i ? ', ' : null,
       h('span', { class: 'fp-off-text' }, name),
       time ? h('span', { class: 'fp-off-time' }, time) : null)),

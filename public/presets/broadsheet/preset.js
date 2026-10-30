@@ -132,7 +132,7 @@ function masthead(focus, posts, refreshed, ctx) {
       h('span', { class: 'bs-ear-sub' },
         !since ? `tot ${until}` : since === until ? `op ${since}` : `van ${since} tot ${until}`));
 
-  return h('header', { class: 'bs-mast' },
+  return h('header', { class: 'bs-mast', dataset: { story: focus.url } },
     h('div', { class: 'bs-flagrow' },
       leftEar,
       h('h1', { class: 'bs-nameplate' }, h('span', null, flagText(focus))),
@@ -334,7 +334,7 @@ function rail(data, focus, photo, geo, ctx) {
       const isLive = b.status === 'live';
       const ts = last?.timestamp ?? b.updatedAt ?? null;
       const when = !ts ? '' : sameDay(ts, now) ? ctx.time(ts) : `${ctx.date(ts, 'short')} ${ctx.time(ts)}`;
-      return h('article', { class: `bs-other${isLive ? '' : ' is-ended'}`, dataset: { drop: 'other' } },
+      return h('article', { class: `bs-other${isLive ? '' : ' is-ended'}`, dataset: { drop: 'other', story: b.url } },
         h('p', { class: 'bs-other-topic' },
           isLive ? h('i', { class: 'bs-livedot' }) : null,
           typo(b.topic) || (isLive ? 'Liveblog' : 'Einde liveblog')),
@@ -350,7 +350,7 @@ function rail(data, focus, photo, geo, ctx) {
   const heads = (data.headlines ?? []).slice(0, 14);
   const news = heads.length ? h('section', { class: 'bs-rail-sec bs-news' },
     h('h4', { class: 'bs-rail-head' }, h('span', null, 'Ander nieuws')),
-    heads.map(a => h('article', { class: 'bs-headitem', dataset: { drop: 'head' } },
+    heads.map(a => h('article', { class: 'bs-headitem', dataset: { drop: 'head', story: a.url } },
       a.section ? h('p', { class: 'bs-headitem-sec' }, a.section) : null,
       h('h5', null, typo(a.title)),
     )),

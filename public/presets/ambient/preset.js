@@ -44,7 +44,7 @@ export default {
         h('div', { class: 'aw-grain' }),
       ),
 
-      h('section', { class: `aw-block${fresh ? ' is-fresh' : ''}` },
+      h('section', { class: `aw-block${fresh ? ' is-fresh' : ''}`, dataset: { story: blog.url } },
         h('p', { class: 'aw-kicker' },
           h('span', { class: 'aw-state' }, h('i', { class: 'aw-dot' }), live ? 'Live' : 'Afgelopen'),
           h('span', { class: 'aw-topic' }, blog.topic || 'Liveblog'),

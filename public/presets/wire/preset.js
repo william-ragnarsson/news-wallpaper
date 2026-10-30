@@ -76,7 +76,7 @@ export default {
     const count = focus.postCount ?? posts.length;
     const head = h('header', { class: 'w-head' },
       h('div', { class: cls('w-status', live ? 'is-live' : 'is-ended') }, h('i', { class: 'w-dot' }), h('span', null, live ? 'live' : 'afgelopen')),
-      h('div', { class: 'w-topic' }, focus.topic || focus.title),
+      h('div', { class: 'w-topic', dataset: { story: focus.url } }, focus.topic || focus.title),
       h('div', { class: 'w-meta' }, h('b', null, String(count)), h('span', null, count === 1 ? 'bericht' : 'berichten')),
       Number.isNaN(refreshed) ? null : h('div', { class: 'w-meta' },
         h('span', null, 'bijgewerkt'),
@@ -271,7 +271,7 @@ function blogItem(b, ctx, stamp, i) {
     : 'afgelopen';
   const when = stamp(latest?.timestamp ?? b.updatedAt);
   const title = (latest && postCopy(latest).title) || b.title;
-  return h('div', { class: cls('w-blog', live ? 'is-live' : 'is-ended', latest && ctx.fresh.has(latest.id) && 'is-fresh'), dataset: { flow: 'side', i, shrink: '1' } },
+  return h('div', { class: cls('w-blog', live ? 'is-live' : 'is-ended', latest && ctx.fresh.has(latest.id) && 'is-fresh'), dataset: { flow: 'side', i, shrink: '1', story: b.url } },
     h('div', { class: 'w-blog-head' },
       h('i', { class: 'w-dot' }),
       h('span', { class: 'w-blog-topic' }, b.topic || b.title || 'Liveblog'),
@@ -285,7 +285,7 @@ function blogItem(b, ctx, stamp, i) {
 // The summary only shows when the side column has room to spare (data-side-rich).
 function newsItem(a, ctx, stamp, i) {
   const { h } = ctx;
-  return h('div', { class: 'w-news', dataset: { flow: 'side', i, shrink: '1' } },
+  return h('div', { class: 'w-news', dataset: { flow: 'side', i, shrink: '1', story: a.url } },
     timeEl(h, stamp(a.updatedAt ?? a.publishedAt)),
     h('div', null,
       a.section ? h('span', { class: 'w-news-sec' }, a.section) : null,

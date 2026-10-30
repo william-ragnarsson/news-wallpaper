@@ -8,6 +8,7 @@ import WallpaperCore
 //   Renderer  draws the page (public/) from the stored news offscreen and takes a picture of it (WallpaperRender)
 //   Bridge    serves the page, the sources and their network (WallpaperCore)
 //   DesktopOutput  sets the picture
+//   ArticlesMenu   the menu's Articles: the stories on the picture, to open
 // Customize (CustomizeView and its panes) edits the settings through
 // SettingsService (WallpaperCore), in this process (Customization), and
 // previews them with a Renderer of its own.
@@ -17,6 +18,8 @@ struct WallpaperHeadlinesApp: App {
 
   var body: some Scene {
     MenuBarExtra("Wallpaper Headlines", systemImage: "newspaper") {
+      ArticlesMenu(onScreen: delegate.onScreen)
+      Divider()
       Button("Customize…") { delegate.customize() }
         .keyboardShortcut(",")
       Button("Update news") { delegate.updater.refresh() }
@@ -43,6 +46,7 @@ struct WallpaperHeadlinesApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   let updater = Updater()
+  let onScreen = OnScreen()
   private var window: NSWindow?
   private lazy var customization = Customization(service: SettingsService(.app)) { [weak self] in self?.updater.refreshSoon() }
 
@@ -50,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Info.plist's LSUIElement does this for the .app; this covers `swift run`.
     NSApp.setActivationPolicy(.accessory)
     updater.redrawing = { [weak self] in self?.customization.redrawing($0) }
+    updater.drawn = { [weak self] in self?.onScreen.stories = $0 }
     // New news: an open Customize lists it and draws its preview again.
     updater.fetched = { [weak self] in
       guard let self, window != nil else { return }

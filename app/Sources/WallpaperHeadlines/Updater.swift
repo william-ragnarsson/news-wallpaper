@@ -32,6 +32,8 @@ final class Updater {
   // Told when a fetch stored news (Customize lists it and draws its preview
   // from it).
   var fetched: () -> Void = {}
+  // Told the stories on a new picture on the desktop (the menu's Articles).
+  var drawn: ([Snapshot.Story]) -> Void = { _ in }
 
   // Seconds between fetches, at least 60:
   // `defaults write io.github.william-ragnarsson.wallpaper-headlines interval 120`
@@ -119,6 +121,7 @@ final class Updater {
       // without a restart.
       let snapshot = try await renderer.render(RenderRequest(page: Environment.app.page, for: screen))
       _ = try DesktopOutput(screen: screen).put(snapshot)
+      drawn(snapshot.stories)
     } catch {
       NSLog("Refresh failed: \(error)")
     }

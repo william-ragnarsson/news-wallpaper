@@ -37,8 +37,10 @@ let usage = """
       --size points at --scale pixels a point (default: the main screen's).
       --follow picks the liveblog for the liveblog designs (default: the
       newest running one).
-      Prints {path, width, height, fetchedAt, page}: fetchedAt is when the
-      news drawn was fetched. Nothing is fetched while drawing. --settings are
+      Prints {path, width, height, fetchedAt, page, stories}: fetchedAt is when
+      the news drawn was fetched; stories are the articles the picture shows,
+      [{title, url}] in the design's order, as the menu bar's Articles lists
+      them. Nothing is fetched while drawing. --settings are
       changes to the saved settings for this picture only: checked as settings
       set checks them, not saved, and printed as settings. --preset and
       --follow pin the page over them.
@@ -158,6 +160,7 @@ func render(_ arguments: Arguments, _ environment: Environment) async throws -> 
   let file = try FileOutput(URL(filePath: out)).put(snapshot)
   var result: [String: Any] = ["path": file.path(percentEncoded: false), "width": snapshot.width, "height": snapshot.height, "page": page.url!.absoluteString]
   result["fetchedAt"] = snapshot.fetchedAt
+  result["stories"] = snapshot.stories.map { ["title": $0.title, "url": $0.url.absoluteString] }
   if let settings { result["settings"] = try object(settings) }
   return result
 }

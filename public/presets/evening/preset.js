@@ -197,7 +197,7 @@ function masthead(data, ctx) {
 function leadStory(item, ctx, cols) {
   const { h } = ctx;
   const { story } = item;
-  return h('article', { class: `ev-lead${item.picture ? '' : ' no-photo'}`, dataset: { key: kit.storyKey(story) } },
+  return h('article', { class: `ev-lead${item.picture ? '' : ' no-photo'}`, dataset: { key: kit.storyKey(story), story: story.url } },
     item.picture ? kit.photo(ctx, item.picture, cols.leadPx, { cls: 'ev-photo' }) : null,
     h('div', { class: 'ev-lead-text' },
       kicker(story, ctx),
@@ -226,7 +226,7 @@ function sideColumn(items, ctx, cols) {
 function secondary(item, ctx, cols) {
   const { h } = ctx;
   const { story } = item;
-  return kit.spare(h('article', { class: `ev-second${item.picture ? '' : ' no-photo'}`, dataset: { key: kit.storyKey(story) } },
+  return kit.spare(h('article', { class: `ev-second${item.picture ? '' : ' no-photo'}`, dataset: { key: kit.storyKey(story), story: story.url } },
     h('div', { class: 'ev-second-text' },
       kicker(story, ctx),
       h('h3', { class: 'ev-second-title' }, kit.typo(story.title)),
@@ -239,7 +239,7 @@ function secondary(item, ctx, cols) {
 function brief(item, ctx) {
   const { h } = ctx;
   const { story } = item;
-  return kit.spare(h('article', { class: 'ev-brief', dataset: { key: kit.storyKey(story) } },
+  return kit.spare(h('article', { class: 'ev-brief', dataset: { key: kit.storyKey(story), story: story.url } },
     kicker(story, ctx, { time: !story.section }),
     h('h3', { class: 'ev-brief-title' }, kit.typo(story.title)),
     item.summary ? kit.prose(ctx, item.summary, 'ev-brief-summary') : null,
@@ -252,7 +252,7 @@ function liveLine(stories, ctx) {
   const { h } = ctx;
   return kit.spare(h('footer', { class: 'ev-live' },
     h('span', { class: 'ev-tag is-live' }, ctx.t.live),
-    stories.map(s => h('p', { class: 'ev-live-item', dataset: { key: kit.storyKey(s) } },
+    stories.map(s => h('p', { class: 'ev-live-item', dataset: { key: kit.storyKey(s), story: s.url } },
       s.section ? h('span', { class: 'ev-section' }, s.section) : null,
       kit.typo(s.title),
     )),

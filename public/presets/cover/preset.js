@@ -82,7 +82,7 @@ export default {
 
     const dekText = typeset(dek);
     const main = h('section', { class: 'cv-main' },
-      h('div', { class: 'cv-main-inner' },
+      h('div', { class: 'cv-main-inner', dataset: { story: blog.url } },
         kicker,
         headline,
         dekText ? h('p', { class: 'cv-dek', dataset: { full: dekText } }, dekText) : null,
