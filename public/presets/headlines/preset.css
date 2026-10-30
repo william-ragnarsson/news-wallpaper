@@ -101,8 +101,10 @@
   text-overflow: ellipsis;
 }
 
-/* A middle dot between the parts of a label and between foot items. */
-.preset-headlines :is(.hl-credit > span, .hl-kicker > *, .hl-foot-item) + *::before {
+/* A middle dot between the parts of a label and between the foot items
+   shown (fitLine hides the ones already on the page). */
+.preset-headlines :is(.hl-credit > span, .hl-kicker > *) + *::before,
+.preset-headlines .hl-foot-item:not([hidden]) ~ .hl-foot-item:not([hidden])::before {
   content: '·';
   margin: 0 0.65em;
   color: var(--ink-3);
@@ -364,7 +366,7 @@
   flex: none;
 }
 
-.preset-headlines .hl-foot .hl-foot-item + *::before {
+.preset-headlines .hl-foot .hl-foot-item:not([hidden]) ~ .hl-foot-item:not([hidden])::before {
   margin: 0 0.9em;
 }
 
