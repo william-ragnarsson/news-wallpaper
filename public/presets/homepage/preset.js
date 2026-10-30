@@ -29,7 +29,7 @@ const REGIONS = {
   lead: { from: 'top', stories: 1, words: [24, 90], points: [0, 3], pictures: 1 },
   related: { from: 'top', stories: [4, 2], spares: 2, words: [0, 30] },
   more: { from: 'top', stories: [6, 3], spares: 2, words: [0, 30], pictures: [0, 1] },
-  sections: { from: 'sections', stories: [4, 2], spares: 2, words: [0, 30], pictures: [0, 1] },
+  sections: { from: 'sections', stories: [4, 2], spares: [2, 4], words: [0, 30], pictures: [0, 1] },
   topics: { from: 'top', stories: 24, words: [0, 30], pictures: [0, 1] },
   rail: { from: ['latest', 'top'], newest: true, stories: [16, 9], spares: 4, words: [0, 24] },
 };
@@ -64,7 +64,7 @@ export default {
       topBar(data, ctx),
       h('main', { class: 'hp-main kit-page' },
         leadPackage(lead, related, more, ctx),
-        latestRail(rail, ctx),
+        latestRail(rail, related.filter(i => i.story.live), ctx),
         sectionRow([...sections, ...topicGroups(topics, ctx)].slice(0, blocks), ctx),
       ),
       footer(data, ctx),
@@ -73,6 +73,7 @@ export default {
 
   layout(root, ctx) {
     kit.reset(root);
+    hyphenateLong(root);
 
     const box = root.querySelector('.hp-lead-text');
     if (box) {
@@ -83,40 +84,127 @@ export default {
         // headline growing into the room, up to 1.5 times.
         kit.trimToFit(story, () => kit.overflows(story), 8);
         growTitle(story, 1.5, () => !kit.overflows(story));
-        stack(related, () => kit.overflows(box.querySelector('.hp-related')));
+        const list = box.querySelector('.hp-related');
+        stack(related, () => kit.overflows(list));
+        if (list) spread(list, related);
       } else {
         // The photo sets the height: the story keeps its share, its related
         // headlines fit in under it, and what is still over comes off the
-        // story; with none of them fitting, the story has it all. The
-        // headline grows into what is left, up to 1.3 times.
+        // story. With none of them fitting, the first comes in without its
+        // summary and the story makes room for it (makeRoom); only when it
+        // cannot has the story it all. The headline grows into what is
+        // left, up to 1.3 times.
         const over = () => kit.overflows(box);
         kit.trimToFit(story, () => story.offsetHeight > box.clientHeight * kit.at(ctx, STORY_SHARE), 8);
         stack(related, over);
-        if (related.every(li => li.hidden)) kit.reset(story);
+        if (related.every(li => li.hidden) && !makeRoom(story, related[0], over)) {
+          kit.reset(story);
+          hyphenateLong(story);
+        }
         kit.trimToFit(story, over, 8);
         growTitle(story, 1.3, () => !over());
       }
     }
 
     for (const block of root.querySelectorAll('.hp-more, .hp-section')) {
-      stack([...block.querySelectorAll('.hp-list > li')], () => kit.overflows(block));
+      const card = block.querySelector('.hp-card');
+      const items = [...block.querySelectorAll('.hp-list > li')];
+      stack(items, () => kit.overflows(block), card);
+      spread(block, [card, ...items]);
     }
+    // The rail, with the live stories the lead had no room for: they keep
+    // their place, at their time, and the rail's own stories make room.
     const latest = root.querySelector('.hp-latest');
-    if (latest) stack([...latest.children], () => kit.overflows(latest));
+    if (latest) {
+      const off = new Set([...root.querySelectorAll('.hp-related > li[hidden]')].map(li => li.dataset.id));
+      const twins = [...latest.children].filter(li => off.has(li.dataset.twin));
+      twins.forEach(kit.show);
+      stack([...latest.children].filter(li => !li.dataset.twin), () => kit.overflows(latest));
+      kit.dropToFit(twins, () => kit.overflows(latest));
+      spread(latest, [...latest.children]);
+    }
   },
 };
 
 // A list that loses items from the end until it fits, the first one left out
 // coming back cut to the words that fit, or with room to spare takes in a spare.
-function stack(items, over) {
+// Room still left takes the next story as its headline alone, the summary
+// above (the last shown, or `head` over the list) giving way to it if need be.
+function stack(items, over, head) {
   kit.dropToFit(items, over, { trim: 6 });
   kit.fill(items, over, { trim: 6 });
+  const i = items.findLastIndex(el => !el.hidden);
+  const next = items[i + 1];
+  if (!next) return;
+  kit.show(next);
+  next.querySelectorAll('.hp-summary').forEach(kit.hide);
+  const above = items[i] ?? head;
+  if (!over() || (above && kit.trimToFit(above, over, 6))) return;
+  kit.hide(next);
+  if (above) {
+    kit.reset(above);
+    hyphenateLong(above);
+    kit.trimToFit(above, over, 6);
+  }
 }
 
+// A headline or summary with a word too long for its line is hyphenated; the
+// rest is not, so that only such a word breaks. A spare is measured too, shown
+// for the while. What resets one does it again.
+function hyphenateLong(root) {
+  for (const el of root.querySelectorAll('h1, h2, h3, h4, p')) {
+    const off = el.closest('[hidden]');
+    if (off) off.hidden = false;
+    const long = tooLong(el);
+    if (off) off.hidden = true;
+    if (long) {
+      kit.setStyle(el, 'hyphens', 'auto');
+      kit.setStyle(el, '-webkit-hyphens', 'auto');
+    }
+  }
+}
+
+// Whether a word of el is wider than its line: el is wider with words kept whole.
+function tooLong(el) {
+  const width = () => Math.max(el.scrollWidth, el.offsetWidth);
+  const fits = width();
+  el.style.overflowWrap = 'normal';
+  const long = width() > fits + 1;
+  el.style.overflowWrap = '';
+  return long;
+}
+
+// What room a list still has goes between its stories, a line at most each.
+function spread(box, items) {
+  const line = parseFloat(getComputedStyle(box.querySelector('.hp-headline, .hp-related-title') ?? box).lineHeight);
+  kit.spread(box, items, line || 0);
+}
+
+// The first related headline back, without its summary: the story's summary
+// gives way to it, then the story's headline, down to 0.75 times its size.
+// False, and the headline hidden again, if that is not enough.
+function makeRoom(story, li, over) {
+  if (!li) return false;
+  kit.show(li);
+  kit.hide(li.querySelector('.hp-summary'));
+  kit.trimToFit(story, over, 8);
+  const title = story.querySelector('.hp-lead-title');
+  const px = parseFloat(getComputedStyle(title).fontSize);
+  kit.fitSize(title, px * 0.75, px, () => !over());
+  if (!over()) return true;
+  kit.hide(li);
+  return false;
+}
+
+// The lead's headline grows into the room, up to `most` times its size, and
+// its words fitting their lines whole not so far that one no longer does;
+// with too little room for even the headline alone, it shrinks to fit, to
+// as little as 0.6 times.
 function growTitle(story, most, ok) {
   const title = story.querySelector('.hp-lead-title');
   const px = parseFloat(getComputedStyle(title).fontSize);
-  kit.fitSize(title, px, px * most, ok);
+  const whole = !tooLong(title);
+  kit.fitSize(title, px * 0.6, px * most, () => ok() && !(whole && tooLong(title)));
 }
 
 // An ultrawide gets 15 columns, the column of more top stories and a fourth
@@ -159,7 +247,7 @@ function leadPackage(lead, related, more, ctx) {
         lead.points.map(p => kit.prose(ctx, p, 'hp-point')),
       ),
       related.length ? h('ul', { class: 'hp-related' },
-        related.map(item => kit.spare(h('li', null,
+        related.map(item => kit.spare(h('li', { dataset: { id: item.story.id } },
           kicker(item.story, ctx),
           h('h2', { class: 'hp-related-title' }, kit.typo(item.story.title)),
           item.summary ? kit.prose(ctx, item.summary, 'hp-summary') : null,
@@ -180,12 +268,17 @@ function moreColumn(items, ctx) {
   );
 }
 
-function latestRail(items, ctx) {
+// `live`: the live stories among the related headlines, in at their time as
+// headlines alone, hidden; layout() shows those the lead had no room for, so
+// that a running liveblog the lead drops is not lost with it.
+function latestRail(items, live, ctx) {
   const { h } = ctx;
+  const all = [...items, ...live.map(item => ({ ...item, summary: null, spare: true, twin: item.story.id }))]
+    .sort((a, b) => (b.story.time ?? 0) - (a.story.time ?? 0));
   return h('aside', { class: 'hp-rail' },
     h('h3', { class: 'hp-label' }, ctx.t.justIn),
     h('ol', { class: 'hp-latest' },
-      items.map(item => kit.spare(h('li', null,
+      all.map(item => kit.spare(h('li', { dataset: item.twin ? { twin: item.twin } : null },
         h('time', null, ctx.time(item.story.time)),
         headline(item.story, ctx),
         item.summary ? kit.prose(ctx, item.summary, 'hp-summary') : null,
