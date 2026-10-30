@@ -16,8 +16,11 @@ struct SettingsPane: View {
   var body: some View {
     Form {
       Section {
-        HStack(spacing: 14) {
-          AppTile(size: 56)
+        HStack(spacing: 8) {
+          // The icon's tile is 824 of its 1024, so it shows about 56 wide.
+          Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .frame(width: 70, height: 70)
           VStack(alignment: .leading, spacing: 2) {
             Text("Wallpaper Headlines").font(.title2.weight(.semibold))
             Text("Version \(version)").foregroundStyle(.secondary).textSelection(.enabled)
@@ -143,20 +146,5 @@ struct SettingsPane: View {
   private var credits: String {
     let providers = model.options?.providers ?? []
     return providers.isEmpty ? "Its publishers" : providers.map { "\($0.name), © \($0.owner)" }.joined(separator: "\n")
-  }
-}
-
-// The newspaper on the accent colour: the tile at the top of this pane, and
-// the app's icon in the Dock and Cmd+Tab (AppDelegate), as the bundle has no
-// icon file.
-struct AppTile: View {
-  let size: CGFloat
-
-  var body: some View {
-    Image(systemName: "newspaper.fill")
-      .font(.system(size: size / 2))
-      .foregroundStyle(.white)
-      .frame(width: size, height: size)
-      .background(.tint, in: RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
   }
 }

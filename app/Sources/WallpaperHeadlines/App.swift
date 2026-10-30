@@ -49,10 +49,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   func applicationDidFinishLaunching(_ notification: Notification) {
     // Info.plist's LSUIElement does this for the .app; this covers `swift run`.
     NSApp.setActivationPolicy(.accessory)
-    // Its icon in the Dock and Cmd+Tab while Customize is open.
-    let icon = ImageRenderer(content: AppTile(size: 412).padding(50))
-    icon.scale = 2
-    NSApp.applicationIconImage = icon.nsImage
     updater.redrawing = { [weak self] in self?.customization.redrawing($0) }
     // New news: an open Customize lists it and draws its preview again.
     updater.fetched = { [weak self] in
