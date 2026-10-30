@@ -44,6 +44,7 @@ app/                host 2: the macOS app (wallpaper://app/)
   Customize           the window that picks the design, the news provider and sections (menu bar → Customize);
                       its preview is a render, and what it lists comes from the stored news
   DesktopOutput.swift sets the picture
+  ArticlesMenu.swift  the menu's Articles ›: the stories on the picture, each opens in the browser
   wallpaper-dev       the same parts from the command line, without the desktop (AGENTS.md)
 tools/check-feeds.mjs   health check of every stream (`npm run check`)
 tools/check-boundaries.sh  which part may do what (only the app sets the desktop picture)
@@ -62,8 +63,10 @@ news there is to pick from in `news.json`; then the page is drawn from that
 only draws again, unless it picks another provider (the store holds only the
 one picked): that is fetched first. The page's one call is
 `window.wallpaper.refresh()`: it renders and resolves to `{ ok, error,
-fetchedAt }` once fonts and images are in. When it is not ok, the app keeps the
-picture it has.
+fetchedAt, stories }` once fonts and images are in. When it is not ok, the app keeps the
+picture it has. `stories` are the articles the picture shows, the ones the
+design marks with `data-story` that fitting left in view (`public/presets/README.md`);
+the menu bar lists them under Articles.
 
 ## Run
 

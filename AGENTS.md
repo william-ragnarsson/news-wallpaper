@@ -24,7 +24,9 @@ swift run --package-path app --build-system native wallpaper-dev pane sources --
   writes the PNG: `--size` points times `--scale` pixels. It fetches nothing, so
   `fetch` first; with no news stored it fails. Read the PNG to check a change to
   the page or a design. Preset ids are in `public/presets/index.js`.
-  `--settings` tries settings for one picture without saving them.
+  `--settings` tries settings for one picture without saving them. It also
+  prints `stories`, the articles the picture shows (`[{title, url}]`), which
+  the app's menu bar lists under Articles: check them against the PNG.
 - `fetch` fetches all the news there is to pick from into `.dev/news.json`
   (the one before stays as `news.prev.json`) and prints what it got; `news
   [path]` prints it, or one part (a jq path: keys, indexes, `| length`,
